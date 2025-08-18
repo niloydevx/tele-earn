@@ -894,11 +894,12 @@
       
       if (doc.exists) {
         // Existing user
-        currentUser = doc.data();
-        currentUser.id = tgData.id.toString();
+        userData = doc.data();
+        userData.id = doc.id;
+        currentUser = tgData;
         
         // Check if banned
-        if (currentUser.isBanned) {
+        if (userData.isBanned) {
           showNotification("Account Banned", "Your account has been suspended", "danger");
           return;
         }
@@ -909,7 +910,8 @@
         });
       } else {
         // New user
-        currentUser = {
+        currentUser = tgData;
+        userData = {
           id: tgData.id.toString(),
           username: tgData.username || `user${tgData.id.toString().slice(-4)}`,
           firstName: tgData.first_name,
@@ -943,16 +945,16 @@
             
             // Update referrer's data
             await db.collection('users').doc(referrer.id).update({
-              referrals: firebase.firestore.FieldValue.arrayUnion(currentUser.id)
+              referrals: firebase.firestore.FieldValue.arrayUnion(userData.id)
             });
             
             // Store referrer info
-            currentUser.referredBy = referrer.id;
+            userData.referredBy = referrer.id;
           }
         }
         
         // Create new user
-        await userRef.set(currentUser);
+        await userRef.set(userData);
       }
       
       // Load user data
@@ -975,7 +977,7 @@
   function generateReferralCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let result = '';
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 8; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return result;
