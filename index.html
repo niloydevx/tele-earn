@@ -1,0 +1,1455 @@
+//index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Money Land</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <!-- GigaPub Ads -->
+  <script src="https://ad.gigapub.tech/script?id=1872"></script>
+  <style>
+    :root {
+      --primary-color: #ffd700;
+      --accent-color: #ffdb4d;
+      --dark-bg: #0a0a0a;
+      --card-bg: linear-gradient(145deg, #111, #1a1a1a);
+      --header-bg: rgba(17, 17, 17, 0.95);
+    }
+    
+    body {
+      background: var(--dark-bg);
+      color: var(--primary-color);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      padding-top: 70px;
+      padding-bottom: 85px;
+      min-height: 100vh;
+    }
+    
+    /* TOP HEADER BAR */
+    .top-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: var(--header-bg);
+      padding: 12px 20px;
+      border-bottom: 1px solid #333;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+      border-bottom-left-radius: 20px;
+      border-bottom-right-radius: 20px;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    
+    /* PERFECT BOTTOM NAV BAR */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--header-bg);
+      padding: 8px 10px;
+      border-top: 1px solid #333;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
+    }
+    
+    .bottom-nav a {
+      color: rgba(255, 215, 0, 0.7);
+      font-size: 22px;
+      text-decoration: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 10px 14px;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      position: relative;
+      width: 100%;
+      max-width: 72px;
+    }
+    
+    .bottom-nav a.active {
+      color: #fff;
+      transform: translateY(-8px);
+      text-shadow: 0 0 12px rgba(255, 215, 0, 0.9);
+      background: rgba(255, 215, 0, 0.15);
+    }
+    
+    .bottom-nav a span {
+      font-size: 10px;
+      font-weight: 500;
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: absolute;
+      bottom: -4px;
+    }
+    
+    .bottom-nav a.active span {
+      opacity: 1;
+      transform: translateY(10px);
+    }
+    
+    /* SMOOTH ANIMATIONS */
+    .card, .btn-custom, .progress-bar {
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    h1, h2, h3, h4, h5, h6 {
+      color: var(--primary-color);
+      font-weight: 600;
+    }
+    
+    .card {
+      background: var(--card-bg);
+      border: none;
+      border-radius: 18px;
+      box-shadow: 0 6px 18px rgba(255, 215, 0, 0.15);
+      color: var(--primary-color);
+      overflow: hidden;
+    }
+     .btn-custom {
+      background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+      color: #000;
+      font-weight: 600;
+      border-radius: 14px;
+      padding: 12px 24px;
+      box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
+      border: none;
+      letter-spacing: 0.5px;
+    }
+    
+    .btn-custom:hover {
+      background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(255, 215, 0, 0.3);
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 24px rgba(255, 215, 0, 0.25);
+    }
+    
+    .hidden { 
+      display: none;
+      opacity: 0;
+    }
+    
+    .container:not(.hidden) {
+      animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .progress {
+      height: 20px;
+      border-radius: 12px;
+      background: #333;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .progress-bar {
+      background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+      color: #000;
+      font-weight: bold;
+      border-radius: 12px;
+    }
+    
+    .profile-img {
+      width: 50px;
+      height: 50px;
+      object-fit: cover;
+      border: 2px solid var(--primary-color);
+    }
+    
+    .cover-img {
+      border-radius: 20px;
+      height: 180px;
+      object-fit: cover;
+      filter: brightness(0.7);
+    }
+    
+    .form-control, .form-select {
+      background-color: rgba(0,0,0,0.5);
+      border: 1px solid #333;
+      color: var(--primary-color);
+      padding: 12px 15px;
+      border-radius: 12px;
+    }
+    
+    .form-control:focus, .form-select:focus {
+      background-color: rgba(0,0,0,0.7);
+      border-color: var(--primary-color);
+      color: var(--primary-color);
+      box-shadow: 0 0 0 0.25rem rgba(255, 215, 0, 0.25);
+    }
+    
+    .table-dark {
+      --bs-table-bg: transparent;
+      --bs-table-striped-bg: rgba(255, 215, 0, 0.05);
+      --bs-table-hover-bg: rgba(255, 215, 0, 0.1);
+    }
+    
+    .badge-gold {
+      background: linear-gradient(135deg, #ffd700, #ffcc00);
+      color: #000;
+    }
+    
+    .badge-hot {
+      background: linear-gradient(135deg, #ff416c, #ff4b2b);
+      color: white;
+    }
+    
+    .floating-notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1100;
+      animation: slideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    .overlay-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: #fff;
+      text-shadow: 0 3px 8px rgba(0,0,0,0.9);
+      width: 90%;
+    }
+    
+    /* Survey Page Styles */
+    .survey-container {
+      background: var(--dark-bg);
+      border-radius: 20px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 0 4px 12px rgba(255, 215, 0, 0.1);
+    }
+    
+    .survey-card {
+      background: var(--card-bg);
+      border: none;
+      border-radius: 20px;
+      box-shadow: 0 6px 18px rgba(255, 215, 0, 0.15);
+      transition: all 0.3s ease-in-out;
+      overflow: hidden;
+    }
+    
+    .survey-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 24px rgba(255, 215, 0, 0.25);
+    }
+    
+    .survey-img {
+      height: 160px;
+      object-fit: cover;
+      width: 100%;
+      filter: brightness(0.8);
+    }
+    
+    .survey-btn-warning {
+      background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+      color: #000;
+      font-weight: 500;
+      border-radius: 12px;
+      border: none;
+      box-shadow: 0 3px 8px rgba(255, 215, 0, 0.4);
+      transition: all 0.3s ease;
+    }
+    
+    .survey-btn-warning:hover {
+      background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+      transform: translateY(-2px);
+      box-shadow: 0 5px 12px rgba(255, 215, 0, 0.6);
+    }
+    
+    .survey-btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--primary-color);
+      font-weight: 500;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease;
+    }
+    
+    .survey-btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: var(--primary-color);
+      box-shadow: 0 5px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .survey-card .card-body {
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      height: calc(100% - 160px);
+    }
+    
+    .survey-card .card-title {
+      color: var(--primary-color);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    
+    .survey-card .card-text {
+      color: rgba(255, 215, 0, 0.8);
+      font-size: 0.9rem;
+      margin-bottom: 15px;
+    }
+    
+    .survey-card .btn-group {
+      margin-top: auto;
+    }
+    
+    /* VPN Check Styles */
+    .vpn-check-container {
+      background: var(--card-bg);
+      border-radius: 18px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 6px 18px rgba(255, 215, 0, 0.15);
+    }
+    
+    .vpn-status {
+      padding: 10px;
+      border-radius: 12px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    
+    /* Banned user styles */
+    .banned-container {
+      text-align: center;
+      padding: 40px 20px;
+    }
+    
+    .banned-icon {
+      font-size: 64px;
+      color: #dc3545;
+      margin-bottom: 20px;
+    }
+    
+    @media (max-width: 576px) {
+      .cover-img {
+        height: 150px;
+      }
+      
+      .bottom-nav a {
+        padding: 10px 12px;
+        max-width: 64px;
+      }
+      
+      .top-header {
+        padding: 10px 15px;
+      }
+      
+      .survey-img {
+        height: 120px;
+      }
+      
+      .survey-card .card-body {
+        height: calc(100% - 120px);
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- BANNED USER SCREEN (hidden by default) -->
+<div id="bannedScreen" class="container hidden">
+  <div class="banned-container">
+    <i class="bi bi-shield-slash-fill banned-icon"></i>
+    <h2 class="text-danger">Account Suspended</h2>
+    <p class="text-muted">Your account has been suspended for violating our terms of service.</p>
+    <div class="card p-4 mt-4">
+      <h5>Contact Support</h5>
+      <p>If you believe this is a mistake, please contact our support team:</p>
+      <p class="fw-bold">Email: support@moneylnd.com</p>
+      <p class="fw-bold">Telegram: @moneylnd_support</p>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP CONTENT (hidden if banned) -->
+<div id="appContent">
+
+<!-- TOP HEADER -->
+<div class="top-header d-flex justify-content-between align-items-center">
+  <div class="d-flex align-items-center gap-2">
+    <img id="logoImg" src="https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg" class="profile-img rounded-circle shadow" alt="Logo">
+    <h5 class="m-0 fw-bold">Money Land</h5>
+  </div>
+  <div class="text-end">
+    <div class="d-flex align-items-center justify-content-end gap-2">
+      <i class="bi bi-wallet2"></i>
+      <span id="balance" class="fw-bold">0.00</span> 
+      <span class="badge badge-gold">BDT</span>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICATION AREA -->
+<div id="notificationArea"></div>
+
+<!-- VPN CHECK -->
+<div id="vpnCheck" class="container my-4">
+  <div class="vpn-check-container">
+    <h4 class="text-center mb-3">Connection Check</h4>
+    <div id="vpnStatus" class="vpn-status alert alert-info">Checking your connection...</div>
+    <div id="vpnAlert" class="alert alert-warning d-none text-center">🚨 VPN required! Please connect VPN.</div>
+    <div id="vpnOffAlert" class="alert alert-danger d-none text-center">⚠️ VPN detected! Please turn it off.</div>
+    <div id="vpnSuccess" class="alert alert-success d-none text-center">✅ VPN connection verified! You can now use the app.</div>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="home" class="container my-4 hidden">
+  <div class="position-relative mb-4 mt-2">
+    <img id="coverImg" src="https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg" class="img-fluid cover-img shadow-lg w-100" alt="Cover">
+    <div class="overlay-text">
+      <h5>Welcome back, <span id="username" class="text-warning">User</span></h5>
+      <h2 class="fw-bold mb-3">Start Earning Today</h2>
+      <button class="btn btn-custom px-4 py-2" onclick="showTab('rewards', document.querySelector('.bottom-nav a:nth-child(2)'))">Let's Earn <i class="bi bi-arrow-right ms-2"></i></button>
+    </div>
+  </div>
+  
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card p-3 text-center">
+        <i class="bi bi-cash-coin fs-1 mb-2 text-warning"></i>
+        <h5>Total Earnings</h5>
+        <h3 class="fw-bold"><span id="totalEarningsHome">0.00</span> <small class="fs-6">BDT</small></h3>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card p-3 text-center">
+        <i class="bi bi-check-circle fs-1 mb-2 text-success"></i>
+        <h5>Tasks Done</h5>
+        <h3 class="fw-bold"><span id="completed">0</span>/<span id="dailyLimit">0</span></h3>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card p-3 text-center">
+        <i class="bi bi-people fs-1 mb-2 text-info"></i>
+        <h5>Referrals</h5>
+        <h3 class="fw-bold" id="referralsCountHome">0</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROMO CODE SECTION -->
+  <div class="card p-4 mb-4">
+    <h5 class="mb-3"><i class="bi bi-ticket-perforated me-2"></i> Redeem Promo Code</h5>
+    <div class="input-group">
+      <input type="text" class="form-control" id="promoCodeInput" placeholder="Enter promo code">
+      <button class="btn btn-custom" type="button" onclick="redeemPromoCode()">Redeem</button>
+    </div>
+    <div class="form-text text-warning mt-2">Enter a valid promo code to get bonus balance</div>
+  </div>
+</div>
+
+<!-- REWARDS -->
+<div id="rewards" class="container my-4 hidden">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="m-0">Earning Rewards</h3>
+    <span class="badge badge-hot px-3 py-2">Hot Offers</span>
+  </div>
+  
+  <div class="card p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h5 class="mb-1">Daily Tasks Progress</h5>
+        <small class="text-muted">Complete tasks to earn more</small>
+      </div>
+      <span class="badge bg-dark px-3 py-2"><span id="remaining">0</span> remaining</span>
+    </div>
+    
+    <div class="progress mb-4">
+      <div id="progressBar" class="progress-bar" style="width:0%">0%</div>
+    </div>
+    
+    <button class="btn btn-custom w-100 mb-3 py-3" onclick="watchAd()">
+      <i class="bi bi-play-circle me-2"></i> Watch Ad (+0.20 BDT)
+    </button>
+    
+    <div class="alert alert-dark d-flex align-items-center" role="alert">
+      <i class="bi bi-info-circle-fill me-2"></i>
+      <small>Complete all <span id="dailyLimitText">0</span> tasks to unlock bonus rewards</small>
+    </div>
+  </div>
+  
+  <h4 class="mb-3">Daily Offers</h4>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card p-3 h-100">
+        <div class="d-flex align-items-center mb-2">
+          <i class="bi bi-star-fill text-warning me-2"></i>
+          <h5 class="m-0">Survey Task</h5>
+        </div>
+        <p class="text-muted small mb-3">Complete surveys and earn up to 5.00 BDT per survey</p>
+        <button onclick="showSurveyPage()" class="btn btn-outline-warning w-100 mt-auto">Start Survey</button>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card p-3 h-100">
+        <div class="d-flex align-items-center mb-2">
+          <i class="bi bi-gem text-info me-2"></i>
+          <h5 class="m-0">Refer Friends</h5>
+        </div>
+        <p class="text-muted small mb-3">Earn 10% of your referrals' earnings</p>
+        
+        <!-- Invite URL with copy button -->
+        <div class="input-group mb-3">
+          <input type="text" class="form-control" id="inviteLink" value="" readonly>
+          <button class="btn btn-outline-info w-20" type="button" onclick="copyInviteLink()">Copy</button>
+        </div>   
+      </div>    
+    </div>
+  </div>
+</div>
+
+<!-- WITHDRAW -->
+<div id="withdraw" class="container my-4 hidden">
+  <h3 class="mb-4">Withdraw Funds</h3>
+  
+  <div class="card p-4 mb-4">
+    <h5 class="mb-3 fw-bold"><i class="bi bi-wallet2 me-2"></i> Withdrawal Options</h5>
+    
+    <div class="mb-3">
+      <label class="fw-bold mb-2">Withdrawal Method</label>
+      <select class="form-select mb-3" id="method">
+        <option value="">Select a method</option>
+        <option>Bkash</option>
+        <option>Nagad</option>
+        <option>Binance Id</option>
+      </select>
+    </div>
+    
+    <div class="mb-3">
+      <label class="fw-bold mb-2">Amount (BDT)</label>
+      <input type="number" class="form-control mb-3" id="amount" placeholder="Enter amount">
+      <div class="d-flex justify-content-between small text-white">
+        <span>Min: <span id="minWithdraw">50</span> BDT</span>
+        <span>Available: <span id="availableBalance">0.00</span> BDT</span>
+      </div>
+    </div>
+    
+    <div class="mb-4">
+      <label class="fw-bold mb-2">Wallet/Account Number</label>
+      <input type="text" class="form-control" id="address" placeholder="Enter your wallet number">
+    </div>
+    
+    <button class="btn btn-custom w-100 py-3" onclick="withdraw()">
+      <i class="bi bi-send-check me-2"></i> Submit Withdrawal
+    </button>
+  </div>
+  
+  <div class="card p-4">
+    <h5 class="mb-3 fw-bold"><i class="bi bi-info-circle me-2"></i> Withdrawal Info</h5>
+    <ul class="list-unstyled">
+      <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i> Minimum withdrawal: <span id="minWithdrawInfo">50</span> BDT</li>
+      <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i> Processing time: 24-48 hours</li>
+      <li><i class="bi bi-check-circle text-success me-2"></i> 5৳ fees</li>
+    </ul>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div id="history" class="container my-4 hidden">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="m-0">Transaction History</h3>
+    <div class="dropdown">
+      <button class="btn btn-dark dropdown-toggle" type="button" id="historyFilter" data-bs-toggle="dropdown">
+        <i class="bi bi-funnel"></i> Filter
+      </button>
+      <ul class="dropdown-menu dropdown-menu-dark">
+        <li><a class="dropdown-item active" href="#" onclick="filterHistory('all')">All</a></li>
+        <li><a class="dropdown-item" href="#" onclick="filterHistory('withdrawal')">Withdrawals</a></li>
+        <li><a class="dropdown-item" href="#" onclick="filterHistory('earning')">Earnings</a></li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="card p-0 overflow-hidden">
+    <div class="table-responsive">
+      <table class="table table-dark table-hover mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th class="ps-4 text-nowrap">Date</th>
+            <th>Method</th>
+            <th class="">Amount</th>
+            <th>Address</th>
+            <th class="text-end pe-4 text-nowrap">Status</th>
+          </tr>
+        </thead>
+        <tbody id="historyTable">
+          <!-- Data will be inserted here -->
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="card-footer bg-dark text-center py-3">
+      <button class="btn btn-sm btn-outline-warning" onclick="loadMoreHistory()">
+        <i class="bi bi-arrow-down"></i> Load More
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE -->
+<div id="profile" class="container my-4 hidden">
+  <div class="text-center mb-4">
+    <img id="profileImg" src="https://via.placeholder.com/120" class="rounded-circle border border-warning mb-3 shadow" width="120" height="120">
+    <h3 id="profileName" class="fw-bold mb-1">User</h3>
+  </div>
+  
+  <div class="card p-4 mb-4 rounded-4 shadow-sm border-0">
+    <h5 class="mb-3 fw-bold d-flex align-items-center">
+      <i class="bi bi-person-badge me-2 text-warning"></i> Account Info
+    </h5>
+
+    <div class="row row-cols-2 g-3">
+      <div class="col">
+        <div class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow">
+          <label class="small text-muted d-block mb-1">Username</label>
+          <span id="profileUsername">user</span>
+        </div>
+      </div>
+      <div class="col">
+        <div class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow">
+          <label class="small text-muted d-block mb-1">Member Since</label>
+          <span id="memberSince">-</span>
+        </div>
+      </div>
+      <div class="col">
+        <div class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow">
+          <label class="small text-muted d-block mb-1">Promo Code</label>
+          <span id="promoCode">-</span>
+        </div>
+      </div>
+      <div class="col">
+        <div class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow">
+          <label class="small text-muted d-block mb-1">Referrals</label>
+          <span id="referralsCount">0</span> users
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card p-4 mb-4 rounded-4 shadow-sm border-0">
+    <h5 class="mb-3 fw-bold d-flex align-items-center">
+      <i class="bi bi-graph-up me-2"></i> Earnings Summary
+    </h5>
+
+    <div class="row row-cols-2 g-3">
+      <div class="col">
+        <div class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow">
+          <label class="small text-muted d-block mb-1">Total Earnings</label>
+          <span id="totalEarnings">0.00</span> BDT
+        </div>
+      </div>
+      <div class="col">
+        <div class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow">
+          <label class="small text-muted d-block mb-1">Withdrawn</label>
+          <span id="withdrawnAmount">0.00</span> BDT
+        </div>
+      </div>
+      <div class="col">
+        <div class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow">
+          <label class="small text-muted d-block mb-1">Available Balance</label>
+          <span id="availableBalanceProfile">0.00</span> BDT
+        </div>
+      </div>
+      <div class="col">
+        <div class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow">
+          <label class="small text-muted d-block mb-1">Referral Earnings</label>
+          <span id="referralEarnings">0.00</span> BDT
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SURVEY PAGE (hidden by default) -->
+<div id="surveyPage" class="container survey-container hidden">
+  <h3 class="mb-4 fw-bold text-center">✨ Available Surveys</h3>
+  <div class="row g-4" id="surveysContainer">
+    <!-- Surveys will be loaded dynamically -->
+  </div>
+  
+  <div class="text-center mt-4">
+    <button class="btn btn-outline-warning" onclick="hideSurveyPage()">
+      <i class="bi bi-arrow-left"></i> Back to Rewards
+    </button>
+  </div>
+</div>
+
+<!-- PERFECT BOTTOM NAVIGATION -->
+<div class="bottom-nav shadow-lg">
+  <a href="#" onclick="showTab('home', this)" class="active">
+    <i class="bi bi-house"></i>
+    <span>Home</span>
+  </a>
+  <a href="#" onclick="showTab('rewards', this)">
+    <i class="bi bi-cash-coin"></i>
+    <span>Earn</span>
+  </a>
+  <a href="#" onclick="showTab('withdraw', this)">
+    <i class="bi bi-wallet2"></i>
+    <span>Withdraw</span>
+  </a>
+  <a href="#" onclick="showTab('history', this)">
+    <i class="bi bi-clock-history"></i>
+    <span>History</span>
+  </a>
+  <a href="#" onclick="showTab('profile', this)">
+    <i class="bi bi-person"></i>
+    <span>Profile</span>
+  </a>
+</div>
+
+</div> <!-- End of appContent -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyDuaWMh0eIJ2tdtLxYj43ij9MGSh_Yo22M",
+    authDomain: "test-6977e.firebaseapp.com",
+    projectId: "test-6977e",
+    storageBucket: "test-6977e.firebasestorage.app",
+    messagingSenderId: "544329273038",
+    appId: "1:544329273038:web:c7a31e12bec7c80741ca9f"
+  };
+  
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
+  
+  // Initialize Telegram Web App
+  const tg = window.Telegram.WebApp;
+  tg.expand(); // full height
+  
+  // Telegram user info
+  const user = tg.initDataUnsafe?.user;
+  let userId = user ? user.id : Math.floor(Math.random() * 1000000);
+  let username = user ? (user.username || user.first_name) : "User" + userId;
+  let userPhotoUrl = user ? (user.photo_url || "https://via.placeholder.com/120") : "https://via.placeholder.com/120";
+  
+  // App state
+  let userData = null;
+  let appConfig = null;
+  let vpnRequired = true;
+  let userIP = "";
+  let deviceID = "";
+  let currentSurveyUrl = "";
+  let surveyCompleted = false;
+  
+  // Initialize the application
+  document.addEventListener("DOMContentLoaded", async function() {
+    // Get user IP and device info
+    await getUserIP();
+    getDeviceFingerprint();
+    
+    // Check if user is banned
+    const isBanned = await checkIfBanned();
+    if (isBanned) {
+      document.getElementById("bannedScreen").classList.remove("hidden");
+      document.getElementById("appContent").classList.add("hidden");
+      return;
+    }
+    
+    // Load app configuration
+    await loadAppConfig();
+    
+    // Check VPN status
+    await checkVPN();
+    
+    // Load or create user data
+    await loadUserData();
+    
+    // Update UI with user data
+    updateUI();
+    
+    // Load surveys
+    loadSurveys();
+  });
+  
+  // Get user IP address
+  async function getUserIP() {
+    try {
+      let res = await fetch("https://api.ipify.org?format=json");
+      let data = await res.json();
+      userIP = data.ip;
+    } catch (e) {
+      console.error("Failed to get IP:", e);
+      userIP = "unknown";
+    }
+  }
+  
+  // Get device fingerprint
+  function getDeviceFingerprint() {
+    let ua = navigator.userAgent;
+    let screenRes = window.screen.width + "x" + window.screen.height;
+    let lang = navigator.language;
+    
+    // Device ID (encoded)
+    deviceID = btoa(ua + screenRes + lang);
+  }
+  
+  // Check if user is banned
+  async function checkIfBanned() {
+    return new Promise((resolve) => {
+      database.ref('bannedUsers').once('value', (snapshot) => {
+        const bannedUsers = snapshot.val() || [];
+        resolve(bannedUsers.includes(userId.toString()));
+      });
+    });
+  }
+  
+  // Load app configuration from Firebase
+  async function loadAppConfig() {
+    return new Promise((resolve) => {
+      database.ref('appConfig').once('value', (snapshot) => {
+        appConfig = snapshot.val();
+        
+        if (!appConfig) {
+          // Default configuration if none exists
+          appConfig = {
+            dailyLimit: 60,
+            minWithdraw: 50,
+            logo: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
+            cover: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
+            surveys: [
+              { 
+                id: 1, 
+                name: "Tap_Cash", 
+                reward: 0.30, 
+                image: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
+                url: "https://example.com/survey1" 
+              },
+              { 
+                id: 2, 
+                name: "Survey 2", 
+                reward: 0.50, 
+                image: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
+                url: "https://example.com/survey2" 
+              },
+              { 
+                id: 3, 
+                name: "Survey 3", 
+                reward: 1.00, 
+                image: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
+                url: "https://example.com/survey3" 
+              },
+              { 
+                id: 4, 
+                name: "Survey 4", 
+                reward: 2.00, 
+                image: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
+                url: "https://example.com/survey4" 
+              }
+            ],
+            vpnRequired: true,
+            promoCodes: {
+              "WELCOME10": { value: 10, used: false },
+              "BONUS5": { value: 5, used: false }
+            }
+          };
+          
+          // Save default config to Firebase
+          database.ref('appConfig').set(appConfig);
+        }
+        
+        // Apply app configuration
+        document.getElementById("logoImg").src = appConfig.logo;
+        document.getElementById("coverImg").src = appConfig.cover;
+        document.getElementById("dailyLimit").textContent = appConfig.dailyLimit;
+        document.getElementById("dailyLimitText").textContent = appConfig.dailyLimit;
+        document.getElementById("minWithdraw").textContent = appConfig.minWithdraw;
+        document.getElementById("minWithdrawInfo").textContent = appConfig.minWithdraw;
+        
+        vpnRequired = appConfig.vpnRequired !== undefined ? appConfig.vpnRequired : true;
+        
+        resolve();
+      });
+    });
+  }
+  
+  // Load user data from Firebase or create new user
+  async function loadUserData() {
+    return new Promise((resolve) => {
+      database.ref('users/' + userId).once('value', (snapshot) => {
+        if (snapshot.exists()) {
+          userData = snapshot.val();
+          
+          // Check if user already exists with same IP or device
+          if (!userData.ip || !userData.deviceID) {
+            // Update with IP and device info for existing users
+            userData.ip = userIP;
+            userData.deviceID = deviceID;
+            database.ref('users/' + userId).update({
+              ip: userIP,
+              deviceID: deviceID
+            });
+          } else if (userData.ip !== userIP || userData.deviceID !== deviceID) {
+            // Check for duplicate accounts
+            checkForDuplicateAccounts();
+          }
+        } else {
+          // Check if this IP or device already has an account
+          checkForDuplicateAccounts(true);
+          
+          // Create new user with default values
+          const joinDate = new Date().toISOString().split('T')[0];
+          const promoCode = 'ML' + Math.random().toString(36).substring(2, 8).toUpperCase();
+          
+          userData = {
+            username: username,
+            photoUrl: userPhotoUrl,
+            joinDate: joinDate,
+            promoCode: promoCode,
+            balance: 0.00,
+            totalEarnings: 0.00,
+            withdrawn: 0.00,
+            referralEarnings: 0.00,
+            completedTasks: 0,
+            referrals: 0,
+            referralCode: 'REF' + Math.random().toString(36).substring(2, 8).toUpperCase(),
+            history: [],
+            ip: userIP,
+            deviceID: deviceID,
+            usedPromoCodes: []
+          };
+          
+          // Save new user to Firebase
+          database.ref('users/' + userId).set(userData);
+        }
+        
+        // Update username in UI
+        document.getElementById("username").textContent = userData.username;
+        document.getElementById("profileName").textContent = userData.username;
+        document.getElementById("profileUsername").textContent = userData.username;
+        document.getElementById("profileImg").src = userData.photoUrl;
+        document.getElementById("memberSince").textContent = userData.joinDate;
+        document.getElementById("promoCode").textContent = userData.promoCode;
+        document.getElementById("referralsCount").textContent = userData.referrals;
+        document.getElementById("referralsCountHome").textContent = userData.referrals;
+        document.getElementById("inviteLink").value = `https://yourwebsite.com/invite?ref=${userData.referralCode}`;
+        
+        resolve();
+      });
+    });
+  }
+  
+  // Check for duplicate accounts
+  async function checkForDuplicateAccounts(isNewUser = false) {
+    database.ref('users').once('value', (snapshot) => {
+      const users = snapshot.val();
+      let duplicateFound = false;
+      
+      if (users) {
+        Object.keys(users).forEach(key => {
+          if (key !== userId.toString()) {
+            const user = users[key];
+            if (user.ip === userIP || user.deviceID === deviceID) {
+              duplicateFound = true;
+              
+              if (isNewUser) {
+                // Prevent creating new account
+                showNotification("Error", "You already have an account with this device/IP", "danger");
+                document.getElementById("bannedScreen").classList.remove("hidden");
+                document.getElementById("appContent").classList.add("hidden");
+                
+                // Add to banned users
+                database.ref('bannedUsers').once('value', (bannedSnapshot) => {
+                  const bannedUsers = bannedSnapshot.val() || [];
+                  if (!bannedUsers.includes(userId.toString())) {
+                    bannedUsers.push(userId.toString());
+                    database.ref('bannedUsers').set(bannedUsers);
+                  }
+                });
+                
+                return;
+              }
+            }
+          }
+        });
+      }
+      
+      if (duplicateFound && !isNewUser) {
+        showNotification("Warning", "Multiple accounts detected from same device/IP", "warning");
+      }
+    });
+  }
+  
+  // Check VPN status
+  async function checkVPN() {
+    try {
+      document.getElementById("vpnStatus").textContent = "Checking your connection...";
+      
+      // Get public IP
+      let ipRes = await fetch("https://api64.ipify.org?format=json");
+      let ipData = await ipRes.json();
+
+      // Get IP details
+      let geoRes = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
+      let geoData = await geoRes.json();
+
+      document.getElementById("vpnStatus").textContent = `Your country: ${geoData.country_name}`;
+
+      if (vpnRequired) {
+        // VPN required mode
+        if (geoData.country === "BD") {
+          document.getElementById("vpnAlert").classList.remove("d-none");
+          document.getElementById("vpnSuccess").classList.add("d-none");
+          document.getElementById("vpnOffAlert").classList.add("d-none");
+        } else {
+          document.getElementById("vpnAlert").classList.add("d-none");
+          document.getElementById("vpnSuccess").classList.remove("d-none");
+          document.getElementById("vpnOffAlert").classList.add("d-none");
+          
+          // Hide VPN check and show home page after successful verification
+          setTimeout(() => {
+            document.getElementById("vpnCheck").classList.add("hidden");
+            document.getElementById("home").classList.remove("hidden");
+          }, 2000);
+        }
+      } else {
+        // VPN not required mode
+        if (geoData.country !== "BD") {
+          document.getElementById("vpnOffAlert").classList.remove("d-none");
+          document.getElementById("vpnAlert").classList.add("d-none");
+          document.getElementById("vpnSuccess").classList.add("d-none");
+        } else {
+          document.getElementById("vpnOffAlert").classList.add("d-none");
+          document.getElementById("vpnAlert").classList.add("d-none");
+          document.getElementById("vpnSuccess").classList.remove("d-none");
+          
+          // Hide VPN check and show home page
+          setTimeout(() => {
+            document.getElementById("vpnCheck").classList.add("hidden");
+            document.getElementById("home").classList.remove("hidden");
+          }, 2000);
+        }
+      }
+    } catch (e) {
+      document.getElementById("vpnStatus").textContent = "Failed to check IP (API error)";
+      console.error("VPN check error:", e);
+    }
+  }
+  
+  // Update UI with user data
+  function updateUI() {
+    if (!userData) return;
+    
+    // Format balance with commas
+    const formattedBalance = userData.balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const formattedTotalEarnings = userData.totalEarnings.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const formattedWithdrawn = userData.withdrawn.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const formattedReferralEarnings = userData.referralEarnings.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    
+    document.getElementById("balance").innerText = formattedBalance;
+    document.getElementById("availableBalance").innerText = formattedBalance;
+    document.getElementById("availableBalanceProfile").innerText = formattedBalance;
+    document.getElementById("totalEarningsHome").innerText = formattedTotalEarnings;
+    document.getElementById("totalEarnings").innerText = formattedTotalEarnings;
+    document.getElementById("withdrawnAmount").innerText = formattedWithdrawn;
+    document.getElementById("referralEarnings").innerText = formattedReferralEarnings;
+    document.getElementById("completed").innerText = userData.completedTasks;
+    document.getElementById("remaining").innerText = appConfig.dailyLimit - userData.completedTasks;
+
+    let percent = Math.round((userData.completedTasks / appConfig.dailyLimit) * 100);
+    document.getElementById("progressBar").style.width = percent + "%";
+    document.getElementById("progressBar").innerText = percent + "%";
+
+    // Update history table
+    filterHistory('all');
+  }
+  
+  // Save user data to Firebase
+  function saveUserData() {
+    database.ref('users/' + userId).set(userData);
+  }
+  
+  function showTab(tab, el) {
+    // Add fade-out effect to current tab
+    const currentTab = document.querySelector(".container:not(.hidden)");
+    if (currentTab) {
+      currentTab.style.opacity = 0;
+      setTimeout(() => {
+        currentTab.classList.add("hidden");
+        
+        // Show new tab
+        document.querySelectorAll("div.container").forEach(div => div.classList.add("hidden"));
+        const newTab = document.getElementById(tab);
+        newTab.classList.remove("hidden");
+        newTab.style.opacity = 1;
+        
+        // Update active nav item
+        document.querySelectorAll(".bottom-nav a").forEach(a => a.classList.remove("active"));
+        el.classList.add("active");
+      }, 300);
+    }
+  }
+
+  async function watchAd() {
+    if (userData.completedTasks < appConfig.dailyLimit) {
+      try {
+        // Disable button to prevent multiple clicks
+        const adButton = document.querySelector('.btn-custom');
+        const originalText = adButton.innerHTML;
+        adButton.disabled = true;
+        adButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
+        
+        // Load GigaPub Ad and wait for completion
+        await window.showGiga();
+        
+        // Update user data
+        userData.completedTasks++;
+        userData.balance += 0.2;
+        userData.totalEarnings += 0.2;
+        
+        // Add to history
+        userData.history.unshift({ 
+          type: "earning",
+          method: "Ad View", 
+          amount: "0.20", 
+          address: "Ad Reward", 
+          status: "Completed",
+          date: new Date().toLocaleDateString()
+        });
+        
+        // Save to Firebase
+        saveUserData();
+        
+        // Update UI
+        updateUI();
+        showNotification("Success!", "You earned 0.20 BDT!", "success");
+        
+      } catch(e) {
+        console.log("Ad failed or closed before completion", e);
+        showNotification("Error", "Ad not completed. Please try again.", "danger");
+      } finally {
+        // Re-enable button
+        const adButton = document.querySelector('.btn-custom');
+        adButton.disabled = false;
+        adButton.innerHTML = '<i class="bi bi-play-circle me-2"></i> Watch Ad (+0.20 BDT)';
+      }
+    } else {
+      showNotification("Completed!", "All tasks completed for today!", "info");
+    }
+  }
+  
+  function showSurveyPage() {
+    document.querySelectorAll("div.container").forEach(div => div.classList.add("hidden"));
+    document.getElementById("surveyPage").classList.remove("hidden");
+    document.querySelectorAll(".bottom-nav a").forEach(a => a.classList.remove("active"));
+  }
+  
+  function hideSurveyPage() {
+    // If a survey was started but not completed, don't award anything
+    if (currentSurveyUrl && !surveyCompleted) {
+      showNotification("Info", "Survey was not completed. No reward awarded.", "info");
+    }
+    
+    // Reset survey state
+    currentSurveyUrl = "";
+    surveyCompleted = false;
+    
+    document.getElementById("surveyPage").classList.add("hidden");
+    document.getElementById("rewards").classList.remove("hidden");
+    document.querySelector('.bottom-nav a[onclick*="rewards"]').classList.add("active");
+  }
+  
+  function loadSurveys() {
+    const surveysContainer = document.getElementById("surveysContainer");
+    surveysContainer.innerHTML = "";
+    
+    if (!appConfig || !appConfig.surveys) return;
+    
+    appConfig.surveys.forEach(survey => {
+      const surveyHTML = `
+        <div class="col-6">
+          <div class="card survey-card h-100">
+            <img src="${survey.image}" class="survey-img" alt="${survey.name}">
+            <div class="card-body">
+              <h5 class="card-title">${survey.name}</h5>
+              <p class="card-text text-success">Reward: BDT ${survey.reward.toFixed(2)}</p>
+              <div class="mb-3">
+                <label class="form-label">Survey URL</label>
+                <input type="text" class="form-control" value="${survey.url}" readonly>
+              </div>
+              <div class="d-flex gap-2 mt-auto">
+                <button class="btn survey-btn-secondary flex-fill" onclick="checkSurvey(${survey.id})">Check</button>
+                <button class="btn survey-btn-warning flex-fill" onclick="startSurvey(${survey.id})">Start</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      surveysContainer.innerHTML += surveyHTML;
+    });
+  }
+  
+  function checkSurvey(surveyId) {
+    const survey = appConfig.surveys.find(s => s.id === surveyId);
+    if (!survey) return;
+    
+    // Open the survey URL in a new tab
+    window.open(survey.url, '_blank');
+  }
+  
+  function startSurvey(surveyId) {
+    const survey = appConfig.surveys.find(s => s.id === surveyId);
+    if (!survey) return;
+    
+    if (userData.completedTasks < appConfig.dailyLimit) {
+      // Store the current survey URL
+      currentSurveyUrl = survey.url;
+      surveyCompleted = false;
+      
+      // Open the survey URL in a new tab
+      window.open(survey.url, '_blank');
+      
+      // Show confirmation dialog
+      const confirmed = confirm("Please complete the survey in the new tab. Click OK only after you have completed the survey to claim your reward.");
+      
+      if (confirmed) {
+        completeSurvey(surveyId);
+      } else {
+        showNotification("Info", "Please complete the survey to get your reward.", "info");
+      }
+    } else {
+      showNotification("Completed!", "All tasks completed for today!", "info");
+    }
+  }
+  
+  async function completeSurvey(surveyId) {
+    const survey = appConfig.surveys.find(s => s.id === surveyId);
+    if (!survey) return;
+    
+    // Update user data
+    userData.completedTasks++;
+    userData.balance += survey.reward;
+    userData.totalEarnings += survey.reward;
+    
+    // Add to history
+    userData.history.unshift({ 
+      type: "earning",
+      method: "Survey", 
+      amount: survey.reward.toFixed(2), 
+      address: survey.name, 
+      status: "Completed",
+      date: new Date().toLocaleDateString()
+    });
+    
+    // Mark survey as completed
+    surveyCompleted = true;
+    
+    // Save to Firebase
+    saveUserData();
+    
+    // Update UI
+    updateUI();
+    showNotification("Success!", `You earned ${survey.reward.toFixed(2)} BDT from survey!`, "success");
+  }
+
+  async function withdraw() {
+    let method = document.getElementById("method").value;
+    let amount = parseFloat(document.getElementById("amount").value);
+    let address = document.getElementById("address").value;
+
+    if (!method || !amount || !address) {
+      return showNotification("Error", "Please fill all fields!", "danger");
+    }
+    
+    if (amount < appConfig.minWithdraw) {
+      return showNotification("Error", `Minimum withdrawal is ${appConfig.minWithdraw} BDT!`, "danger");
+    }
+    
+    if (amount > userData.balance) {
+      return showNotification("Error", "Not enough balance!", "danger");
+    }
+
+    // Update user data
+    userData.balance -= amount;
+    userData.withdrawn += amount;
+    
+    // Add to history
+    userData.history.unshift({ 
+      type: "withdrawal",
+      method, 
+      amount: amount.toFixed(2), 
+      address, 
+      status: "Pending",
+      date: new Date().toLocaleDateString()
+    });
+    
+    // Save to Firebase
+    saveUserData();
+    
+    // Update UI
+    updateUI();
+    showNotification("Success!", "Withdrawal request submitted!", "success");
+    
+    // Clear form
+    document.getElementById("method").value = "";
+    document.getElementById("amount").value = "";
+    document.getElementById("address").value = "";
+  }
+  
+  function copyInviteLink() {
+    const copyText = document.getElementById("inviteLink");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); // For mobile devices
+    navigator.clipboard.writeText(copyText.value)
+      .then(() => {
+        showNotification("Success", "Invite link copied!", "success");
+      })
+      .catch(err => {
+        console.error("Failed to copy: ", err);
+      });
+  }
+  
+  function redeemPromoCode() {
+    const promoCode = document.getElementById("promoCodeInput").value.trim().toUpperCase();
+    
+    if (!promoCode) {
+      return showNotification("Error", "Please enter a promo code!", "danger");
+    }
+    
+    // Check if user already used this promo code
+    if (userData.usedPromoCodes && userData.usedPromoCodes.includes(promoCode)) {
+      return showNotification("Error", "You have already used this promo code!", "danger");
+    }
+    
+    // Check if promo code exists in app config
+    if (!appConfig.promoCodes || !appConfig.promoCodes[promoCode]) {
+      return showNotification("Error", "Invalid promo code!", "danger");
+    }
+    
+    const promoCodeData = appConfig.promoCodes[promoCode];
+    
+    // Check if promo code has already been used
+    if (promoCodeData.used) {
+      return showNotification("Error", "This promo code has already been used!", "danger");
+    }
+    
+    // Apply promo code value
+    const reward = promoCodeData.value;
+    userData.balance += reward;
+    userData.totalEarnings += reward;
+    
+    // Add to used promo codes
+    if (!userData.usedPromoCodes) {
+      userData.usedPromoCodes = [];
+    }
+    userData.usedPromoCodes.push(promoCode);
+    
+    // Mark promo code as used in app config
+    appConfig.promoCodes[promoCode].used = true;
+    database.ref('appConfig').update({
+      [`promoCodes/${promoCode}/used`]: true
+    });
+    
+    // Add to history
+    userData.history.unshift({ 
+      type: "earning",
+      method: "Promo Code", 
+      amount: reward.toFixed(2), 
+      address: promoCode, 
+      status: "Completed",
+      date: new Date().toLocaleDateString()
+    });
+    
+    // Save to Firebase
+    saveUserData();
+    
+    // Update UI
+    updateUI();
+    showNotification("Success!", `You received ${reward} BDT from promo code ${promoCode}!`, "success");
+    
+    // Clear input
+    document.getElementById("promoCodeInput").value = "";
+  }
+  
+  function filterHistory(type) {
+    let table = document.getElementById("historyTable");
+    table.innerHTML = "";
+    
+    if (!userData || !userData.history) return;
+    
+    let filteredData = userData.history;
+    if (type !== 'all') {
+      filteredData = userData.history.filter(tx => tx.type === type);
+    }
+    
+    filteredData.slice(0, 5).forEach(tx => {
+      let statusClass = "";
+      if (tx.status === "Pending") statusClass = "text-warning";
+      if (tx.status === "Completed") statusClass = "text-success";
+      if (tx.status === "Failed") statusClass = "text-danger";
+      if (tx.status === "Rejected") statusClass = "text-danger";
+      
+      let row = `
+        <tr>
+          <td class="ps-4">${tx.date || "Today"}</td>
+          <td>${tx.method}</td>
+          <td>${tx.amount} ৳</td>
+          <td>${tx.address.substring(0, 4)}...${tx.address.slice(-4)}</td>
+          <td class="text-end pe-4 ${statusClass}">${tx.status}</td>
+        </tr>
+      `;
+      table.innerHTML += row;
+    });
+  }
+  
+  function loadMoreHistory() {
+    showNotification("Info", "Loading more transactions...", "info");
+  }
+  
+  function showNotification(title, message, type) {
+    const notification = document.createElement("div");
+    notification.className = `alert alert-${type} floating-notification alert-dismissible shadow`;
+    notification.innerHTML = `
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+      <strong>${title}</strong> ${message}
+    `;
+    
+    document.getElementById("notificationArea").appendChild(notification);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+      notification.classList.add("fade");
+      setTimeout(() => notification.remove(), 300);
+    }, 5000);
+  }
+</script>
+</body>
+</html>
