@@ -3,15 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Money Land</title>
+  <title>Money Land - Fixed Ad System</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-  <!-- GigaPub Ads -->
-  <script src="https://ad.gigapub.tech/script?id=1872"></script>
   <style>
     :root {
       --primary-color: #ffd700;
@@ -433,6 +428,70 @@
       object-fit: contain;
     }
     
+    /* Ad Container Styles */
+    .ad-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .ad-content {
+      background: var(--card-bg);
+      border-radius: 20px;
+      width: 90%;
+      max-width: 400px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    
+    .ad-header {
+      background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+      color: #000;
+      padding: 15px;
+      text-align: center;
+      font-weight: bold;
+    }
+    
+    .ad-body {
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .ad-timer {
+      font-size: 18px;
+      margin: 15px 0;
+      color: var(--primary-color);
+    }
+    
+    .ad-progress {
+      height: 10px;
+      background: #333;
+      border-radius: 5px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    
+    .ad-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    
+    .ad-actions {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+    
     @media (max-width: 576px) {
       .cover-img {
         height: 150px;
@@ -454,6 +513,10 @@
       .survey-card .card-body {
         height: calc(100% - 120px);
       }
+      
+      .ad-content {
+        width: 95%;
+      }
     }
   </style>
 </head>
@@ -470,6 +533,33 @@
       <p>If you believe this is a mistake, please contact our support team:</p>
       <p class="fw-bold">Email: support@moneylnd.com</p>
       <p class="fw-bold">Telegram: @moneylnd_support</p>
+    </div>
+  </div>
+</div>
+
+<!-- AD CONTAINER (hidden by default) -->
+<div id="adContainer" class="ad-container hidden">
+  <div class="ad-content">
+    <div class="ad-header">
+      <i class="bi bi-play-circle-fill me-2"></i> Advertisement
+    </div>
+    <div class="ad-body">
+      <h4>Please watch this ad</h4>
+      <p>You will earn <span class="fw-bold">0.20 BDT</span> after completing this ad</p>
+      
+      <div class="ad-timer">
+        <i class="bi bi-clock me-2"></i>
+        <span id="adTimer">15</span> seconds remaining
+      </div>
+      
+      <div class="ad-progress">
+        <div id="adProgressBar" class="ad-progress-bar"></div>
+      </div>
+      
+      <div class="ad-actions">
+        <button id="cancelAdBtn" class="btn btn-outline-danger">Cancel</button>
+        <button id="completeAdBtn" class="btn btn-custom" disabled>Complete Ad</button>
+      </div>
     </div>
   </div>
 </div>
@@ -888,7 +978,8 @@
   let selectedWithdrawMethod = "";
   let dailyBonusAvailable = false;
   let dailyBonusTimer = null;
-  let gigapubInitialized = false;
+  let adTimer = null;
+  let adSecondsRemaining = 15;
   
   // Initialize the application
   document.addEventListener("DOMContentLoaded", async function() {
@@ -922,35 +1013,10 @@
     // Check daily bonus status
     checkDailyBonus();
     
-    // Initialize Gigapub Ads
-    initializeGigapubAds();
+    // Set up ad event listeners
+    document.getElementById('cancelAdBtn').addEventListener('click', cancelAd);
+    document.getElementById('completeAdBtn').addEventListener('click', completeAd);
   });
-  
-  // Initialize Gigapub Ads
-  function initializeGigapubAds() {
-    // Check if Gigapub is available
-    if (typeof gigapub !== 'undefined') {
-      try {
-        // Configure Gigapub
-        gigapub.configure({
-          userId: userId.toString(),
-          onInit: function() {
-            console.log("Gigapub Ads initialized successfully");
-            gigapubInitialized = true;
-          },
-          onError: function(error) {
-            console.error("Gigapub Ads initialization error:", error);
-            showNotification("Ad Error", "Failed to initialize ads. Please refresh the page.", "danger");
-          }
-        });
-      } catch (e) {
-        console.error("Error initializing Gigapub:", e);
-      }
-    } else {
-      console.error("Gigapub Ads script not loaded");
-      showNotification("Ad Error", "Ad service not available. Please try again later.", "danger");
-    }
-  }
   
   // Get user IP address
   async function getUserIP() {
@@ -1282,80 +1348,62 @@
       return;
     }
     
-    // Check if Gigapub is initialized
-    if (!gigapubInitialized || typeof gigapub === 'undefined') {
-      showNotification("Error", "Ad service not ready. Please try again.", "danger");
-      return;
-    }
+    // Show the ad container
+    document.getElementById("adContainer").classList.remove("hidden");
     
-    try {
-      // Disable button to prevent multiple clicks
-      const adButton = document.querySelector('.btn-custom');
-      const originalText = adButton.innerHTML;
-      adButton.disabled = true;
-      adButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
+    // Reset ad timer
+    adSecondsRemaining = 15;
+    document.getElementById("adTimer").textContent = adSecondsRemaining;
+    document.getElementById("adProgressBar").style.width = "0%";
+    document.getElementById("completeAdBtn").disabled = true;
+    
+    // Start the ad timer
+    adTimer = setInterval(() => {
+      adSecondsRemaining--;
+      document.getElementById("adTimer").textContent = adSecondsRemaining;
       
-      // Show ad with Gigapub
-      gigapub.showAd({
-        onAdStarted: function() {
-          console.log("Ad started");
-        },
-        onAdCompleted: function() {
-          console.log("Ad completed successfully");
-          
-          // Update user data only after ad is fully completed
-          userData.completedTasks++;
-          userData.balance += 0.2;
-          userData.totalEarnings += 0.2;
-          
-          // Add to history
-          userData.history.unshift({ 
-            type: "earning",
-            method: "Ad View", 
-            amount: "0.20", 
-            address: "Ad Reward", 
-            status: "Completed",
-            date: new Date().toLocaleDateString()
-          });
-          
-          // Save to Firebase
-          saveUserData();
-          
-          // Update UI
-          updateUI();
-          showNotification("Success!", "You earned 0.20 BDT!", "success");
-          
-          // Re-enable button
-          adButton.disabled = false;
-          adButton.innerHTML = '<i class="bi bi-play-circle me-2"></i> Watch Ad (+0.20 BDT)';
-        },
-        onAdError: function(error) {
-          console.error("Ad error:", error);
-          showNotification("Error", "Ad failed to load. Please try again.", "danger");
-          
-          // Re-enable button
-          adButton.disabled = false;
-          adButton.innerHTML = '<i class="bi bi-play-circle me-2"></i> Watch Ad (+0.20 BDT)';
-        },
-        onAdSkipped: function() {
-          console.log("Ad was skipped");
-          showNotification("Info", "Ad was skipped. No reward awarded.", "info");
-          
-          // Re-enable button
-          adButton.disabled = false;
-          adButton.innerHTML = '<i class="bi bi-play-circle me-2"></i> Watch Ad (+0.20 BDT)';
-        }
-      });
+      // Update progress bar
+      const progress = ((15 - adSecondsRemaining) / 15) * 100;
+      document.getElementById("adProgressBar").style.width = progress + "%";
       
-    } catch(e) {
-      console.error("Ad failed to load:", e);
-      showNotification("Error", "Ad not available. Please try again.", "danger");
-      
-      // Re-enable button
-      const adButton = document.querySelector('.btn-custom');
-      adButton.disabled = false;
-      adButton.innerHTML = '<i class="bi bi-play-circle me-2"></i> Watch Ad (+0.20 BDT)';
-    }
+      if (adSecondsRemaining <= 0) {
+        clearInterval(adTimer);
+        document.getElementById("completeAdBtn").disabled = false;
+      }
+    }, 1000);
+  }
+  
+  function cancelAd() {
+    clearInterval(adTimer);
+    document.getElementById("adContainer").classList.add("hidden");
+    showNotification("Info", "Ad viewing cancelled. No reward awarded.", "info");
+  }
+  
+  function completeAd() {
+    clearInterval(adTimer);
+    document.getElementById("adContainer").classList.add("hidden");
+    
+    // Update user data
+    userData.completedTasks++;
+    userData.balance += 0.2;
+    userData.totalEarnings += 0.2;
+    
+    // Add to history
+    userData.history.unshift({ 
+      type: "earning",
+      method: "Ad View", 
+      amount: "0.20", 
+      address: "Ad Reward", 
+      status: "Completed",
+      date: new Date().toLocaleDateString()
+    });
+    
+    // Save to Firebase
+    saveUserData();
+    
+    // Update UI
+    updateUI();
+    showNotification("Success!", "You earned 0.20 BDT!", "success");
   }
   
   function showSurveyPage() {
