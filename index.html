@@ -888,6 +888,7 @@
   let selectedWithdrawMethod = "";
   let dailyBonusAvailable = false;
   let dailyBonusTimer = null;
+  let gigapubInitialized = false;
   
   // Initialize the application
   document.addEventListener("DOMContentLoaded", async function() {
@@ -920,7 +921,36 @@
     
     // Check daily bonus status
     checkDailyBonus();
+    
+    // Initialize Gigapub Ads
+    initializeGigapubAds();
   });
+  
+  // Initialize Gigapub Ads
+  function initializeGigapubAds() {
+    // Check if Gigapub is available
+    if (typeof gigapub !== 'undefined') {
+      try {
+        // Configure Gigapub
+        gigapub.configure({
+          userId: userId.toString(),
+          onInit: function() {
+            console.log("Gigapub Ads initialized successfully");
+            gigapubInitialized = true;
+          },
+          onError: function(error) {
+            console.error("Gigapub Ads initialization error:", error);
+            showNotification("Ad Error", "Failed to initialize ads. Please refresh the page.", "danger");
+          }
+        });
+      } catch (e) {
+        console.error("Error initializing Gigapub:", e);
+      }
+    } else {
+      console.error("Gigapub Ads script not loaded");
+      showNotification("Ad Error", "Ad service not available. Please try again later.", "danger");
+    }
+  }
   
   // Get user IP address
   async function getUserIP() {
@@ -1247,50 +1277,84 @@
   }
 
   async function watchAd() {
-    if (userData.completedTasks < appConfig.dailyLimit) {
-      try {
-        // Disable button to prevent multiple clicks
-        const adButton = document.querySelector('.btn-custom');
-        const originalText = adButton.innerHTML;
-        adButton.disabled = true;
-        adButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
-        
-        // Simulate ad loading (replace with actual GigaPub implementation)
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Update user data
-        userData.completedTasks++;
-        userData.balance += 0.2;
-        userData.totalEarnings += 0.2;
-        
-        // Add to history
-        userData.history.unshift({ 
-          type: "earning",
-          method: "Ad View", 
-          amount: "0.20", 
-          address: "Ad Reward", 
-          status: "Completed",
-          date: new Date().toLocaleDateString()
-        });
-        
-        // Save to Firebase
-        saveUserData();
-        
-        // Update UI
-        updateUI();
-        showNotification("Success!", "You earned 0.20 BDT!", "success");
-        
-      } catch(e) {
-        console.log("Ad failed or closed before completion", e);
-        showNotification("Error", "Ad not completed. Please try again.", "danger");
-      } finally {
-        // Re-enable button
-        const adButton = document.querySelector('.btn-custom');
-        adButton.disabled = false;
-        adButton.innerHTML = '<i class="bi bi-play-circle me-2"></i> Watch Ad (+0.20 BDT)';
-      }
-    } else {
+    if (userData.completedTasks >= appConfig.dailyLimit) {
       showNotification("Completed!", "All tasks completed for today!", "info");
+      return;
+    }
+    
+    // Check if Gigapub is initialized
+    if (!gigapubInitialized || typeof gigapub === 'undefined') {
+      showNotification("Error", "Ad service not ready. Please try again.", "danger");
+      return;
+    }
+    
+    try {
+      // Disable button to prevent multiple clicks
+      const adButton = document.querySelector('.btn-custom');
+      const originalText = adButton.innerHTML;
+      adButton.disabled = true;
+      adButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
+      
+      // Show ad with Gigapub
+      gigapub.showAd({
+        onAdStarted: function() {
+          console.log("Ad started");
+        },
+        onAdCompleted: function() {
+          console.log("Ad completed successfully");
+          
+          // Update user data only after ad is fully completed
+          userData.completedTasks++;
+          userData.balance += 0.2;
+          userData.totalEarnings += 0.2;
+          
+          // Add to history
+          userData.history.unshift({ 
+            type: "earning",
+            method: "Ad View", 
+            amount: "0.20", 
+            address: "Ad Reward", 
+            status: "Completed",
+            date: new Date().toLocaleDateString()
+          });
+          
+          // Save to Firebase
+          saveUserData();
+          
+          // Update UI
+          updateUI();
+          showNotification("Success!", "You earned 0.20 BDT!", "success");
+          
+          // Re-enable button
+          adButton.disabled = false;
+          adButton.innerHTML = '<i class="bi bi-play-circle me-2"></i> Watch Ad (+0.20 BDT)';
+        },
+        onAdError: function(error) {
+          console.error("Ad error:", error);
+          showNotification("Error", "Ad failed to load. Please try again.", "danger");
+          
+          // Re-enable button
+          adButton.disabled = false;
+          adButton.innerHTML = '<i class="bi bi-play-circle me-2"></i> Watch Ad (+0.20 BDT)';
+        },
+        onAdSkipped: function() {
+          console.log("Ad was skipped");
+          showNotification("Info", "Ad was skipped. No reward awarded.", "info");
+          
+          // Re-enable button
+          adButton.disabled = false;
+          adButton.innerHTML = '<i class="bi bi-play-circle me-2"></i> Watch Ad (+0.20 BDT)';
+        }
+      });
+      
+    } catch(e) {
+      console.error("Ad failed to load:", e);
+      showNotification("Error", "Ad not available. Please try again.", "danger");
+      
+      // Re-enable button
+      const adButton = document.querySelector('.btn-custom');
+      adButton.disabled = false;
+      adButton.innerHTML = '<i class="bi bi-play-circle me-2"></i> Watch Ad (+0.20 BDT)';
     }
   }
   
