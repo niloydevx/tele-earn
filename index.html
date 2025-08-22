@@ -436,59 +436,6 @@
       font-size: 1.2rem;
     }
     
-    /* Ad Modal Styles */
-    .ad-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.9);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 2000;
-      backdrop-filter: blur(10px);
-    }
-    
-    .ad-content {
-      background: var(--card-bg);
-      border-radius: 20px;
-      padding: 2rem;
-      text-align: center;
-      max-width: 90%;
-      width: 400px;
-      box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
-    }
-    
-    .ad-timer {
-      font-size: 2rem;
-      font-weight: bold;
-      color: var(--primary-color);
-      margin: 1.5rem 0;
-    }
-    
-    .ad-progress {
-      height: 10px;
-      background-color: #333;
-      border-radius: 5px;
-      overflow: hidden;
-      margin-bottom: 1.5rem;
-    }
-    
-    .ad-progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
-      width: 0%;
-      transition: width 0.3s linear;
-    }
-    
-    .ad-skip {
-      margin-top: 1rem;
-      color: #999;
-      font-size: 0.9rem;
-    }
-    
     /* Responsive adjustments */
     @media (max-width: 576px) {
       .cover-img {
@@ -519,14 +466,6 @@
       #vpnCheck .vpn-check-container {
         padding: 1.5rem 1rem;
       }
-      
-      .ad-content {
-        padding: 1.5rem;
-      }
-      
-      .ad-timer {
-        font-size: 1.5rem;
-      }
     }
   </style>
 </head>
@@ -543,27 +482,6 @@
       <p>If you believe this is a mistake, please contact our support team:</p>
       <p class="fw-bold">Email: support@moneylnd.com</p>
       <p class="fw-bold">Telegram: @moneylnd_support</p>
-    </div>
-  </div>
-</div>
-
-<!-- AD VIEWING MODAL (hidden by default) -->
-<div id="adModal" class="ad-modal hidden">
-  <div class="ad-content">
-    <h3 class="mb-3">Watch Ad to Earn</h3>
-    <p>Please watch the full ad to receive your reward</p>
-    
-    <div class="ad-timer" id="adTimer">15</div>
-    
-    <div class="ad-progress">
-      <div class="ad-progress-bar" id="adProgressBar"></div>
-    </div>
-    
-    <div class="ad-skip" id="adSkipMessage">Skipping will cancel the reward</div>
-    
-    <div class="mt-4">
-      <button class="btn btn-danger me-2" id="cancelAdBtn">Cancel</button>
-      <button class="btn btn-success" id="completeAdBtn" disabled>Complete Ad</button>
     </div>
   </div>
 </div>
@@ -960,11 +878,6 @@ let currentSurvey = null;
 let surveyWindow = null;
 let surveyCheckInterval = null;
 
-// Ad viewing state
-let adTimer = null;
-let adSecondsRemaining = 15;
-let adCompleted = false;
-
 // Initialize the application
 document.addEventListener("DOMContentLoaded", async function() {
   // Get user IP and device info
@@ -995,11 +908,7 @@ document.addEventListener("DOMContentLoaded", async function() {
   loadSurveys();
   
   // Add event listener to watch ad button
-  document.getElementById("watchAdBtn").addEventListener("click", startAdViewing);
-  
-  // Add event listeners for ad modal buttons
-  document.getElementById("cancelAdBtn").addEventListener("click", cancelAdViewing);
-  document.getElementById("completeAdBtn").addEventListener("click", completeAdViewing);
+  document.getElementById("watchAdBtn").addEventListener("click", watchAd);
 });
 
 // Get user IP address
@@ -1198,7 +1107,7 @@ async function checkForDuplicateAccounts(isNewUser = false) {
     }
     
     if (duplicateFound && !isNewUser) {
-      showNotification("Warning", "Multiple accounts detected from same device/IP", "warning");
+      showNotification("Warning", "Multiple accounts detected", "warning");
     }
   });
 }
@@ -1321,90 +1230,58 @@ function showTab(tab, el) {
   }
 }
 
-// Start ad viewing process
-function startAdViewing() {
-  if (userData.completedTasks >= appConfig.dailyLimit) {
+async function watchAd() {
+  if (userData.completedTasks < appConfig.dailyLimit) {
+    try {
+      // Disable button to prevent multiple clicks
+      const adButton = document.getElementById("watchAdBtn");
+      const originalText = adButton.innerHTML;
+      adButton.disabled = true;
+      adButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
+      
+      // Load GigaPub Ad and wait for completion
+      await window.showGiga();
+      
+      // Get ad reward from app config (default to 0.20 if not set)
+      const adReward = appConfig.adsRewards || 0.20;
+      
+      // Update user data
+      userData.completedTasks++;
+      userData.balance += adReward;
+      userData.totalEarnings += adReward;
+      
+      // Add to history
+      userData.history.unshift({ 
+        type: "earning",
+        method: "Ad View", 
+        amount: adReward.toFixed(2), 
+        address: "Ad Reward", 
+        status: "Completed",
+        date: new Date().toLocaleDateString()
+      });
+      
+      // Save to Firebase
+      saveUserData();
+      
+      // Update UI
+      updateUI();
+      showNotification("Success!", `You earned ${adReward.toFixed(2)} BDT!`, "success");
+      
+    } catch(e) {
+      console.log("Ad failed or closed before completion", e);
+      showNotification("Error", "Ad not completed. Please try again.", "danger");
+    } finally {
+      // Re-enable button
+      const adButton = document.getElementById("watchAdBtn");
+      adButton.disabled = false;
+      
+      // Update button text with current reward amount
+      const adReward = appConfig.adsRewards || 0.20;
+      adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
+    }
+  } else {
     showNotification("Completed!", "All tasks completed for today!", "info");
-    return;
   }
-  
-  // Reset ad state
-  adSecondsRemaining = 15;
-  adCompleted = false;
-  
-  // Update UI
-  document.getElementById("adTimer").textContent = adSecondsRemaining;
-  document.getElementById("adProgressBar").style.width = "0%";
-  document.getElementById("completeAdBtn").disabled = true;
-  
-  // Show ad modal
-  document.getElementById("adModal").classList.remove("hidden");
-  
-  // Start timer
-  adTimer = setInterval(updateAdTimer, 1000);
-}
-
-// Update ad timer
-function updateAdTimer() {
-  adSecondsRemaining--;
-  
-  // Update UI
-  document.getElementById("adTimer").textContent = adSecondsRemaining;
-  const progressPercent = ((15 - adSecondsRemaining) / 15) * 100;
-  document.getElementById("adProgressBar").style.width = progressPercent + "%";
-  
-  // Enable complete button when timer reaches 0
-  if (adSecondsRemaining <= 0) {
-    clearInterval(adTimer);
-    document.getElementById("completeAdBtn").disabled = false;
-    adCompleted = true;
-  }
-}
-
-// Cancel ad viewing
-function cancelAdViewing() {
-  clearInterval(adTimer);
-  document.getElementById("adModal").classList.add("hidden");
-  
-  if (!adCompleted) {
-    showNotification("Ad Cancelled", "You did not complete the ad. No reward awarded.", "warning");
-  }
-}
-
-// Complete ad viewing and award reward
-function completeAdViewing() {
-  if (!adCompleted) {
-    showNotification("Error", "Please watch the full ad to receive your reward.", "danger");
-    return;
-  }
-  
-  // Hide ad modal
-  document.getElementById("adModal").classList.add("hidden");
-  
-  // Get ad reward from app config
-  const adReward = appConfig.adsRewards || 0.20;
-  
-  // Update user data
-  userData.completedTasks++;
-  userData.balance += adReward;
-  userData.totalEarnings += adReward;
-  
-  // Add to history
-  userData.history.unshift({ 
-    type: "earning",
-    method: "Ad View", 
-    amount: adReward.toFixed(2), 
-    address: "Ad Reward", 
-    status: "Completed",
-    date: new Date().toLocaleDateString()
-  });
-  
-  // Save to Firebase
-  saveUserData();
-  
-  // Update UI
-  updateUI();
-  showNotification("Success!", `You earned ${adReward.toFixed(2)} BDT!`, "success");
 }
 
 function showSurveyPage() {
