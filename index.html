@@ -436,6 +436,70 @@
       font-size: 1.2rem;
     }
     
+    /* Ad Modal Styles */
+    .ad-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.9);
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+    }
+    
+    .ad-content {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 20px;
+      max-width: 90%;
+      width: 400px;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+    }
+    
+    .ad-timer {
+      font-size: 18px;
+      margin: 15px 0;
+      color: var(--primary-color);
+    }
+    
+    .ad-progress {
+      width: 100%;
+      height: 10px;
+      background: #333;
+      border-radius: 5px;
+      overflow: hidden;
+      margin: 15px 0;
+    }
+    
+    .ad-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+      width: 0%;
+      transition: width 0.3s linear;
+    }
+    
+    .ad-close-btn {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+    
+    .ad-close-btn.allowed {
+      background: #198754;
+      cursor: pointer;
+      opacity: 1;
+    }
+    
     /* Responsive adjustments */
     @media (max-width: 576px) {
       .cover-img {
@@ -466,6 +530,11 @@
       #vpnCheck .vpn-check-container {
         padding: 1.5rem 1rem;
       }
+      
+      .ad-content {
+        width: 90%;
+        padding: 15px;
+      }
     }
   </style>
 </head>
@@ -482,6 +551,33 @@
       <p>If you believe this is a mistake, please contact our support team:</p>
       <p class="fw-bold">Email: support@moneylnd.com</p>
       <p class="fw-bold">Telegram: @moneylnd_support</p>
+    </div>
+  </div>
+</div>
+
+<!-- AD VIEWING MODAL (hidden by default) -->
+<div id="adModal" class="ad-modal hidden">
+  <div class="ad-content">
+    <h3><i class="bi bi-play-btn-fill me-2"></i> Watching Advertisement</h3>
+    <p>Please watch the ad completely to earn your reward</p>
+    
+    <div class="ad-timer">
+      <i class="bi bi-clock-history me-2"></i>
+      <span id="adTimer">15</span> seconds remaining
+    </div>
+    
+    <div class="ad-progress">
+      <div id="adProgress" class="ad-progress-bar"></div>
+    </div>
+    
+    <div class="mt-3">
+      <button id="adCloseBtn" class="ad-close-btn" disabled>
+        <i class="bi bi-x-circle me-2"></i> Close Ad
+      </button>
+    </div>
+    
+    <div class="mt-3 text-warning">
+      <small><i class="bi bi-exclamation-triangle me-1"></i> Closing early will cancel your reward</small>
     </div>
   </div>
 </div>
@@ -878,6 +974,11 @@ let currentSurvey = null;
 let surveyWindow = null;
 let surveyCheckInterval = null;
 
+// Ad viewing state
+let adTimer = null;
+let adSecondsRemaining = 15;
+let adCompleted = false;
+
 // Initialize the application
 document.addEventListener("DOMContentLoaded", async function() {
   // Get user IP and device info
@@ -908,7 +1009,10 @@ document.addEventListener("DOMContentLoaded", async function() {
   loadSurveys();
   
   // Add event listener to watch ad button
-  document.getElementById("watchAdBtn").addEventListener("click", watchAd);
+  document.getElementById("watchAdBtn").addEventListener("click", startAdViewing);
+  
+  // Add event listener to close ad button
+  document.getElementById("adCloseBtn").addEventListener("click", closeAdModal);
 });
 
 // Get user IP address
@@ -1107,7 +1211,7 @@ async function checkForDuplicateAccounts(isNewUser = false) {
     }
     
     if (duplicateFound && !isNewUser) {
-      showNotification("Warning", "Multiple accounts detected", "warning");
+      showNotification("Warning", "Multiple accounts detected from same device/IP", "warning");
     }
   });
 }
@@ -1230,57 +1334,113 @@ function showTab(tab, el) {
   }
 }
 
-async function watchAd() {
-  if (userData.completedTasks < appConfig.dailyLimit) {
-    try {
-      // Disable button to prevent multiple clicks
-      const adButton = document.getElementById("watchAdBtn");
-      const originalText = adButton.innerHTML;
-      adButton.disabled = true;
-      adButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
-      
-      // Load GigaPub Ad and wait for completion
-      await window.showGiga();
-      
-      // Get ad reward from app config (default to 0.20 if not set)
-      const adReward = appConfig.adsRewards || 0.20;
-      
-      // Update user data
-      userData.completedTasks++;
-      userData.balance += adReward;
-      userData.totalEarnings += adReward;
-      
-      // Add to history
-      userData.history.unshift({ 
-        type: "earning",
-        method: "Ad View", 
-        amount: adReward.toFixed(2), 
-        address: "Ad Reward", 
-        status: "Completed",
-        date: new Date().toLocaleDateString()
-      });
-      
-      // Save to Firebase
-      saveUserData();
-      
-      // Update UI
-      updateUI();
-      showNotification("Success!", `You earned ${adReward.toFixed(2)} BDT!`, "success");
-      
-    } catch(e) {
-      console.log("Ad failed or closed before completion", e);
-      showNotification("Error", "Ad not completed. Please try again.", "danger");
-    } finally {
-      // Re-enable button
-      const adButton = document.getElementById("watchAdBtn");
-      adButton.disabled = false;
-      
-      // Update button text with current reward amount
-      const adReward = appConfig.adsRewards || 0.20;
-      adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
-    }
-  } else {
+// Start ad viewing process
+function startAdViewing() {
+  if (userData.completedTasks >= appConfig.dailyLimit) {
     showNotification("Completed!", "All tasks completed for today!", "info");
+    return;
+  }
+  
+  // Reset ad state
+  adSecondsRemaining = 15;
+  adCompleted = false;
+  
+  // Show ad modal
+  document.getElementById("adModal").classList.remove("hidden");
+  document.getElementById("adTimer").textContent = adSecondsRemaining;
+  document.getElementById("adProgress").style.width = "0%";
+  
+  // Disable close button initially
+  const closeBtn = document.getElementById("adCloseBtn");
+  closeBtn.disabled = true;
+  closeBtn.classList.remove("allowed");
+  
+  // Start the timer
+  adTimer = setInterval(updateAdTimer, 1000);
+  
+  // Start the ad (simulated)
+  simulateAdPlayback();
+}
+
+// Update ad timer
+function updateAdTimer() {
+  adSecondsRemaining--;
+  document.getElementById("adTimer").textContent = adSecondsRemaining;
+  
+  // Update progress bar
+  const progressPercent = ((15 - adSecondsRemaining) / 15) * 100;
+  document.getElementById("adProgress").style.width = progressPercent + "%";
+  
+  // Check if ad viewing is complete
+  if (adSecondsRemaining <= 0) {
+    completeAdViewing();
+  }
+}
+
+// Simulate ad playback (replace with actual ad integration)
+function simulateAdPlayback() {
+  // In a real implementation, this would initialize your ad network
+  console.log("Ad playback started");
+  
+  // Simulate ad loading and playing
+  setTimeout(() => {
+    // After 2 seconds, enable the close button but still require full viewing
+    if (adSecondsRemaining > 0) {
+      const closeBtn = document.getElementById("adCloseBtn");
+      closeBtn.disabled = false;
+      closeBtn.classList.add("allowed");
+    }
+  }, 2000);
+}
+
+// Complete ad viewing and reward user
+function completeAdViewing() {
+  clearInterval(adTimer);
+  adCompleted = true;
+  
+  // Get ad reward from app config
+  const adReward = appConfig.adsRewards || 0.20;
+  
+  // Update user data
+  userData.completedTasks++;
+  userData.balance += adReward;
+  userData.totalEarnings += adReward;
+  
+  // Add to history
+  userData.history.unshift({ 
+    type: "earning",
+    method: "Ad View", 
+    amount: adReward.toFixed(2), 
+    address: "Ad Reward", 
+    status: "Completed",
+    date: new Date().toLocaleDateString()
+  });
+  
+  // Save to Firebase
+  saveUserData();
+  
+  // Update UI
+  updateUI();
+  
+  // Show success message
+  showNotification("Success!", `You earned ${adReward.toFixed(2)} BDT!`, "success");
+  
+  // Close the ad modal after a short delay
+  setTimeout(() => {
+    document.getElementById("adModal").classList.add("hidden");
+  }, 1500);
+}
+
+// Close ad modal (only allowed after ad completes or if user forces close)
+function closeAdModal() {
+  if (adCompleted) {
+    // Ad was completed successfully, just close the modal
+    document.getElementById("adModal").classList.add("hidden");
+  } else {
+    // User is trying to close early
+    clearInterval(adTimer);
+    document.getElementById("adModal").classList.add("hidden");
+    showNotification("Ad Skipped", "You did not complete the ad. No reward awarded.", "warning");
   }
 }
 
