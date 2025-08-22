@@ -7,7 +7,6 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  <link rel="stylesheet" href="index.css">
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -46,6 +45,9 @@
       border-bottom-right-radius: 20px;
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     
     /* PERFECT BOTTOM NAV BAR */
@@ -123,7 +125,8 @@
       color: var(--primary-color);
       overflow: hidden;
     }
-     .btn-custom {
+    
+    .btn-custom {
       background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
       color: #000;
       font-weight: 600;
@@ -139,6 +142,7 @@
       transform: translateY(-2px);
       box-shadow: 0 8px 16px rgba(255, 215, 0, 0.3);
     }
+    
     .card:hover {
       transform: translateY(-5px);
       box-shadow: 0 12px 24px rgba(255, 215, 0, 0.25);
@@ -210,11 +214,15 @@
     .badge-gold {
       background: linear-gradient(135deg, #ffd700, #ffcc00);
       color: #000;
+      padding: 0.35em 0.65em;
+      border-radius: 0.25rem;
     }
     
     .badge-hot {
       background: linear-gradient(135deg, #ff416c, #ff4b2b);
       color: white;
+      padding: 0.5em 0.8em;
+      border-radius: 0.5rem;
     }
     
     .floating-notification {
@@ -354,6 +362,81 @@
       margin-bottom: 20px;
     }
     
+    /* VPN Check Styles */
+    #vpnCheck {
+      background: var(--dark-bg);
+      padding: 2rem;
+      border-radius: 1rem;
+      color: #fff;
+      max-width: 500px;
+      margin: 3rem auto;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    
+    #vpnCheck .vpn-check-container {
+      background: var(--card-bg);
+      padding: 2.5rem 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.7);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    #vpnCheck h4 {
+      color: var(--primary-color);
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    
+    .alert {
+      border-radius: 0.75rem;
+      font-weight: 500;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.3s ease;
+      text-align: center;
+      padding: 0.75rem 1rem;
+    }
+    
+    .alert-primary {
+      background-color: #1a1a2e;
+      color: var(--accent-color);
+      border: 1px solid var(--primary-color);
+    }
+    
+    .alert-warning {
+      background-color: #331a00;
+      color: #ffcc66;
+      border: 1px solid #ff9900;
+    }
+    
+    .alert-danger {
+      background-color: #330000;
+      color: #ff6666;
+      border: 1px solid #ff0000;
+    }
+    
+    .alert-success {
+      background-color: #003300;
+      color: #99ff66;
+      border: 1px solid #00ff00;
+    }
+    
+    .spinner-border {
+      margin-right: 0.5rem;
+    }
+    
+    .d-flex i {
+      font-size: 1.2rem;
+    }
+    
+    /* Responsive adjustments */
     @media (max-width: 576px) {
       .cover-img {
         height: 150px;
@@ -374,6 +457,14 @@
       
       .survey-card .card-body {
         height: calc(100% - 120px);
+      }
+      
+      #vpnCheck {
+        padding: 1rem;
+      }
+      
+      #vpnCheck .vpn-check-container {
+        padding: 1.5rem 1rem;
       }
     }
   </style>
@@ -399,7 +490,7 @@
 <div id="appContent">
 
 <!-- TOP HEADER -->
-<div class="top-header d-flex justify-content-between align-items-center">
+<div class="top-header">
   <div class="d-flex align-items-center gap-2">
     <img id="logoImg" src="https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg" class="profile-img rounded-circle shadow" alt="Logo">
     <h5 class="m-0 fw-bold">Money Land</h5>
@@ -417,76 +508,6 @@
 <div id="notificationArea"></div>
 
 <!-- VPN CHECK -->
-<style>
-  :root {
-    --primary-color: #ffd700;
-    --accent-color: #ffdb4d;
-    --dark-bg: #0a0a0a;
-    --card-bg: linear-gradient(145deg, #111, #1a1a1a);
-  }
-
-  #vpnCheck {
-    background: var(--dark-bg);
-    padding: 2rem;
-    border-radius: 1rem;
-    color: #fff;
-    max-width: 500px;
-    margin: 3rem auto;
-    font-family: 'Segoe UI', sans-serif;
-  }
-
-  .vpn-check-container {
-    background: var(--card-bg);
-    padding: 2.5rem 2rem;
-    border-radius: 1rem;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.7);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  #vpnCheck h4 {
-    color: var(--primary-color);
-    margin-bottom: 1.5rem;
-    font-size: 1.5rem;
-    font-weight: 700;
-  }
-
-  .alert {
-    border-radius: 0.75rem;
-    font-weight: 500;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    transition: all 0.3s ease;
-    text-align: center;
-    padding: 0.75rem 1rem;
-  }
-
-  .alert-primary {
-    background-color: #1a1a2e;
-    color: var(--accent-color);
-    border: 1px solid var(--primary-color);
-  }
-
-  .alert-success {
-    background-color: #003300;
-    color: #99ff66;
-    border: 1px solid #00ff00;
-  }
-
-  .spinner-border {
-    margin-right: 0.5rem;
-  }
-
-  .d-flex i {
-    font-size: 1.2rem;
-  }
-</style>
-
 <div id="vpnCheck">
   <div class="vpn-check-container">
     <h4>🌐 Network Status</h4>
@@ -512,7 +533,6 @@
     </div>
   </div>
 </div>
-
 
 <!-- HOME -->
 <div id="home" class="container my-4 hidden">
@@ -580,9 +600,9 @@
       <div id="progressBar" class="progress-bar" style="width:0%">0%</div>
     </div>
     
-    <button class="btn btn-custom w-100 mb-3 py-3" onclick="watchAd()">
-  <i class="bi bi-play-circle me-2"></i>  Watch Ad (+${adReward.toFixed(2)} BDT)
-</button>
+    <button class="btn btn-custom w-100 mb-3 py-3" id="watchAdBtn">
+      <i class="bi bi-play-circle me-2"></i> Watch Ad (+0.20 BDT)
+    </button>
     
     <div class="alert alert-dark d-flex align-items-center" role="alert">
       <i class="bi bi-info-circle-fill me-2"></i>
@@ -608,7 +628,7 @@
           <i class="bi bi-gem text-info me-2"></i>
           <h5 class="m-0">Refer Friends</h5>
         </div>
-        <p class="text-muted small mb-3">Earn ${referralCommission}% of your referrals' earnings</p>
+        <p class="text-muted small mb-3" id="referralText">Earn 10% of your referrals' earnings</p>
         
         <!-- Invite URL with copy button -->
         <div class="input-group mb-3">
@@ -823,7 +843,8 @@
 </div> <!-- End of appContent -->
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>// Firebase configuration
+<script>
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDuaWMh0eIJ2tdtLxYj43ij9MGSh_Yo22M",
   authDomain: "test-6977e.firebaseapp.com",
@@ -885,6 +906,9 @@ document.addEventListener("DOMContentLoaded", async function() {
   
   // Load surveys
   loadSurveys();
+  
+  // Add event listener to watch ad button
+  document.getElementById("watchAdBtn").addEventListener("click", watchAd);
 });
 
 // Get user IP address
@@ -1083,7 +1107,7 @@ async function checkForDuplicateAccounts(isNewUser = false) {
     }
     
     if (duplicateFound && !isNewUser) {
-      showNotification("Warning", "Multiple accounts detected from same device/IP", "warning");
+      showNotification("Warning", "Multiple accounts detected", "warning");
     }
   });
 }
@@ -1170,17 +1194,11 @@ function updateUI() {
   
   // Update ad button with correct reward amount
   const adReward = appConfig.adsRewards || 0.20;
-  const adButton = document.querySelector('.btn-custom');
-  if (adButton) {
-    adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
-  }
+  document.getElementById("watchAdBtn").innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
   
-  // Update referral text with correct percentage - FIXED
+  // Update referral text with correct percentage
   const referralCommission = appConfig.referralCommission || 10;
-  const referralTextElements = document.querySelectorAll('.text-muted.small.mb-3');
-  if (referralTextElements.length > 1) {
-    referralTextElements[1].textContent = `Earn ${referralCommission}% of your referrals' earnings`;
-  }
+  document.getElementById("referralText").textContent = `Earn ${referralCommission}% of your referrals' earnings`;
 
   // Update history table
   filterHistory('all');
@@ -1216,7 +1234,7 @@ async function watchAd() {
   if (userData.completedTasks < appConfig.dailyLimit) {
     try {
       // Disable button to prevent multiple clicks
-      const adButton = document.querySelector('.btn-custom');
+      const adButton = document.getElementById("watchAdBtn");
       const originalText = adButton.innerHTML;
       adButton.disabled = true;
       adButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
@@ -1254,7 +1272,7 @@ async function watchAd() {
       showNotification("Error", "Ad not completed. Please try again.", "danger");
     } finally {
       // Re-enable button
-      const adButton = document.querySelector('.btn-custom');
+      const adButton = document.getElementById("watchAdBtn");
       adButton.disabled = false;
       
       // Update button text with current reward amount
@@ -1609,6 +1627,7 @@ function showNotification(title, message, type) {
 function calculateReferralEarnings(amount) {
   const commissionPercentage = appConfig.referralCommission || 10;
   return (amount * commissionPercentage) / 100;
-}</script>
+}
+</script>
 </body>
 </html>
