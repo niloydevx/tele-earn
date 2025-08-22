@@ -956,24 +956,6 @@ async function loadAppConfig() {
               url: "https://www.surveys.com/consumer",
               completedBy: {},
               status: "active"
-            },
-            { 
-              id: 2, 
-              name: "Market Research", 
-              reward: 2.00, 
-              image: "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-              url: "https://www.surveys.com/market",
-              completedBy: {},
-              status: "active"
-            },
-            { 
-              id: 3, 
-              name: "Product Feedback", 
-              reward: 1.00, 
-              image: "https://images.unsplash.com/photo-1552581234-26160f608093?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-              url: "https://www.surveys.com/product",
-              completedBy: {},
-              status: "active"
             }
           ],
           vpnRequired: true,
@@ -986,6 +968,14 @@ async function loadAppConfig() {
         
         // Save default config to Firebase
         database.ref('appConfig').set(appConfig);
+      }
+      
+      // Ensure adsRewards and referralCommission exist with defaults
+      if (appConfig.adsRewards === undefined) {
+        appConfig.adsRewards = 0.20;
+      }
+      if (appConfig.referralCommission === undefined) {
+        appConfig.referralCommission = 10;
       }
       
       // Apply app configuration
@@ -1193,7 +1183,17 @@ function updateUI() {
   
   // Update ad button with correct reward amount
   const adReward = appConfig.adsRewards || 0.20;
-  document.querySelector('.btn-custom').innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
+  const adButton = document.querySelector('.btn-custom');
+  if (adButton) {
+    adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
+  }
+  
+  // Update referral text with correct percentage
+  const referralCommission = appConfig.referralCommission || 10;
+  const referralText = document.querySelector('.text-muted.small.mb-3');
+  if (referralText) {
+    referralText.textContent = `Earn ${referralCommission}% of your referrals' earnings`;
+  }
 
   // Update history table
   filterHistory('all');
@@ -1237,7 +1237,7 @@ async function watchAd() {
       // Load GigaPub Ad and wait for completion
       await window.showGiga();
       
-      // Get ad reward from app config
+      // Get ad reward from app config (default to 0.20 if not set)
       const adReward = appConfig.adsRewards || 0.20;
       
       // Update user data
@@ -1269,7 +1269,10 @@ async function watchAd() {
       // Re-enable button
       const adButton = document.querySelector('.btn-custom');
       adButton.disabled = false;
-      adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${(appConfig.adsRewards || 0.20).toFixed(2)} BDT)`;
+      
+      // Update button text with current reward amount
+      const adReward = appConfig.adsRewards || 0.20;
+      adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
     }
   } else {
     showNotification("Completed!", "All tasks completed for today!", "info");
