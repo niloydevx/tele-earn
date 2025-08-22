@@ -444,37 +444,36 @@
       width: 100%;
       height: 100%;
       background-color: rgba(0, 0, 0, 0.9);
-      z-index: 2000;
       display: flex;
-      flex-direction: column;
       justify-content: center;
       align-items: center;
-      color: white;
+      z-index: 2000;
+      backdrop-filter: blur(10px);
     }
     
     .ad-content {
       background: var(--card-bg);
       border-radius: 20px;
-      padding: 20px;
+      padding: 2rem;
+      text-align: center;
       max-width: 90%;
       width: 400px;
-      text-align: center;
-      box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+      box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
     }
     
     .ad-timer {
-      font-size: 18px;
-      margin: 15px 0;
+      font-size: 2rem;
+      font-weight: bold;
       color: var(--primary-color);
+      margin: 1.5rem 0;
     }
     
     .ad-progress {
-      width: 100%;
       height: 10px;
-      background: #333;
+      background-color: #333;
       border-radius: 5px;
       overflow: hidden;
-      margin: 15px 0;
+      margin-bottom: 1.5rem;
     }
     
     .ad-progress-bar {
@@ -484,20 +483,10 @@
       transition: width 0.3s linear;
     }
     
-    .ad-close-btn {
-      background: #dc3545;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 10px;
-      cursor: not-allowed;
-      opacity: 0.7;
-    }
-    
-    .ad-close-btn.allowed {
-      background: #198754;
-      cursor: pointer;
-      opacity: 1;
+    .ad-skip {
+      margin-top: 1rem;
+      color: #999;
+      font-size: 0.9rem;
     }
     
     /* Responsive adjustments */
@@ -532,8 +521,11 @@
       }
       
       .ad-content {
-        width: 90%;
-        padding: 15px;
+        padding: 1.5rem;
+      }
+      
+      .ad-timer {
+        font-size: 1.5rem;
       }
     }
   </style>
@@ -558,26 +550,20 @@
 <!-- AD VIEWING MODAL (hidden by default) -->
 <div id="adModal" class="ad-modal hidden">
   <div class="ad-content">
-    <h3><i class="bi bi-play-btn-fill me-2"></i> Watching Advertisement</h3>
-    <p>Please watch the ad completely to earn your reward</p>
+    <h3 class="mb-3">Watch Ad to Earn</h3>
+    <p>Please watch the full ad to receive your reward</p>
     
-    <div class="ad-timer">
-      <i class="bi bi-clock-history me-2"></i>
-      <span id="adTimer">15</span> seconds remaining
-    </div>
+    <div class="ad-timer" id="adTimer">15</div>
     
     <div class="ad-progress">
-      <div id="adProgress" class="ad-progress-bar"></div>
+      <div class="ad-progress-bar" id="adProgressBar"></div>
     </div>
     
-    <div class="mt-3">
-      <button id="adCloseBtn" class="ad-close-btn" disabled>
-        <i class="bi bi-x-circle me-2"></i> Close Ad
-      </button>
-    </div>
+    <div class="ad-skip" id="adSkipMessage">Skipping will cancel the reward</div>
     
-    <div class="mt-3 text-warning">
-      <small><i class="bi bi-exclamation-triangle me-1"></i> Closing early will cancel your reward</small>
+    <div class="mt-4">
+      <button class="btn btn-danger me-2" id="cancelAdBtn">Cancel</button>
+      <button class="btn btn-success" id="completeAdBtn" disabled>Complete Ad</button>
     </div>
   </div>
 </div>
@@ -1011,8 +997,9 @@ document.addEventListener("DOMContentLoaded", async function() {
   // Add event listener to watch ad button
   document.getElementById("watchAdBtn").addEventListener("click", startAdViewing);
   
-  // Add event listener to close ad button
-  document.getElementById("adCloseBtn").addEventListener("click", closeAdModal);
+  // Add event listeners for ad modal buttons
+  document.getElementById("cancelAdBtn").addEventListener("click", cancelAdViewing);
+  document.getElementById("completeAdBtn").addEventListener("click", completeAdViewing);
 });
 
 // Get user IP address
@@ -1345,58 +1332,54 @@ function startAdViewing() {
   adSecondsRemaining = 15;
   adCompleted = false;
   
+  // Update UI
+  document.getElementById("adTimer").textContent = adSecondsRemaining;
+  document.getElementById("adProgressBar").style.width = "0%";
+  document.getElementById("completeAdBtn").disabled = true;
+  
   // Show ad modal
   document.getElementById("adModal").classList.remove("hidden");
-  document.getElementById("adTimer").textContent = adSecondsRemaining;
-  document.getElementById("adProgress").style.width = "0%";
   
-  // Disable close button initially
-  const closeBtn = document.getElementById("adCloseBtn");
-  closeBtn.disabled = true;
-  closeBtn.classList.remove("allowed");
-  
-  // Start the timer
+  // Start timer
   adTimer = setInterval(updateAdTimer, 1000);
-  
-  // Start the ad (simulated)
-  simulateAdPlayback();
 }
 
 // Update ad timer
 function updateAdTimer() {
   adSecondsRemaining--;
+  
+  // Update UI
   document.getElementById("adTimer").textContent = adSecondsRemaining;
-  
-  // Update progress bar
   const progressPercent = ((15 - adSecondsRemaining) / 15) * 100;
-  document.getElementById("adProgress").style.width = progressPercent + "%";
+  document.getElementById("adProgressBar").style.width = progressPercent + "%";
   
-  // Check if ad viewing is complete
+  // Enable complete button when timer reaches 0
   if (adSecondsRemaining <= 0) {
-    completeAdViewing();
+    clearInterval(adTimer);
+    document.getElementById("completeAdBtn").disabled = false;
+    adCompleted = true;
   }
 }
 
-// Simulate ad playback (replace with actual ad integration)
-function simulateAdPlayback() {
-  // In a real implementation, this would initialize your ad network
-  console.log("Ad playback started");
+// Cancel ad viewing
+function cancelAdViewing() {
+  clearInterval(adTimer);
+  document.getElementById("adModal").classList.add("hidden");
   
-  // Simulate ad loading and playing
-  setTimeout(() => {
-    // After 2 seconds, enable the close button but still require full viewing
-    if (adSecondsRemaining > 0) {
-      const closeBtn = document.getElementById("adCloseBtn");
-      closeBtn.disabled = false;
-      closeBtn.classList.add("allowed");
-    }
-  }, 2000);
+  if (!adCompleted) {
+    showNotification("Ad Cancelled", "You did not complete the ad. No reward awarded.", "warning");
+  }
 }
 
-// Complete ad viewing and reward user
+// Complete ad viewing and award reward
 function completeAdViewing() {
-  clearInterval(adTimer);
-  adCompleted = true;
+  if (!adCompleted) {
+    showNotification("Error", "Please watch the full ad to receive your reward.", "danger");
+    return;
+  }
+  
+  // Hide ad modal
+  document.getElementById("adModal").classList.add("hidden");
   
   // Get ad reward from app config
   const adReward = appConfig.adsRewards || 0.20;
@@ -1421,27 +1404,7 @@ function completeAdViewing() {
   
   // Update UI
   updateUI();
-  
-  // Show success message
   showNotification("Success!", `You earned ${adReward.toFixed(2)} BDT!`, "success");
-  
-  // Close the ad modal after a short delay
-  setTimeout(() => {
-    document.getElementById("adModal").classList.add("hidden");
-  }, 1500);
-}
-
-// Close ad modal (only allowed after ad completes or if user forces close)
-function closeAdModal() {
-  if (adCompleted) {
-    // Ad was completed successfully, just close the modal
-    document.getElementById("adModal").classList.add("hidden");
-  } else {
-    // User is trying to close early
-    clearInterval(adTimer);
-    document.getElementById("adModal").classList.add("hidden");
-    showNotification("Ad Skipped", "You did not complete the ad. No reward awarded.", "warning");
-  }
 }
 
 function showSurveyPage() {
