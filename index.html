@@ -620,7 +620,7 @@
           <i class="bi bi-gem text-info me-2"></i>
           <h5 class="m-0">Refer Friends</h5>
         </div>
-        <p class="text-muted small mb-3">Earn 10% of your referrals' earnings</p>
+        <p class="text-muted small mb-3">Earn ${referralCommission}% of your referrals' earnings</p>
         
         <!-- Invite URL with copy button -->
         <div class="input-group mb-3">
@@ -835,8 +835,7 @@
 </div> <!-- End of appContent -->
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-  // Firebase configuration
+<script>// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDuaWMh0eIJ2tdtLxYj43ij9MGSh_Yo22M",
   authDomain: "test-6977e.firebaseapp.com",
@@ -1188,11 +1187,11 @@ function updateUI() {
     adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
   }
   
-  // Update referral text with correct percentage
+  // Update referral text with correct percentage - FIXED
   const referralCommission = appConfig.referralCommission || 10;
-  const referralText = document.querySelector('.text-muted.small.mb-3');
-  if (referralText) {
-    referralText.textContent = `Earn ${referralCommission}% of your referrals' earnings`;
+  const referralTextElements = document.querySelectorAll('.text-muted.small.mb-3');
+  if (referralTextElements.length > 1) {
+    referralTextElements[1].textContent = `Earn ${referralCommission}% of your referrals' earnings`;
   }
 
   // Update history table
@@ -1622,7 +1621,6 @@ function showNotification(title, message, type) {
 function calculateReferralEarnings(amount) {
   const commissionPercentage = appConfig.referralCommission || 10;
   return (amount * commissionPercentage) / 100;
-}
-</script>
+}</script>
 </body>
 </html>
