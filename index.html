@@ -3,10 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Money Land - Fixed Ad System</title>
+  <title>Money Land</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <!-- GigaPub Ads -->
+  <script src="https://ad.gigapub.tech/script?id=1872"></script>
   <style>
     :root {
       --primary-color: #ffd700;
@@ -14,9 +19,6 @@
       --dark-bg: #0a0a0a;
       --card-bg: linear-gradient(145deg, #111, #1a1a1a);
       --header-bg: rgba(17, 17, 17, 0.95);
-      --success-color: #28a745;
-      --danger-color: #dc3545;
-      --info-color: #17a2b8;
     }
     
     body {
@@ -26,21 +28,6 @@
       padding-top: 70px;
       padding-bottom: 85px;
       min-height: 100vh;
-      overflow-x: hidden;
-    }
-    
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar {
-      width: 8px;
-    }
-    
-    ::-webkit-scrollbar-track {
-      background: #1a1a1a;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-      background: var(--primary-color);
-      border-radius: 4px;
     }
     
     /* TOP HEADER BAR */
@@ -135,8 +122,7 @@
       color: var(--primary-color);
       overflow: hidden;
     }
-    
-    .btn-custom {
+     .btn-custom {
       background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
       color: #000;
       font-weight: 600;
@@ -152,7 +138,6 @@
       transform: translateY(-2px);
       box-shadow: 0 8px 16px rgba(255, 215, 0, 0.3);
     }
-    
     .card:hover {
       transform: translateY(-5px);
       box-shadow: 0 12px 24px rgba(255, 215, 0, 0.25);
@@ -368,130 +353,6 @@
       margin-bottom: 20px;
     }
     
-    /* Loading Spinner */
-    .spinner-border-sm {
-      width: 1rem;
-      height: 1rem;
-    }
-    
-    /* Premium Animations */
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-      100% { transform: scale(1); }
-    }
-    
-    .pulse {
-      animation: pulse 2s infinite;
-    }
-    
-    /* Referral Section */
-    .referral-card {
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .referral-card::before {
-      content: "";
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: linear-gradient(
-        to bottom right,
-        rgba(255, 215, 0, 0.1),
-        rgba(255, 215, 0, 0.05),
-        transparent
-      );
-      transform: rotate(30deg);
-      z-index: 0;
-    }
-    
-    /* Withdraw Section */
-    .withdraw-method {
-      border: 1px solid rgba(255, 215, 0, 0.2);
-      border-radius: 12px;
-      padding: 12px;
-      margin-bottom: 10px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-    
-    .withdraw-method:hover, .withdraw-method.selected {
-      border-color: var(--primary-color);
-      background: rgba(255, 215, 0, 0.1);
-    }
-    
-    .withdraw-method img {
-      height: 30px;
-      object-fit: contain;
-    }
-    
-    /* Ad Container Styles */
-    .ad-container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.9);
-      z-index: 2000;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .ad-content {
-      background: var(--card-bg);
-      border-radius: 20px;
-      width: 90%;
-      max-width: 400px;
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    }
-    
-    .ad-header {
-      background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-      color: #000;
-      padding: 15px;
-      text-align: center;
-      font-weight: bold;
-    }
-    
-    .ad-body {
-      padding: 20px;
-      text-align: center;
-    }
-    
-    .ad-timer {
-      font-size: 18px;
-      margin: 15px 0;
-      color: var(--primary-color);
-    }
-    
-    .ad-progress {
-      height: 10px;
-      background: #333;
-      border-radius: 5px;
-      overflow: hidden;
-      margin: 20px 0;
-    }
-    
-    .ad-progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
-      width: 0%;
-      transition: width 0.3s ease;
-    }
-    
-    .ad-actions {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 20px;
-    }
-    
     @media (max-width: 576px) {
       .cover-img {
         height: 150px;
@@ -513,10 +374,6 @@
       .survey-card .card-body {
         height: calc(100% - 120px);
       }
-      
-      .ad-content {
-        width: 95%;
-      }
     }
   </style>
 </head>
@@ -533,33 +390,6 @@
       <p>If you believe this is a mistake, please contact our support team:</p>
       <p class="fw-bold">Email: support@moneylnd.com</p>
       <p class="fw-bold">Telegram: @moneylnd_support</p>
-    </div>
-  </div>
-</div>
-
-<!-- AD CONTAINER (hidden by default) -->
-<div id="adContainer" class="ad-container hidden">
-  <div class="ad-content">
-    <div class="ad-header">
-      <i class="bi bi-play-circle-fill me-2"></i> Advertisement
-    </div>
-    <div class="ad-body">
-      <h4>Please watch this ad</h4>
-      <p>You will earn <span class="fw-bold">0.20 BDT</span> after completing this ad</p>
-      
-      <div class="ad-timer">
-        <i class="bi bi-clock me-2"></i>
-        <span id="adTimer">15</span> seconds remaining
-      </div>
-      
-      <div class="ad-progress">
-        <div id="adProgressBar" class="ad-progress-bar"></div>
-      </div>
-      
-      <div class="ad-actions">
-        <button id="cancelAdBtn" class="btn btn-outline-danger">Cancel</button>
-        <button id="completeAdBtn" class="btn btn-custom" disabled>Complete Ad</button>
-      </div>
     </div>
   </div>
 </div>
@@ -593,11 +423,6 @@
     <div id="vpnAlert" class="alert alert-warning d-none text-center">🚨 VPN required! Please connect VPN.</div>
     <div id="vpnOffAlert" class="alert alert-danger d-none text-center">⚠️ VPN detected! Please turn it off.</div>
     <div id="vpnSuccess" class="alert alert-success d-none text-center">✅ VPN connection verified! You can now use the app.</div>
-    <div class="text-center mt-3">
-      <button id="retryVpnBtn" class="btn btn-outline-warning btn-sm" onclick="checkVPN()">
-        <i class="bi bi-arrow-repeat"></i> Retry Check
-      </button>
-    </div>
   </div>
 </div>
 
@@ -690,7 +515,7 @@
       </div>
     </div>
     <div class="col-md-6">
-      <div class="card p-3 h-100 referral-card">
+      <div class="card p-3 h-100">
         <div class="d-flex align-items-center mb-2">
           <i class="bi bi-gem text-info me-2"></i>
           <h5 class="m-0">Refer Friends</h5>
@@ -701,14 +526,7 @@
         <div class="input-group mb-3">
           <input type="text" class="form-control" id="inviteLink" value="" readonly>
           <button class="btn btn-outline-info w-20" type="button" onclick="copyInviteLink()">Copy</button>
-        </div>
-        
-        <div class="d-flex justify-content-between align-items-center">
-          <small class="text-warning">Your referral code: <span id="referralCodeDisplay"></span></small>
-          <button class="btn btn-sm btn-outline-warning" onclick="copyReferralCode()">
-            <i class="bi bi-clipboard"></i>
-          </button>
-        </div>
+        </div>   
       </div>    
     </div>
   </div>
@@ -722,41 +540,18 @@
     <h5 class="mb-3 fw-bold"><i class="bi bi-wallet2 me-2"></i> Withdrawal Options</h5>
     
     <div class="mb-3">
-      <label class="fw-bold mb-2">Select Payment Method</label>
-      <div class="d-grid gap-2">
-        <div class="withdraw-method" onclick="selectWithdrawMethod('Bkash')">
-          <div class="d-flex align-items-center">
-            <img src="https://images.seeklogo.com/logo-png/27/1/bkash-logo-png_seeklogo-273684.png" alt="Bkash" class="me-2" height="30">
-            <div>
-              <h6 class="mb-0">Bkash</h6>
-              <small class="text-muted">Instant withdrawal</small>
-            </div>
-          </div>
-        </div>
-        <div class="withdraw-method" onclick="selectWithdrawMethod('Nagad')">
-          <div class="d-flex align-items-center">
-            <img src="https://images.seeklogo.com/logo-png/35/1/nagad-logo-png_seeklogo-355240.png" alt="Nagad" class="me-2" height="30">
-            <div>
-              <h6 class="mb-0">Nagad</h6>
-              <small class="text-muted">Instant withdrawal</small>
-            </div>
-          </div>
-        </div>
-        <div class="withdraw-method" onclick="selectWithdrawMethod('Binance')">
-          <div class="d-flex align-items-center">
-            <img src="https://seeklogo.com/images/B/binance-coin-bnb-logo-97F9D55608-seeklogo.com.png" alt="Binance" class="me-2" height="30">
-            <div>
-              <h6 class="mb-0">Binance ID</h6>
-              <small class="text-muted">Crypto withdrawal</small>
-            </div>
-          </div>
-        </div>
-      </div>
+      <label class="fw-bold mb-2">Withdrawal Method</label>
+      <select class="form-select mb-3" id="method">
+        <option value="">Select a method</option>
+        <option>Bkash</option>
+        <option>Nagad</option>
+        <option>Binance Id</option>
+      </select>
     </div>
     
     <div class="mb-3">
       <label class="fw-bold mb-2">Amount (BDT)</label>
-      <input type="number" class="form-control mb-3" id="amount" placeholder="Enter amount" oninput="updateWithdrawAmount()">
+      <input type="number" class="form-control mb-3" id="amount" placeholder="Enter amount">
       <div class="d-flex justify-content-between small text-white">
         <span>Min: <span id="minWithdraw">50</span> BDT</span>
         <span>Available: <span id="availableBalance">0.00</span> BDT</span>
@@ -764,7 +559,7 @@
     </div>
     
     <div class="mb-4">
-      <label class="fw-bold mb-2" id="accountLabel">Wallet/Account Number</label>
+      <label class="fw-bold mb-2">Wallet/Account Number</label>
       <input type="text" class="form-control" id="address" placeholder="Enter your wallet number">
     </div>
     
@@ -948,8 +743,7 @@
     projectId: "test-6977e",
     storageBucket: "test-6977e.firebasestorage.app",
     messagingSenderId: "544329273038",
-    appId: "1:544329273038:web:c7a31e12bec7c80741ca9f",
-    databaseURL: "https://test-6977e-default-rtdb.firebaseio.com/"
+    appId: "1:544329273038:web:c7a31e12bec7c80741ca9f"
   };
   
   // Initialize Firebase
@@ -959,7 +753,6 @@
   // Initialize Telegram Web App
   const tg = window.Telegram.WebApp;
   tg.expand(); // full height
-  tg.enableClosingConfirmation(); // Prevent accidental closing
   
   // Telegram user info
   const user = tg.initDataUnsafe?.user;
@@ -975,11 +768,6 @@
   let deviceID = "";
   let currentSurveyUrl = "";
   let surveyCompleted = false;
-  let selectedWithdrawMethod = "";
-  let dailyBonusAvailable = false;
-  let dailyBonusTimer = null;
-  let adTimer = null;
-  let adSecondsRemaining = 15;
   
   // Initialize the application
   document.addEventListener("DOMContentLoaded", async function() {
@@ -1009,13 +797,6 @@
     
     // Load surveys
     loadSurveys();
-    
-    // Check daily bonus status
-    checkDailyBonus();
-    
-    // Set up ad event listeners
-    document.getElementById('cancelAdBtn').addEventListener('click', cancelAd);
-    document.getElementById('completeAdBtn').addEventListener('click', completeAd);
   });
   
   // Get user IP address
@@ -1162,8 +943,7 @@
             history: [],
             ip: userIP,
             deviceID: deviceID,
-            usedPromoCodes: [],
-            lastDailyBonus: null
+            usedPromoCodes: []
           };
           
           // Save new user to Firebase
@@ -1179,12 +959,7 @@
         document.getElementById("promoCode").textContent = userData.promoCode;
         document.getElementById("referralsCount").textContent = userData.referrals;
         document.getElementById("referralsCountHome").textContent = userData.referrals;
-        document.getElementById("referralCodeDisplay").textContent = userData.referralCode;
-        
-        // Generate invite link with Telegram bot
-        const botUsername = "testosteroneeeeebot";
-        const inviteLink = `https://t.me/${botUsername}?start=${userData.referralCode}`;
-        document.getElementById("inviteLink").value = inviteLink;
+        document.getElementById("inviteLink").value = `https://yourwebsite.com/invite?ref=${userData.referralCode}`;
         
         resolve();
       });
@@ -1343,67 +1118,51 @@
   }
 
   async function watchAd() {
-    if (userData.completedTasks >= appConfig.dailyLimit) {
-      showNotification("Completed!", "All tasks completed for today!", "info");
-      return;
-    }
-    
-    // Show the ad container
-    document.getElementById("adContainer").classList.remove("hidden");
-    
-    // Reset ad timer
-    adSecondsRemaining = 15;
-    document.getElementById("adTimer").textContent = adSecondsRemaining;
-    document.getElementById("adProgressBar").style.width = "0%";
-    document.getElementById("completeAdBtn").disabled = true;
-    
-    // Start the ad timer
-    adTimer = setInterval(() => {
-      adSecondsRemaining--;
-      document.getElementById("adTimer").textContent = adSecondsRemaining;
-      
-      // Update progress bar
-      const progress = ((15 - adSecondsRemaining) / 15) * 100;
-      document.getElementById("adProgressBar").style.width = progress + "%";
-      
-      if (adSecondsRemaining <= 0) {
-        clearInterval(adTimer);
-        document.getElementById("completeAdBtn").disabled = false;
+    if (userData.completedTasks < appConfig.dailyLimit) {
+      try {
+        // Disable button to prevent multiple clicks
+        const adButton = document.querySelector('.btn-custom');
+        const originalText = adButton.innerHTML;
+        adButton.disabled = true;
+        adButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
+        
+        // Load GigaPub Ad and wait for completion
+        await window.showGiga();
+        
+        // Update user data
+        userData.completedTasks++;
+        userData.balance += 0.2;
+        userData.totalEarnings += 0.2;
+        
+        // Add to history
+        userData.history.unshift({ 
+          type: "earning",
+          method: "Ad View", 
+          amount: "0.20", 
+          address: "Ad Reward", 
+          status: "Completed",
+          date: new Date().toLocaleDateString()
+        });
+        
+        // Save to Firebase
+        saveUserData();
+        
+        // Update UI
+        updateUI();
+        showNotification("Success!", "You earned 0.20 BDT!", "success");
+        
+      } catch(e) {
+        console.log("Ad failed or closed before completion", e);
+        showNotification("Error", "Ad not completed. Please try again.", "danger");
+      } finally {
+        // Re-enable button
+        const adButton = document.querySelector('.btn-custom');
+        adButton.disabled = false;
+        adButton.innerHTML = '<i class="bi bi-play-circle me-2"></i> Watch Ad (+0.20 BDT)';
       }
-    }, 1000);
-  }
-  
-  function cancelAd() {
-    clearInterval(adTimer);
-    document.getElementById("adContainer").classList.add("hidden");
-    showNotification("Info", "Ad viewing cancelled. No reward awarded.", "info");
-  }
-  
-  function completeAd() {
-    clearInterval(adTimer);
-    document.getElementById("adContainer").classList.add("hidden");
-    
-    // Update user data
-    userData.completedTasks++;
-    userData.balance += 0.2;
-    userData.totalEarnings += 0.2;
-    
-    // Add to history
-    userData.history.unshift({ 
-      type: "earning",
-      method: "Ad View", 
-      amount: "0.20", 
-      address: "Ad Reward", 
-      status: "Completed",
-      date: new Date().toLocaleDateString()
-    });
-    
-    // Save to Firebase
-    saveUserData();
-    
-    // Update UI
-    updateUI();
-    showNotification("Success!", "You earned 0.20 BDT!", "success");
+    } else {
+      showNotification("Completed!", "All tasks completed for today!", "info");
+    }
   }
   
   function showSurveyPage() {
@@ -1521,7 +1280,7 @@
   }
 
   async function withdraw() {
-    let method = selectedWithdrawMethod || document.getElementById("method").value;
+    let method = document.getElementById("method").value;
     let amount = parseFloat(document.getElementById("amount").value);
     let address = document.getElementById("address").value;
 
@@ -1562,44 +1321,6 @@
     document.getElementById("method").value = "";
     document.getElementById("amount").value = "";
     document.getElementById("address").value = "";
-    selectedWithdrawMethod = "";
-    
-    // Reset selected method UI
-    document.querySelectorAll('.withdraw-method').forEach(el => {
-      el.classList.remove('selected');
-    });
-  }
-  
-  function selectWithdrawMethod(method) {
-    selectedWithdrawMethod = method;
-    
-    // Update UI
-    document.querySelectorAll('.withdraw-method').forEach(el => {
-      el.classList.remove('selected');
-    });
-    
-    event.currentTarget.classList.add('selected');
-    
-    // Update account label based on method
-    const accountLabel = document.getElementById('accountLabel');
-    if (method === 'Binance') {
-      accountLabel.textContent = 'Binance ID';
-      document.getElementById('address').placeholder = 'Enter your Binance ID';
-    } else {
-      accountLabel.textContent = 'Account Number';
-      document.getElementById('address').placeholder = 'Enter your account number';
-    }
-  }
-  
-  function updateWithdrawAmount() {
-    const amount = parseFloat(document.getElementById("amount").value) || 0;
-    const balance = userData.balance || 0;
-    
-    if (amount > balance) {
-      document.getElementById("amount").classList.add('is-invalid');
-    } else {
-      document.getElementById("amount").classList.remove('is-invalid');
-    }
   }
   
   function copyInviteLink() {
@@ -1609,17 +1330,6 @@
     navigator.clipboard.writeText(copyText.value)
       .then(() => {
         showNotification("Success", "Invite link copied!", "success");
-      })
-      .catch(err => {
-        console.error("Failed to copy: ", err);
-      });
-  }
-  
-  function copyReferralCode() {
-    const referralCode = document.getElementById("referralCodeDisplay").textContent;
-    navigator.clipboard.writeText(referralCode)
-      .then(() => {
-        showNotification("Success", "Referral code copied!", "success");
       })
       .catch(err => {
         console.error("Failed to copy: ", err);
@@ -1721,147 +1431,9 @@
   
   function loadMoreHistory() {
     showNotification("Info", "Loading more transactions...", "info");
-    // In a real app, you would implement pagination here
-  }
-  
-  // Daily bonus functionality
-  function checkDailyBonus() {
-    const now = new Date();
-    const lastBonus = userData.lastDailyBonus ? new Date(userData.lastDailyBonus) : null;
-    
-    if (!lastBonus) {
-      // Never claimed bonus before
-      enableDailyBonus();
-      return;
-    }
-    
-    // Check if 24 hours have passed since last claim
-    const timeDiff = now - lastBonus;
-    const hoursDiff = timeDiff / (1000 * 60 * 60);
-    
-    if (hoursDiff >= 24) {
-      enableDailyBonus();
-    } else {
-      // Calculate time until next bonus
-      const nextBonusTime = new Date(lastBonus.getTime() + 24 * 60 * 60 * 1000);
-      startDailyBonusTimer(nextBonusTime);
-    }
-  }
-  
-  function enableDailyBonus() {
-    dailyBonusAvailable = true;
-    document.getElementById("dailyBonusBtn").disabled = false;
-    document.getElementById("dailyBonusText").textContent = "Available now!";
-    document.getElementById("dailyBonusTextBtn").textContent = "Claim (5 BDT)";
-  }
-  
-  function startDailyBonusTimer(nextBonusTime) {
-    dailyBonusAvailable = false;
-    document.getElementById("dailyBonusBtn").disabled = true;
-    
-    if (dailyBonusTimer) {
-      clearInterval(dailyBonusTimer);
-    }
-    
-    dailyBonusTimer = setInterval(() => {
-      const now = new Date();
-      const timeRemaining = nextBonusTime - now;
-      
-      if (timeRemaining <= 0) {
-        clearInterval(dailyBonusTimer);
-        enableDailyBonus();
-        return;
-      }
-      
-      // Calculate hours, minutes, seconds
-      const hours = Math.floor(timeRemaining / (1000 * 60 * 60));
-      const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
-      
-      // Update UI
-      document.getElementById("dailyBonusText").textContent = `Available in ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }, 1000);
-  }
-  
-  function claimDailyBonus() {
-    if (!dailyBonusAvailable) return;
-    
-    // Show loading state
-    document.getElementById("dailyBonusSpinner").classList.remove("d-none");
-    document.getElementById("dailyBonusTextBtn").textContent = "Processing...";
-    
-    // Simulate processing
-    setTimeout(() => {
-      // Update user data
-      userData.balance += 5;
-      userData.totalEarnings += 5;
-      userData.lastDailyBonus = new Date().toISOString();
-      
-      // Add to history
-      userData.history.unshift({ 
-        type: "earning",
-        method: "Daily Bonus", 
-        amount: "5.00", 
-        address: "Daily Login", 
-        status: "Completed",
-        date: new Date().toLocaleDateString()
-      });
-      
-      // Save to Firebase
-      saveUserData();
-      
-      // Update UI
-      updateUI();
-      showNotification("Success!", "You claimed your daily bonus of 5 BDT!", "success");
-      
-      // Reset button state
-      document.getElementById("dailyBonusSpinner").classList.add("d-none");
-      document.getElementById("dailyBonusTextBtn").textContent = "Claimed";
-      document.getElementById("dailyBonusBtn").disabled = true;
-      
-      // Start timer for next bonus
-      const nextBonusTime = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
-      startDailyBonusTimer(nextBonusTime);
-    }, 1500);
-  }
-  
-  // Admin function to reset daily tasks
-  function resetDailyTasks() {
-    if (confirm("Are you sure you want to reset your daily tasks? This is an admin function.")) {
-      userData.completedTasks = 0;
-      saveUserData();
-      updateUI();
-      showNotification("Success", "Daily tasks reset successfully!", "success");
-    }
-  }
-  
-  // Clear local data
-  function clearData() {
-    if (confirm("Are you sure you want to clear all local data? This will log you out.")) {
-      localStorage.clear();
-      sessionStorage.clear();
-      showNotification("Info", "Local data cleared. Refreshing page...", "info");
-      setTimeout(() => location.reload(), 1500);
-    }
-  }
-  
-  // Logout function
-  function logout() {
-    if (confirm("Are you sure you want to logout?")) {
-      showNotification("Info", "Logging out...", "info");
-      setTimeout(() => {
-        // In a real app, you would clear authentication tokens
-        localStorage.clear();
-        sessionStorage.clear();
-        location.reload();
-      }, 1500);
-    }
   }
   
   function showNotification(title, message, type) {
-    // Remove any existing notifications
-    document.querySelectorAll('.floating-notification').forEach(el => el.remove());
-    
     const notification = document.createElement("div");
     notification.className = `alert alert-${type} floating-notification alert-dismissible shadow`;
     notification.innerHTML = `
@@ -1873,10 +1445,8 @@
     
     // Auto remove after 5 seconds
     setTimeout(() => {
-      if (notification.parentNode) {
-        notification.classList.add("fade");
-        setTimeout(() => notification.remove(), 300);
-      }
+      notification.classList.add("fade");
+      setTimeout(() => notification.remove(), 300);
     }, 5000);
   }
 </script>
