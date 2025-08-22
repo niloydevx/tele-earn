@@ -416,15 +416,114 @@
 <div id="notificationArea"></div>
 
 <!-- VPN CHECK -->
-<div id="vpnCheck" class="container my-4">
+<style>
+  :root {
+    --primary-color: #ffd700;
+    --accent-color: #ffdb4d;
+    --dark-bg: #0a0a0a;
+    --card-bg: linear-gradient(145deg, #111, #1a1a1a);
+  }
+
+  #vpnCheck {
+    background: var(--dark-bg);
+    padding: 2rem;
+    border-radius: 1rem;
+    color: #fff;
+    max-width: 500px;
+    margin: 3rem auto;
+    font-family: 'Segoe UI', sans-serif;
+  }
+
+  .vpn-check-container {
+    background: var(--card-bg);
+    padding: 2.5rem 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  #vpnCheck h4 {
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .alert {
+    border-radius: 0.75rem;
+    font-weight: 500;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    text-align: center;
+    padding: 0.75rem 1rem;
+  }
+
+  .alert-primary {
+    background-color: #1a1a2e;
+    color: var(--accent-color);
+    border: 1px solid var(--primary-color);
+  }
+
+  .alert-warning {
+    background-color: #331a00;
+    color: #ffcc66;
+    border: 1px solid #ff9900;
+  }
+
+  .alert-danger {
+    background-color: #330000;
+    color: #ff6666;
+    border: 1px solid #ff0000;
+  }
+
+  .alert-success {
+    background-color: #003300;
+    color: #99ff66;
+    border: 1px solid #00ff00;
+  }
+
+  .spinner-border {
+    margin-right: 0.5rem;
+  }
+
+  .d-flex i {
+    font-size: 1.2rem;
+  }
+</style>
+
+<div id="vpnCheck">
   <div class="vpn-check-container">
-    <h4 class="text-center mb-3">Connection Check</h4>
-    <div id="vpnStatus" class="vpn-status alert alert-info">Checking your connection...</div>
-    <div id="vpnAlert" class="alert alert-warning d-none text-center">🚨 VPN required! Please connect VPN.</div>
-    <div id="vpnOffAlert" class="alert alert-danger d-none text-center">⚠️ VPN detected! Please turn it off.</div>
-    <div id="vpnSuccess" class="alert alert-success d-none text-center">✅ VPN connection verified! You can now use the app.</div>
+    <h4>🌐 Network Status</h4>
+
+    <div id="vpnStatus" class="alert alert-primary d-flex">
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      Checking your network...
+    </div>
+
+    <div id="vpnAlert" class="alert alert-warning d-none d-flex">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      VPN required! Please connect your VPN.
+    </div>
+
+    <div id="vpnOffAlert" class="alert alert-danger d-none d-flex">
+      <i class="bi bi-slash-circle-fill"></i>
+      VPN detected! Please disconnect it.
+    </div>
+
+    <div id="vpnSuccess" class="alert alert-success d-none d-flex">
+      <i class="bi bi-check-circle-fill"></i>
+      Connection verified! You can now use the app.
+    </div>
   </div>
 </div>
+
 
 <!-- HOME -->
 <div id="home" class="container my-4 hidden">
@@ -1433,7 +1532,7 @@
       amount: reward.toFixed(2), 
       address: promoCode, 
       status: "Completed",
-      date: new Date().toLocaleDateString()
+      date: new Date().toLocaleDate()
     });
     
     // Save to Firebase
