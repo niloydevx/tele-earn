@@ -766,8 +766,9 @@
   let vpnRequired = true;
   let userIP = "";
   let deviceID = "";
-  let currentSurveyUrl = "";
-  let surveyCompleted = false;
+  let currentSurvey = null;
+  let surveyWindow = null;
+  let surveyCheckInterval = null;
   
   // Initialize the application
   document.addEventListener("DOMContentLoaded", async function() {
@@ -847,31 +848,27 @@
             surveys: [
               { 
                 id: 1, 
-                name: "Tap_Cash", 
-                reward: 0.30, 
-                image: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
-                url: "https://example.com/survey1" 
+                name: "Consumer Survey", 
+                reward: 1.50, 
+                image: "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                url: "https://www.surveys.com/consumer",
+                completedBy: {}
               },
               { 
                 id: 2, 
-                name: "Survey 2", 
-                reward: 0.50, 
-                image: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
-                url: "https://example.com/survey2" 
+                name: "Market Research", 
+                reward: 2.00, 
+                image: "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                url: "https://www.surveys.com/market",
+                completedBy: {}
               },
               { 
                 id: 3, 
-                name: "Survey 3", 
+                name: "Product Feedback", 
                 reward: 1.00, 
-                image: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
-                url: "https://example.com/survey3" 
-              },
-              { 
-                id: 4, 
-                name: "Survey 4", 
-                reward: 2.00, 
-                image: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
-                url: "https://example.com/survey4" 
+                image: "https://images.unsplash.com/photo-1552581234-26160f608093?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                url: "https://www.surveys.com/product",
+                completedBy: {}
               }
             ],
             vpnRequired: true,
@@ -943,7 +940,8 @@
             history: [],
             ip: userIP,
             deviceID: deviceID,
-            usedPromoCodes: []
+            usedPromoCodes: [],
+            completedSurveys: {}
           };
           
           // Save new user to Firebase
@@ -1173,13 +1171,16 @@
   
   function hideSurveyPage() {
     // If a survey was started but not completed, don't award anything
-    if (currentSurveyUrl && !surveyCompleted) {
+    if (currentSurvey) {
       showNotification("Info", "Survey was not completed. No reward awarded.", "info");
     }
     
     // Reset survey state
-    currentSurveyUrl = "";
-    surveyCompleted = false;
+    currentSurvey = null;
+    if (surveyCheckInterval) {
+      clearInterval(surveyCheckInterval);
+      surveyCheckInterval = null;
+    }
     
     document.getElementById("surveyPage").classList.add("hidden");
     document.getElementById("rewards").classList.remove("hidden");
@@ -1193,30 +1194,37 @@
     if (!appConfig || !appConfig.surveys) return;
     
     appConfig.surveys.forEach(survey => {
+      // Check if user has already completed this survey
+      const isCompleted = userData.completedSurveys && userData.completedSurveys[survey.id];
+      
       const surveyHTML = `
         <div class="col-12">
-  <div class="card survey-card p-2">
-    <div class="d-flex align-items-center">
-      
-      <!-- Logo -->
-      <img src="${survey.image}" alt="${survey.name}" 
-           class="rounded-circle me-3" style="width:50px; height:50px; object-fit:cover;">
-      
-      <!-- Title + Reward -->
-      <div class="flex-grow-1">
-        <h6 class="mb-1">${survey.name}</h6>
-        <p class="mb-0 text-success small">Reward: BDT ${survey.reward.toFixed(2)}</p>
-      </div>
-      
-      <!-- Buttons -->
-      <div class="d-flex gap-2">
-        <button class="btn btn-sm btn-outline-secondary" onclick="checkSurvey('${survey.url}')">Check</button>
-        <button class="btn btn-sm btn-warning" onclick="startSurvey('${survey.id}', '${survey.url}')">Start</button>
-      </div>
-      
-    </div>
-  </div>
-</div>
+          <div class="card survey-card p-2 ${isCompleted ? 'opacity-75' : ''}">
+            <div class="d-flex align-items-center">
+              
+              <!-- Logo -->
+              <img src="${survey.image}" alt="${survey.name}" 
+                   class="rounded-circle me-3" style="width:50px; height:50px; object-fit:cover;">
+              
+              <!-- Title + Reward -->
+              <div class="flex-grow-1">
+                <h6 class="mb-1">${survey.name}</h6>
+                <p class="mb-0 text-success small">Reward: BDT ${survey.reward.toFixed(2)}</p>
+                ${isCompleted ? '<span class="badge bg-success">Completed</span>' : ''}
+              </div>
+              
+              <!-- Buttons -->
+              <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-secondary" onclick="checkSurvey(${survey.id})">Check</button>
+                <button class="btn btn-sm ${isCompleted ? 'btn-secondary' : 'btn-warning'}" 
+                        onclick="startSurvey(${survey.id})" ${isCompleted ? 'disabled' : ''}>
+                  ${isCompleted ? 'Completed' : 'Start'}
+                </button>
+              </div>
+              
+            </div>
+          </div>
+        </div>
       `;
       surveysContainer.innerHTML += surveyHTML;
     });
@@ -1234,35 +1242,68 @@
     const survey = appConfig.surveys.find(s => s.id === surveyId);
     if (!survey) return;
     
+    // Check if user has already completed this survey
+    if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
+      showNotification("Info", "You have already completed this survey.", "info");
+      return;
+    }
+    
     if (userData.completedTasks < appConfig.dailyLimit) {
-      // Store the current survey URL
-      currentSurveyUrl = survey.url;
-      surveyCompleted = false;
+      // Store the current survey
+      currentSurvey = survey;
       
       // Open the survey URL in a new tab
-      window.open(survey.url, '_blank');
+      surveyWindow = window.open(survey.url, '_blank', 'noopener,noreferrer');
       
-      // Show confirmation dialog
-      const confirmed = confirm("Please complete the survey in the new tab. Click OK only after you have completed the survey to claim your reward.");
+      // Start checking if the survey is completed
+      startSurveyCompletionCheck(survey);
       
-      if (confirmed) {
-        completeSurvey(surveyId);
-      } else {
-        showNotification("Info", "Please complete the survey to get your reward.", "info");
-      }
+      // Show instructions
+      showNotification("Info", "Survey opened in new tab. Please complete it to get your reward.", "info");
     } else {
       showNotification("Completed!", "All tasks completed for today!", "info");
     }
   }
   
-  async function completeSurvey(surveyId) {
-    const survey = appConfig.surveys.find(s => s.id === surveyId);
+  function startSurveyCompletionCheck(survey) {
+    // Check every 5 seconds if the survey window is closed
+    surveyCheckInterval = setInterval(() => {
+      if (surveyWindow && surveyWindow.closed) {
+        clearInterval(surveyCheckInterval);
+        surveyCheckInterval = null;
+        
+        // Ask user if they completed the survey
+        const completed = confirm("Have you completed the survey? Click OK if you completed it, or Cancel if you didn't.");
+        
+        if (completed) {
+          completeSurvey(survey);
+        } else {
+          showNotification("Info", "Survey not completed. No reward awarded.", "info");
+          currentSurvey = null;
+        }
+      }
+    }, 5000);
+  }
+  
+  async function completeSurvey(survey) {
     if (!survey) return;
     
     // Update user data
     userData.completedTasks++;
     userData.balance += survey.reward;
     userData.totalEarnings += survey.reward;
+    
+    // Mark survey as completed for this user
+    if (!userData.completedSurveys) {
+      userData.completedSurveys = {};
+    }
+    userData.completedSurveys[survey.id] = true;
+    
+    // Update survey completion in app config
+    if (!appConfig.surveys.find(s => s.id === survey.id).completedBy) {
+      appConfig.surveys.find(s => s.id === survey.id).completedBy = {};
+    }
+    appConfig.surveys.find(s => s.id === survey.id).completedBy[userId] = true;
     
     // Add to history
     userData.history.unshift({ 
@@ -1274,15 +1315,17 @@
       date: new Date().toLocaleDateString()
     });
     
-    // Mark survey as completed
-    surveyCompleted = true;
-    
     // Save to Firebase
     saveUserData();
+    database.ref('appConfig').set(appConfig);
     
     // Update UI
     updateUI();
+    loadSurveys(); // Reload surveys to update completion status
     showNotification("Success!", `You earned ${survey.reward.toFixed(2)} BDT from survey!`, "success");
+    
+    // Reset current survey
+    currentSurvey = null;
   }
 
   async function withdraw() {
