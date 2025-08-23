@@ -1324,7 +1324,7 @@ function loadSurveys() {
     // Check if user has already completed this survey
     const isCompleted = userData.completedSurveys && userData.completedSurveys[survey.id];
     
-    const surveyHTML = `
+   const surveyHTML = `
   <div class="col-12 mb-3">
     <div class="card survey-card p-3 ${isCompleted ? 'opacity-75 border-success' : 'border-warning'}">
       <div class="d-flex align-items-center">
@@ -1345,12 +1345,13 @@ function loadSurveys() {
 
         <!-- Action Buttons -->
         <div class="d-flex flex-column gap-2">
-          <button class="btn btn-sm btn-outline-info" onclick="verifySurvey(${survey.id})">
-            🔍 Verify
+          <button class="btn btn-sm btn-outline-primary rounded-pill px-3" 
+                  onclick="verifySurvey(${survey.id})">
+            🔍 Check Now
           </button>
-          <button class="btn btn-sm ${isCompleted ? 'btn-secondary' : 'btn-warning'}" 
+          <button class="btn btn-sm ${isCompleted ? 'btn-secondary' : 'btn-success'} rounded-pill px-3" 
                   onclick="claimSurvey(${survey.id})" ${isCompleted ? 'disabled' : ''}>
-            ${isCompleted ? 'Claimed' : 'Claim'}
+            ${isCompleted ? '✔ Claimed' : '⚡ Claim Reward'}
           </button>
         </div>
 
@@ -1360,6 +1361,11 @@ function loadSurveys() {
 `;
 surveysContainer.innerHTML += surveyHTML;
   });
+  
+  // If no surveys available, show message
+  if (surveysContainer.innerHTML === "") {
+    surveysContainer.innerHTML = `<div class="col-12 text-center text-muted">No active surveys available at the moment.</div>`;
+  }
 }
 
 function checkSurvey(surveyId) {
