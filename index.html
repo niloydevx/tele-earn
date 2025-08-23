@@ -363,7 +363,6 @@
         display: flex;
         flex-direction: column;
         height: calc(100% - 160px);
-        justify-content: space-between;
       }
 
       .survey-card .card-title {
@@ -541,46 +540,6 @@
         transition: width 0.1s linear;
       }
 
-      /* AD CONTAINER STYLES */
-      #adContainer {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 300px;
-        height: 250px;
-        background: #000;
-        border: 2px solid var(--primary-color);
-        border-radius: 12px;
-        overflow: hidden;
-        z-index: 2001;
-        box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
-        display: none;
-      }
-
-      #adContainer iframe {
-        width: 100%;
-        height: 100%;
-        border: none;
-      }
-
-      .ad-close-btn {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background: rgba(0, 0, 0, 0.7);
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 30px;
-        height: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        z-index: 2002;
-      }
-
       /* Responsive adjustments */
       @media (max-width: 576px) {
         .cover-img {
@@ -615,11 +574,6 @@
         .ad-timer {
           font-size: 2.5rem;
         }
-
-        #adContainer {
-          width: 280px;
-          height: 200px;
-        }
       }
     </style>
   </head>
@@ -633,15 +587,9 @@
         <div class="ad-progress">
           <div class="ad-progress-bar" id="adProgressBar"></div>
         </div>
-        <p>Please watch the ad until completion...</p>
+        <p>Please wait while the advertisement completes...</p>
         <p class="text-muted">Do not close or refresh the page</p>
       </div>
-    </div>
-
-    <!-- AD CONTAINER -->
-    <div id="adContainer">
-      <button class="ad-close-btn" id="adCloseBtn">×</button>
-      <!-- Ad content will be loaded here -->
     </div>
 
     <!-- BANNED USER SCREEN (hidden by default) -->
@@ -1067,7 +1015,7 @@
               <div
                 class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow"
               >
-                <label class="small text极
+                <label class="small text-muted d-block mb-1">Promo Code</label>
                 <span id="promoCode">-</span>
               </div>
             </div>
@@ -1090,11 +1038,12 @@
           <div class="row row-cols-2 g-3">
             <div class="col">
               <div
-                class="p-3 rounded-3 f极
+                class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow"
+              >
                 <label class="small text-muted d-block mb-1"
                   >Total Earnings</label
                 >
-                <span id="total极
+                <span id="totalEarnings">0.00</span> BDT
               </div>
             </div>
             <div class="col">
@@ -1123,7 +1072,8 @@
                   >Referral Earnings</label
                 >
                 <span id="referralEarnings">0.00</span> BDT
-              </极
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1157,7 +1107,7 @@
           <span>Withdraw</span>
         </a>
         <a href="#" onclick="showTab('history', this)">
-          <i class="bi极
+          <i class="bi bi-clock-history"></i>
           <span>History</span>
         </a>
         <a href="#" onclick="showTab('profile', this)">
@@ -1194,7 +1144,7 @@
       let username = user ? user.username || user.first_name : "User" + userId;
       let userPhotoUrl = user
         ? user.photo_url || "https://via.placeholder.com/120"
-        : "极
+        : "https://via.placeholder.com/120";
 
       // App state
       let userData = null;
@@ -1240,11 +1190,6 @@
         document
           .getElementById("watchAdBtn")
           .addEventListener("click", watchAd);
-
-        // Add event listener to close ad button
-        document
-          .getElementById("adCloseBtn")
-          .addEventListener("click", closeAd);
       });
 
       // Get user IP address
@@ -1328,7 +1273,7 @@
             }
 
             // Apply app configuration
-            document.getElementById("logo极
+            document.getElementById("logoImg").src = appConfig.logo;
             document.getElementById("coverImg").src = appConfig.cover;
             document.getElementById("dailyLimit").textContent =
               appConfig.dailyLimit;
@@ -1336,7 +1281,8 @@
               appConfig.dailyLimit;
             document.getElementById("minWithdraw").textContent =
               appConfig.minWithdraw;
-            document.getElementById("minWithdrawInfo").极
+            document.getElementById("minWithdrawInfo").textContent =
+              appConfig.minWithdraw;
 
             vpnRequired =
               appConfig.vpnRequired !== undefined
@@ -1431,7 +1377,7 @@
 
       // Check for duplicate accounts
       async function checkForDuplicateAccounts(isNewUser = false) {
-        database.ref("users").once("value", (snapshot)极
+        database.ref("users").once("value", (snapshot) => {
           const users = snapshot.val();
           let duplicateFound = false;
 
@@ -1461,7 +1407,7 @@
                       .ref("bannedUsers")
                       .once("value", (bannedSnapshot) => {
                         const bannedUsers = bannedSnapshot.val() || [];
-                        if (!bannedUsers.includes(user极
+                        if (!bannedUsers.includes(userId.toString())) {
                           bannedUsers.push(userId.toString());
                           database.ref("bannedUsers").set(bannedUsers);
                         }
@@ -1491,12 +1437,12 @@
             "Checking your connection...";
 
           // Get public IP
-          let ipRes = await fetch("https://api64极
+          let ipRes = await fetch("https://api64.ipify.org?format=json");
           let ipData = await ipRes.json();
 
           // Get IP details
           let geoRes = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
-          let geo极
+          let geoData = await geoRes.json();
 
           document.getElementById(
             "vpnStatus"
@@ -1554,7 +1500,7 @@
           .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         const formattedTotalEarnings = userData.totalEarnings
           .toFixed(2)
-          .replace(/\B(?=(\d极
+          .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         const formattedWithdrawn = userData.withdrawn
           .toFixed(2)
           .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -1590,7 +1536,9 @@
         const adReward = appConfig.adsRewards || 0.2;
         document.getElementById(
           "watchAdBtn"
-        ).innerHTML = `<i class="bi bi-play-circle me极
+        ).innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(
+          2
+        )} BDT)`;
 
         // Update referral text with correct percentage
         const referralCommission = appConfig.referralCommission || 10;
@@ -1657,90 +1605,8 @@
           if (seconds <= 0) {
             clearInterval(adTimerInterval);
             overlay.classList.remove("active");
-            document.getElementById("adContainer").style.display = "none";
-            
-            // Award user for completing the ad
-            awardAdReward();
           }
         }, 1000);
-      }
-
-      // Show ad content
-      function showAdContent() {
-        const adContainer = document.getElementById("adContainer");
-        
-        // For demo purposes, we'll use a placeholder ad
-        // In a real implementation, you would load an actual ad
-        adContainer.innerHTML = `
-          <button class="ad-close-btn" id="adCloseBtn">×</button>
-          <div style="width:100%; height:100%; background:linear-gradient(135deg, #4b6cb7, #182848); display:flex; flex-direction:column; justify-content:center; align-items:center; color:white;">
-            <h4>Demo Advertisement</h4>
-            <p>Watch this ad for 16 seconds</p>
-            <div style="margin-top:20px; background:rgba(255,255,255,0.2); padding:10px; border-radius:8px;">
-              <p>Special Offer: 50% Off!</p>
-              <button style="background:var(--primary-color); border:none; padding:8px 16px; border-radius:4px; margin-top:10px; font-weight:bold;">
-                Learn More
-              </button>
-            </div>
-          </div>
-        `;
-        
-        adContainer.style.display = "block";
-        
-        // Re-add event listener to close button
-        document.getElementById("adCloseBtn").addEventListener("click", closeAd);
-      }
-
-      // Close ad manually
-      function closeAd() {
-        clearInterval(adTimerInterval);
-        document.getElementById("adOverlay").classList.remove("active");
-        document.getElementById("adContainer").style.display = "none";
-        
-        // Re-enable button
-        const adButton = document.getElementById("watchAdBtn");
-        adButton.disabled = false;
-        const adReward = appConfig.adsRewards || 0.2;
-        adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
-        
-        showNotification("Info", "Ad was closed early. No reward awarded.", "info");
-      }
-
-      // Award user for completing the ad
-      function awardAdReward() {
-        // Get ad reward from app config (default to 0.20 if not set)
-        const adReward = appConfig.adsRewards || 0.2;
-
-        // Update user data
-        userData.completedTasks++;
-        userData.balance += adReward;
-        userData.totalEarnings += adReward;
-
-        // Add to history
-        userData.history.unshift({
-          type: "earning",
-          method: "Ad View",
-          amount: adReward.toFixed(2),
-          address: "Ad Reward",
-          status: "Completed",
-          date: new Date().toLocaleDateString(),
-        });
-
-        // Save to Firebase
-        saveUserData();
-
-        // Update UI
-        updateUI();
-        showNotification(
-          "Success!",
-          `You earned ${adReward.toFixed(2)} BDT!`,
-          "success"
-        );
-
-        // Re-enable button
-        const adButton = document.getElementById("watchAdBtn");
-        adButton.disabled = false;
-        adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
       }
 
       async function watchAd() {
@@ -1753,10 +1619,40 @@
             adButton.innerHTML =
               '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
 
-            // Show the ad content and overlay
-            showAdContent();
+            // Show the ad overlay
             showAdOverlay();
             
+            // Wait for 16 seconds (simulated ad time)
+            await new Promise(resolve => setTimeout(resolve, 16000));
+
+            // Get ad reward from app config (default to 0.20 if not set)
+            const adReward = appConfig.adsRewards || 0.2;
+
+            // Update user data
+            userData.completedTasks++;
+            userData.balance += adReward;
+            userData.totalEarnings += adReward;
+
+            // Add to history
+            userData.history.unshift({
+              type: "earning",
+              method: "Ad View",
+              amount: adReward.toFixed(2),
+              address: "Ad Reward",
+              status: "Completed",
+              date: new Date().toLocaleDateString(),
+            });
+
+            // Save to Firebase
+            saveUserData();
+
+            // Update UI
+            updateUI();
+            showNotification(
+              "Success!",
+              `You earned ${adReward.toFixed(2)} BDT!`,
+              "success"
+            );
           } catch (e) {
             console.log("Ad failed or closed before completion", e);
             showNotification(
@@ -1764,12 +1660,16 @@
               "Ad not completed. Please try again.",
               "danger"
             );
-            
+          } finally {
             // Re-enable button
             const adButton = document.getElementById("watchAdBtn");
             adButton.disabled = false;
+
+            // Update button text with current reward amount
             const adReward = appConfig.adsRewards || 0.2;
-            adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
+            adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(
+              2
+            )} BDT)`;
           }
         } else {
           showNotification(
@@ -1787,7 +1687,7 @@
         document.getElementById("surveyPage").classList.remove("hidden");
         document
           .querySelectorAll(".bottom-nav a")
-          .forEach((a)极
+          .forEach((a) => a.classList.remove("active"));
       }
 
       function hideSurveyPage() {
@@ -1921,7 +1821,7 @@
       }
 
       function claimSurvey(surveyId) {
-        const survey = appConfig.surveys.find((s)极
+        const survey = appConfig.surveys.find((s) => s.id === surveyId);
         if (!survey) return;
 
         // Check if user has already completed this survey
@@ -2034,7 +1934,7 @@
           return showNotification("Error", "Please fill all fields!", "danger");
         }
 
-        if (amount < appConfig.min极
+        if (amount < appConfig.minWithdraw) {
           return showNotification(
             "Error",
             `Minimum withdrawal is ${appConfig.minWithdraw} BDT!`,
@@ -2125,7 +2025,7 @@
         const promoCodeData = appConfig.promoCodes[promoCode];
 
         // Check if promo code is active
-        if (promo极
+        if (promoCodeData.status !== "active") {
           return showNotification(
             "Error",
             "This promo code is not active!",
@@ -2146,7 +2046,7 @@
 
         // Update promo code usage count in app config
         appConfig.promoCodes[promoCode].used =
-          (appConfig.promoCodes[promoCode极
+          (appConfig.promoCodes[promoCode].used || 0) + 1;
         database.ref("appConfig").update({
           [`promoCodes/${promoCode}/used`]:
             appConfig.promoCodes[promoCode].used,
@@ -2199,7 +2099,7 @@
       <tr>
         <td class="ps-4">${tx.date || "Today"}</td>
         <td>${tx.method}</td>
-        <td>${极
+        <td>${tx.amount} ৳</td>
         <td>${tx.address.substring(0, 4)}...${tx.address.slice(-4)}</td>
         <td class="text-end pe-4 ${statusClass}">${tx.status}</td>
       </tr>
@@ -2216,7 +2116,7 @@
         const notification = document.createElement("div");
         notification.className = `alert alert-${type} floating-notification alert-dismissible shadow`;
         notification.innerHTML = `
-    <button type="button" class="btn-close btn-close-white极
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
     <strong>${title}</strong> ${message}
   `;
 
