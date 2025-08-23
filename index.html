@@ -391,6 +391,45 @@
       font-weight: 700;
     }
     
+     .alert {
+        border-radius: 0.75rem;
+        font-weight: 500;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+        text-align: left;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid transparent;
+    }
+    
+    .alert-primary {
+      background-color: #1a1a2e;
+      color: var(--accent-color);
+      border: 1px solid var(--primary-color);
+    }
+    
+    .alert-warning {
+      background-color: #331a00;
+      color: #ffcc66;
+      border: 1px solid #ff9900;
+    }
+    
+    .alert-danger {
+      background-color: #330000;
+      color: #ff6666;
+      border: 1px solid #ff0000;
+    }
+    
+    .alert-success {
+      background-color: #003300;
+      color: #99ff66;
+      border: 1px solid #00ff00;
+    }
+    
     .spinner-border {
       margin-right: 0.5rem;
     }
@@ -492,7 +531,7 @@
 
     <div id="vpnSuccess" class="alert alert-success d-none d-flex">
       <i class="bi bi-check-circle-fill"></i>
-       Connection verified! Enjoy the app.
+      Connection verified! You can now use the app.
     </div>
   </div>
 </div>
