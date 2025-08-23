@@ -486,7 +486,7 @@
         font-size: 1.2rem;
       }
 
-      /* AD OVERLAY STYLES */
+      /* AD OVERLAY STYLES - FIXED */
       #adOverlay {
         position: fixed;
         top: 0;
@@ -494,7 +494,7 @@
         width: 100%;
         height: 100%;
         background: rgba(0, 0, 0, 0.95);
-        z-index: 2000;
+        z-index: 9999;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -645,7 +645,25 @@
   </head>
   <body>
     <!-- AD OVERLAY -->
-    
+    <div id="adOverlay">
+      <div class="ad-content">
+        <div class="ad-container">
+          <div class="ad-placeholder">
+            <i class="bi bi-play-btn-fill"></i>
+            <h4>Advertisement</h4>
+            <p>Please wait while the ad loads...</p>
+          </div>
+          <div class="ad-timer" id="adTimer">16</div>
+          <div class="ad-close-btn" id="adCloseBtn">
+            <i class="bi bi-x-lg"></i>
+          </div>
+        </div>
+        <div class="ad-progress">
+          <div class="ad-progress-bar" id="adProgressBar"></div>
+        </div>
+        <p class="text-muted">Please watch the ad completely to earn rewards</p>
+      </div>
+    </div>
 
     <!-- BANNED USER SCREEN (hidden by default) -->
     <div id="bannedScreen" class="container hidden">
@@ -1211,6 +1229,7 @@
       let surveyWindow = null;
       let surveyCheckInterval = null;
       let adTimerInterval = null;
+      let adCompleted = false;
 
       // Initialize the application
       document.addEventListener("DOMContentLoaded", async function () {
@@ -1646,6 +1665,9 @@
         const timer = document.getElementById("adTimer");
         const progressBar = document.getElementById("adProgressBar");
         
+        // Reset state
+        adCompleted = false;
+        
         // Show overlay
         overlay.classList.add("active");
         
@@ -1664,9 +1686,45 @@
           
           if (seconds <= 0) {
             clearInterval(adTimerInterval);
+            adCompleted = true;
             overlay.classList.remove("active");
+            
+            // Award reward after ad completes
+            awardAdReward();
           }
         }, 1000);
+      }
+      
+      // Award ad reward to user
+      function awardAdReward() {
+        // Get ad reward from app config (default to 0.20 if not set)
+        const adReward = appConfig.adsRewards || 0.2;
+
+        // Update user data
+        userData.completedTasks++;
+        userData.balance += adReward;
+        userData.totalEarnings += adReward;
+
+        // Add to history
+        userData.history.unshift({
+          type: "earning",
+          method: "Ad View",
+          amount: adReward.toFixed(2),
+          address: "Ad Reward",
+          status: "Completed",
+          date: new Date().toLocaleDateString(),
+        });
+
+        // Save to Firebase
+        saveUserData();
+
+        // Update UI
+        updateUI();
+        showNotification(
+          "Success!",
+          `You earned ${adReward.toFixed(2)} BDT!`,
+          "success"
+        );
       }
       
       // Close ad overlay manually
@@ -1676,7 +1734,10 @@
           clearInterval(adTimerInterval);
         }
         overlay.classList.remove("active");
-        showNotification("Info", "Ad was closed early. No reward awarded.", "info");
+        
+        if (!adCompleted) {
+          showNotification("Info", "Ad was closed early. No reward awarded.", "info");
+        }
         
         // Re-enable button
         const adButton = document.getElementById("watchAdBtn");
@@ -1697,38 +1758,6 @@
 
             // Show the ad overlay with countdown
             showAdOverlay();
-            
-            // Wait for 16 seconds (simulated ad time)
-            await new Promise(resolve => setTimeout(resolve, 16000));
-
-            // Get ad reward from app config (default to 0.20 if not set)
-            const adReward = appConfig.adsRewards || 0.2;
-
-            // Update user data
-            userData.completedTasks++;
-            userData.balance += adReward;
-            userData.totalEarnings += adReward;
-
-            // Add to history
-            userData.history.unshift({
-              type: "earning",
-              method: "Ad View",
-              amount: adReward.toFixed(2),
-              address: "Ad Reward",
-              status: "Completed",
-              date: new Date().toLocaleDateString(),
-            });
-
-            // Save to Firebase
-            saveUserData();
-
-            // Update UI
-            updateUI();
-            showNotification(
-              "Success!",
-              `You earned ${adReward.toFixed(2)} BDT!`,
-              "success"
-            );
           } catch (e) {
             console.log("Ad failed or closed before completion", e);
             showNotification(
@@ -1736,16 +1765,12 @@
               "Ad not completed. Please try again.",
               "danger"
             );
-          } finally {
+            
             // Re-enable button
             const adButton = document.getElementById("watchAdBtn");
             adButton.disabled = false;
-
-            // Update button text with current reward amount
             const adReward = appConfig.adsRewards || 0.2;
-            adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(
-              2
-            )} BDT)`;
+            adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
           }
         } else {
           showNotification(
