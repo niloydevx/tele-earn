@@ -487,57 +487,49 @@
       }
 
       /* AD OVERLAY STYLES */
-      #adOverlay {
+      .ad-overlay {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.95);
+        background-color: rgba(0, 0, 0, 0.95);
         z-index: 2000;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
         color: white;
-        backdrop-filter: blur(10px);
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease;
-      }
-
-      #adOverlay.active {
-        opacity: 1;
-        pointer-events: all;
-      }
-
-      .ad-content {
         text-align: center;
-        max-width: 90%;
+        padding: 20px;
+      }
+
+      .ad-overlay-content {
+        max-width: 500px;
+        width: 90%;
       }
 
       .ad-timer {
-        font-size: 3rem;
+        font-size: 24px;
         font-weight: bold;
         margin: 20px 0;
         color: var(--primary-color);
       }
 
       .ad-progress {
-        width: 80%;
-        max-width: 300px;
+        width: 100%;
         height: 10px;
-        background: #333;
+        background-color: #333;
         border-radius: 5px;
-        margin: 20px 0;
         overflow: hidden;
+        margin: 20px 0;
       }
 
       .ad-progress-bar {
         height: 100%;
         background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
         width: 0%;
-        transition: width 0.1s linear;
+        transition: width 0.3s linear;
       }
 
       /* Responsive adjustments */
@@ -570,25 +562,28 @@
         #vpnCheck .vpn-check-container {
           padding: 1.5rem 1rem;
         }
-        
-        .ad-timer {
-          font-size: 2.5rem;
-        }
       }
     </style>
   </head>
   <body>
-    <!-- AD OVERLAY -->
-    <div id="adOverlay">
-      <div class="ad-content">
-        <i class="bi bi-play-btn-fill" style="font-size: 4rem;"></i>
-        <h2>Advertisement Playing</h2>
-        <div class="ad-timer" id="adTimer">16</div>
+    <!-- AD OVERLAY (hidden by default) -->
+    <div id="adOverlay" class="ad-overlay hidden">
+      <div class="ad-overlay-content">
+        <i class="bi bi-play-circle-fill" style="font-size: 3rem; color: var(--primary-color);"></i>
+        <h2 class="mt-3">Ad is Playing</h2>
+        <p>Please wait while the ad completes. Do not close this window.</p>
+        
         <div class="ad-progress">
-          <div class="ad-progress-bar" id="adProgressBar"></div>
+          <div id="adProgressBar" class="ad-progress-bar"></div>
         </div>
-        <p>Please wait while the advertisement completes...</p>
-        <p class="text-muted">Do not close or refresh the page</p>
+        
+        <div class="ad-timer">
+          <span id="adTimer">16</span> seconds remaining
+        </div>
+        
+        <div class="mt-4 text-muted">
+          <small>You will earn <span id="adRewardAmount">0.20</span> BDT after completion</small>
+        </div>
       </div>
     </div>
 
@@ -1156,6 +1151,7 @@
       let surveyWindow = null;
       let surveyCheckInterval = null;
       let adTimerInterval = null;
+      let adDuration = 16; // seconds
 
       // Initialize the application
       document.addEventListener("DOMContentLoaded", async function () {
@@ -1580,35 +1576,6 @@
         }
       }
 
-      // Show ad overlay for 16 seconds
-      function showAdOverlay() {
-        const overlay = document.getElementById("adOverlay");
-        const timer = document.getElementById("adTimer");
-        const progressBar = document.getElementById("adProgressBar");
-        
-        // Show overlay
-        overlay.classList.add("active");
-        
-        let seconds = 16;
-        timer.textContent = seconds;
-        progressBar.style.width = "0%";
-        
-        // Start timer
-        adTimerInterval = setInterval(() => {
-          seconds--;
-          timer.textContent = seconds;
-          
-          // Update progress bar
-          const progress = ((16 - seconds) / 16) * 100;
-          progressBar.style.width = progress + "%";
-          
-          if (seconds <= 0) {
-            clearInterval(adTimerInterval);
-            overlay.classList.remove("active");
-          }
-        }, 1000);
-      }
-
       async function watchAd() {
         if (userData.completedTasks < appConfig.dailyLimit) {
           try {
@@ -1620,41 +1587,22 @@
               '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
 
             // Show the ad overlay
-            showAdOverlay();
-            
-            // Wait for 16 seconds (simulated ad time)
-            await new Promise(resolve => setTimeout(resolve, 16000));
-
-            // Get ad reward from app config (default to 0.20 if not set)
             const adReward = appConfig.adsRewards || 0.2;
+            document.getElementById("adRewardAmount").textContent = adReward.toFixed(2);
+            document.getElementById("adOverlay").classList.remove("hidden");
+            
+            // Start the timer
+            startAdTimer();
+            
+            // Load GigaPub Ad and wait for completion
+            await window.showGiga();
 
-            // Update user data
-            userData.completedTasks++;
-            userData.balance += adReward;
-            userData.totalEarnings += adReward;
-
-            // Add to history
-            userData.history.unshift({
-              type: "earning",
-              method: "Ad View",
-              amount: adReward.toFixed(2),
-              address: "Ad Reward",
-              status: "Completed",
-              date: new Date().toLocaleDateString(),
-            });
-
-            // Save to Firebase
-            saveUserData();
-
-            // Update UI
-            updateUI();
-            showNotification(
-              "Success!",
-              `You earned ${adReward.toFixed(2)} BDT!`,
-              "success"
-            );
+            // Ad completed successfully
+            completeAdView(adReward);
+            
           } catch (e) {
             console.log("Ad failed or closed before completion", e);
+            hideAdOverlay();
             showNotification(
               "Error",
               "Ad not completed. Please try again.",
@@ -1677,6 +1625,79 @@
             "All tasks completed for today!",
             "info"
           );
+        }
+      }
+      
+      // Start the ad timer
+      function startAdTimer() {
+        let timeLeft = adDuration;
+        document.getElementById("adTimer").textContent = timeLeft;
+        
+        // Update progress bar
+        const progressBar = document.getElementById("adProgressBar");
+        progressBar.style.width = "0%";
+        
+        // Start timer interval
+        adTimerInterval = setInterval(() => {
+          timeLeft--;
+          document.getElementById("adTimer").textContent = timeLeft;
+          
+          // Update progress bar
+          const progressPercent = ((adDuration - timeLeft) / adDuration) * 100;
+          progressBar.style.width = progressPercent + "%";
+          
+          if (timeLeft <= 0) {
+            clearInterval(adTimerInterval);
+            // If ad is still playing after timer ends, complete it
+            completeAdView(appConfig.adsRewards || 0.2);
+          }
+        }, 1000);
+      }
+      
+      // Complete ad view and award reward
+      function completeAdView(adReward) {
+        // Clear the timer if it's still running
+        if (adTimerInterval) {
+          clearInterval(adTimerInterval);
+          adTimerInterval = null;
+        }
+        
+        // Hide the overlay
+        hideAdOverlay();
+        
+        // Update user data
+        userData.completedTasks++;
+        userData.balance += adReward;
+        userData.totalEarnings += adReward;
+
+        // Add to history
+        userData.history.unshift({
+          type: "earning",
+          method: "Ad View",
+          amount: adReward.toFixed(2),
+          address: "Ad Reward",
+          status: "Completed",
+          date: new Date().toLocaleDateString(),
+        });
+
+        // Save to Firebase
+        saveUserData();
+
+        // Update UI
+        updateUI();
+        showNotification(
+          "Success!",
+          `You earned ${adReward.toFixed(2)} BDT!`,
+          "success"
+        );
+      }
+      
+      // Hide the ad overlay
+      function hideAdOverlay() {
+        document.getElementById("adOverlay").classList.add("hidden");
+        if (adTimerInterval) {
+          clearInterval(adTimerInterval);
+          adTimerInterval = null;
         }
       }
 
@@ -1732,6 +1753,7 @@
             <div class="col-12 mb-3">
               <div class="card survey-card p-3 ${isCompleted ? "opacity-75 border-success" : "border-warning"}">
                 <div class="d-flex align-items-start">
+
                   <!-- Survey Logo -->
                   <img 
                     src="${survey.image}" 
@@ -1739,30 +1761,33 @@
                     class="rounded-circle me-3 border" 
                     style="width:55px; height:55px; object-fit:cover;"
                   >
+
                   <!-- Survey Info + Actions -->
                   <div class="flex-grow-1">
                     <h6 class="mb-1">${survey.name}</h6>
                     <p class="mb-2 text-success small fw-semibold">
                       🎁 Reward: BDT ${survey.reward.toFixed(2)}
                     </p>
+
                     <!-- Action Buttons -->
                     <div class="d-flex gap-2">
                       <button 
                         class="btn btn-sm btn-outline-primary rounded-pill px-3" 
+                        onclick="checkSurvey(${survey.id})"
+                      >
+                        🔍 Check
+                      </button>
+
+                      <button 
+                        class="btn btn-sm ${isCompleted ? "btn-secondary" : "btn-success"} rounded-pill px-3" 
                         onclick="startSurvey(${survey.id})"
                         ${isCompleted ? "disabled" : ""}
                       >
-                        🔍 Start
-                      </button>
-                      <button 
-                        class="btn btn-sm ${isCompleted ? "btn-secondary" : "btn-success"} rounded-pill px-3" 
-                        onclick="claimSurvey(${survey.id})"
-                        ${isCompleted ? "disabled" : ""}
-                      >
-                        ${isCompleted ? "✔ Claimed" : "⚡ Claim"}
+                        ${isCompleted ? "✔ Claimed" : "⚡ Start"}
                       </button>
                     </div>
                   </div>
+
                 </div>
               </div>
             </div>
@@ -1775,6 +1800,14 @@
         if (surveysContainer.innerHTML === "") {
           surveysContainer.innerHTML = `<div class="col-12 text-center text-muted">No active surveys available at the moment.</div>`;
         }
+      }
+
+      function checkSurvey(surveyId) {
+        const survey = appConfig.surveys.find((s) => s.id === surveyId);
+        if (!survey) return;
+
+        // Open the survey URL in a new tab
+        window.open(survey.url, "_blank");
       }
 
       function startSurvey(surveyId) {
@@ -1815,36 +1848,6 @@
           showNotification(
             "Completed!",
             "All tasks completed for today!",
-            "info"
-          );
-        }
-      }
-
-      function claimSurvey(surveyId) {
-        const survey = appConfig.surveys.find((s) => s.id === surveyId);
-        if (!survey) return;
-
-        // Check if user has already completed this survey
-        if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
-          showNotification(
-            "Info",
-            "You have already claimed this survey.",
-            "info"
-          );
-          return;
-        }
-
-        // Ask user if they completed the survey
-        const completed = confirm(
-          "Have you completed the survey? Click OK if you completed it, or Cancel if you didn't."
-        );
-
-        if (completed) {
-          completeSurvey(survey);
-        } else {
-          showNotification(
-            "Info",
-            "Survey not completed. No reward awarded.",
             "info"
           );
         }
