@@ -2051,7 +2051,7 @@
         appConfig.promoCodes[promoCode].used =
           (appConfig.promoCodes[promoCode].used || 0) + 1;
         database.ref("appConfig").update({
-          [`promoCodes/${promoCode/used`]:
+          [`promoCodes/${promoCode}/used`]:
             appConfig.promoCodes[promoCode].used,
         });
 
