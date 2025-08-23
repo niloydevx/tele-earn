@@ -486,7 +486,7 @@
         font-size: 1.2rem;
       }
 
-      /* Token Verification Modal */
+      /* Token verification modal styles */
       .modal-content {
         background: var(--card-bg);
         color: var(--primary-color);
@@ -503,29 +503,10 @@
       }
 
       .token-input {
-        font-size: 1.5rem;
-        letter-spacing: 0.5rem;
+        font-size: 24px;
         text-align: center;
+        letter-spacing: 8px;
         font-weight: bold;
-        padding: 10px 15px;
-        background: rgba(0, 0, 0, 0.5);
-        border: 2px solid var(--primary-color);
-        border-radius: 12px;
-        color: var(--primary-color);
-      }
-
-      /* Ad Progress Bar */
-      #adProgressContainer {
-        margin-top: 15px;
-        display: none;
-      }
-
-      #adProgressBar {
-        height: 8px;
-        border-radius: 4px;
-        background: linear-gradient(90deg, #ffd700, #ffcc00);
-        width: 0%;
-        transition: width 1s linear;
       }
 
       /* Responsive adjustments */
@@ -587,41 +568,18 @@
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title">Enter Verification Token</h5>
-            <button
-              type="button"
-              class="btn-close btn-close-white"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body text-center">
-            <p>Please enter the 4-digit token shown in the ad:</p>
-            <input
-              type="text"
-              id="tokenInput"
-              class="token-input mb-3"
-              maxlength="4"
-              placeholder="____"
-            />
-            <div id="tokenError" class="text-danger small mt-2 d-none">
-              Invalid token. Please try again.
+            <p>Please enter the 4-digit token shown during the ad:</p>
+            <input type="text" id="tokenInput" class="form-control token-input" maxlength="4" placeholder="____">
+            <div class="mt-3">
+              <p class="small text-muted">Token expires in: <span id="tokenTimer">60</span>s</p>
             </div>
           </div>
           <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-bs-dismiss="modal"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              class="btn btn-custom"
-              onclick="verifyToken()"
-            >
-              Verify & Claim
-            </button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-custom" onclick="verifyToken()">Verify</button>
           </div>
         </div>
       </div>
@@ -792,14 +750,6 @@
           <button class="btn btn-custom w-100 mb-3 py-3" id="watchAdBtn">
             <i class="bi bi-play-circle me-2"></i> Watch Ad (+0.20 BDT)
           </button>
-          
-          <div id="adProgressContainer">
-            <div class="d-flex justify-content-between mb-1">
-              <small>Ad in progress</small>
-              <small id="adTimer">15s</small>
-            </div>
-            <div id="adProgressBar"></div>
-          </div>
 
           <div class="alert alert-dark d-flex align-items-center" role="alert">
             <i class="bi bi-info-circle-fill me-2"></i>
@@ -1191,9 +1141,8 @@
       let adInProgress = false;
       let adCompleted = false;
       let generatedToken = "";
-      let adTimer = null;
-      let adDuration = 15;
-      let adReward = 0.2;
+      let tokenTimer = null;
+      let tokenTimeLeft = 60;
 
       // Initialize the application
       document.addEventListener("DOMContentLoaded", async function () {
@@ -1227,13 +1176,12 @@
         // Add event listener to watch ad button
         document
           .getElementById("watchAdBtn")
-          .addEventListener("click", startAdProcess);
+          .addEventListener("click", watchAd);
           
-        // Setup token input formatting
+        // Add event listener for token input
         document.getElementById("tokenInput").addEventListener("input", function(e) {
-          this.value = this.value.replace(/[^0-9]/g, '');
-          if (this.value.length > 4) {
-            this.value = this.value.slice(0, 4);
+          if (this.value.length === 4) {
+            verifyToken();
           }
         });
       });
@@ -1330,9 +1278,6 @@
             document.getElementById("minWithdrawInfo").textContent = appConfig.minWithdraw;
 
             vpnRequired = appConfig.vpnRequired !== undefined ? appConfig.vpnRequired : true;
-            
-            // Set ad reward from config
-            adReward = appConfig.adsRewards || 0.2;
 
             resolve();
           }).catch((error) => {
@@ -1571,6 +1516,7 @@
         document.getElementById("progressBar").innerText = percent + "%";
 
         // Update ad button with correct reward amount
+        const adReward = appConfig.adsRewards || 0.2;
         document.getElementById("watchAdBtn").innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
 
         // Update referral text with correct percentage
@@ -1610,144 +1556,173 @@
         }
       }
 
-      // Start the ad watching process
-      function startAdProcess() {
-        if (adInProgress) return;
-        
-        if (userData.completedTasks < appConfig.dailyLimit) {
+      async function watchAd() {
+        if (userData.completedTasks >= appConfig.dailyLimit) {
+          showNotification("Completed!", "All tasks completed for today!", "info");
+          return;
+        }
+
+        if (adInProgress) {
+          showNotification("Info", "An ad is already in progress.", "info");
+          return;
+        }
+
+        try {
           // Disable button to prevent multiple clicks
           const adButton = document.getElementById("watchAdBtn");
+          const originalText = adButton.innerHTML;
           adButton.disabled = true;
           adButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
 
-          // Show progress container
-          document.getElementById("adProgressContainer").style.display = "block";
+          // Reset ad state
+          adInProgress = true;
+          adCompleted = false;
+          generatedToken = "";
           
-          // Start the ad process
-          showAd();
-        } else {
-          showNotification("Completed!", "All tasks completed for today!", "info");
-        }
-      }
-
-      // Show ad and handle token generation
-      async function showAd() {
-        adInProgress = true;
-        adCompleted = false;
-        
-        try {
-          // Reset progress bar and timer
-          document.getElementById("adProgressBar").style.width = "0%";
-          document.getElementById("adTimer").textContent = adDuration + "s";
-          
-          let timeLeft = adDuration;
-          
-          // Update timer every second
-          adTimer = setInterval(() => {
-            timeLeft--;
-            document.getElementById("adTimer").textContent = timeLeft + "s";
-            
-            // Update progress bar
-            const progressPercent = ((adDuration - timeLeft) / adDuration) * 100;
-            document.getElementById("adProgressBar").style.width = progressPercent + "%";
-            
-            if (timeLeft <= 0) {
-              clearInterval(adTimer);
-              finishAd();
-            }
-          }, 1000);
-          
-          // Try to show GigaPub ad if available
-          if (typeof window.showGiga === "function") {
+          // Try to use GigaPub ad
+          if (typeof window.showGiga === 'function') {
             await window.showGiga();
-            clearInterval(adTimer);
-            finishAd();
+            
+            // If ad completed successfully
+            adCompleted = true;
+            adInProgress = false;
+            
+            // Generate token
+            generatedToken = Math.floor(1000 + Math.random() * 9000).toString();
+            
+            // Show token modal
+            tokenTimeLeft = 60;
+            document.getElementById("tokenInput").value = "";
+            document.getElementById("tokenTimer").textContent = tokenTimeLeft;
+            
+            // Start token timer
+            if (tokenTimer) clearInterval(tokenTimer);
+            tokenTimer = setInterval(() => {
+              tokenTimeLeft--;
+              document.getElementById("tokenTimer").textContent = tokenTimeLeft;
+              
+              if (tokenTimeLeft <= 0) {
+                clearInterval(tokenTimer);
+                bootstrap.Modal.getInstance(document.getElementById('tokenModal')).hide();
+                showNotification("Error", "Token expired. Please watch the ad again.", "danger");
+              }
+            }, 1000);
+            
+            // Show modal
+            const tokenModal = new bootstrap.Modal(document.getElementById('tokenModal'));
+            tokenModal.show();
+            
+          } else {
+            // Fallback to simulated ad
+            showNotification("Info", "Using simulated ad (15 seconds)", "info");
+            
+            let adTime = 15;
+            const progressBar = document.createElement('div');
+            progressBar.className = 'progress mt-2';
+            progressBar.innerHTML = '<div class="progress-bar" role="progressbar" style="width: 0%"></div>';
+            adButton.parentNode.appendChild(progressBar);
+            
+            // Simulate ad progress
+            const adInterval = setInterval(() => {
+              adTime--;
+              progressBar.querySelector('.progress-bar').style.width = ((15 - adTime) / 15 * 100) + '%';
+              
+              if (adTime <= 0) {
+                clearInterval(adInterval);
+                adCompleted = true;
+                adInProgress = false;
+                
+                // Generate token
+                generatedToken = Math.floor(1000 + Math.random() * 9000).toString();
+                
+                // Show token modal
+                tokenTimeLeft = 60;
+                document.getElementById("tokenInput").value = "";
+                document.getElementById("tokenTimer").textContent = tokenTimeLeft;
+                
+                // Start token timer
+                if (tokenTimer) clearInterval(tokenTimer);
+                tokenTimer = setInterval(() => {
+                  tokenTimeLeft--;
+                  document.getElementById("tokenTimer").textContent = tokenTimeLeft;
+                  
+                  if (tokenTimeLeft <= 0) {
+                    clearInterval(tokenTimer);
+                    bootstrap.Modal.getInstance(document.getElementById('tokenModal')).hide();
+                    showNotification("Error", "Token expired. Please watch the ad again.", "danger");
+                  }
+                }, 1000);
+                
+                // Show modal
+                const tokenModal = new bootstrap.Modal(document.getElementById('tokenModal'));
+                tokenModal.show();
+                
+                progressBar.remove();
+              }
+            }, 1000);
           }
         } catch (e) {
-          console.log("Ad failed to load", e);
-          clearInterval(adTimer);
-          showNotification("Error", "Ad not loaded. Please try again.", "danger");
-          resetAdButton();
+          console.log("Ad failed or closed before completion", e);
+          showNotification("Error", "Ad not completed. Please try again.", "danger");
+          adInProgress = false;
+        } finally {
+          // Re-enable button
+          const adButton = document.getElementById("watchAdBtn");
+          adButton.disabled = false;
+          
+          // Update button text with current reward amount
+          const adReward = appConfig.adsRewards || 0.2;
+          adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
         }
       }
-
-      // Finish ad and generate token
-      function finishAd() {
-        adInProgress = false;
-        adCompleted = true;
-        
-        // Generate 4-digit token
-        generatedToken = Math.floor(1000 + Math.random() * 9000).toString();
-        
-        // Show token modal
-        const tokenModal = new bootstrap.Modal(document.getElementById('tokenModal'));
-        tokenModal.show();
-        
-        // Reset ad button
-        resetAdButton();
-        
-        // Hide progress container
-        document.getElementById("adProgressContainer").style.display = "none";
-        
-        showNotification("Success", "Ad completed! Please enter the token to claim your reward.", "success");
-      }
-
-      // Verify the entered token
+      
       function verifyToken() {
         const userToken = document.getElementById("tokenInput").value;
-        const tokenError = document.getElementById("tokenError");
+        
+        if (!userToken || userToken.length !== 4) {
+          showNotification("Error", "Please enter a valid 4-digit token.", "danger");
+          return;
+        }
         
         if (userToken === generatedToken) {
-          // Correct token - award reward
-          awardAdReward();
+          // Clear token timer
+          if (tokenTimer) clearInterval(tokenTimer);
           
-          // Close modal
-          const tokenModal = bootstrap.Modal.getInstance(document.getElementById('tokenModal'));
-          tokenModal.hide();
+          // Hide modal
+          bootstrap.Modal.getInstance(document.getElementById('tokenModal')).hide();
           
-          // Clear token input
-          document.getElementById("tokenInput").value = "";
-          tokenError.classList.add("d-none");
+          // Get ad reward from app config (default to 0.20 if not set)
+          const adReward = appConfig.adsRewards || 0.2;
+
+          // Update user data
+          userData.completedTasks++;
+          userData.balance += adReward;
+          userData.totalEarnings += adReward;
+
+          // Add to history
+          userData.history.unshift({
+            type: "earning",
+            method: "Ad View",
+            amount: adReward.toFixed(2),
+            address: "Ad Reward",
+            status: "Completed",
+            date: new Date().toLocaleDateString(),
+          });
+
+          // Save to Firebase
+          saveUserData();
+
+          // Update UI
+          updateUI();
+          showNotification("Success!", `You earned ${adReward.toFixed(2)} BDT!`, "success");
+          
+          // Reset ad state
+          adInProgress = false;
+          adCompleted = false;
+          generatedToken = "";
         } else {
-          // Incorrect token
-          tokenError.classList.remove("d-none");
+          showNotification("Error", "Invalid token. Please try again.", "danger");
         }
-      }
-
-      // Award reward for completed ad
-      function awardAdReward() {
-        // Update user data
-        userData.completedTasks++;
-        userData.balance += adReward;
-        userData.totalEarnings += adReward;
-
-        // Add to history
-        userData.history.unshift({
-          type: "earning",
-          method: "Ad View",
-          amount: adReward.toFixed(2),
-          address: "Ad Reward",
-          status: "Completed",
-          date: new Date().toLocaleDateString(),
-        });
-
-        // Save to Firebase
-        saveUserData();
-
-        // Update UI
-        updateUI();
-        showNotification("Success!", `You earned ${adReward.toFixed(2)} BDT!`, "success");
-        
-        // Reset ad state
-        generatedToken = "";
-        adCompleted = false;
-      }
-
-      // Reset ad button to initial state
-      function resetAdButton() {
-        const adButton = document.getElementById("watchAdBtn");
-        adButton.disabled = false;
-        adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
       }
 
       function showSurveyPage() {
