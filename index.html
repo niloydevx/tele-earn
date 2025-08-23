@@ -363,6 +363,7 @@
         display: flex;
         flex-direction: column;
         height: calc(100% - 160px);
+        justify-content: space-between;
       }
 
       .survey-card .card-title {
@@ -487,49 +488,97 @@
       }
 
       /* AD OVERLAY STYLES */
-      .ad-overlay {
+      #adOverlay {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0, 0, 0, 0.95);
+        background: rgba(0, 0, 0, 0.95);
         z-index: 2000;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
         color: white;
-        text-align: center;
-        padding: 20px;
+        backdrop-filter: blur(10px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
       }
 
-      .ad-overlay-content {
-        max-width: 500px;
-        width: 90%;
+      #adOverlay.active {
+        opacity: 1;
+        pointer-events: all;
+      }
+
+      .ad-content {
+        text-align: center;
+        max-width: 90%;
       }
 
       .ad-timer {
-        font-size: 24px;
+        font-size: 3rem;
         font-weight: bold;
         margin: 20px 0;
         color: var(--primary-color);
       }
 
       .ad-progress {
-        width: 100%;
+        width: 80%;
+        max-width: 300px;
         height: 10px;
-        background-color: #333;
+        background: #333;
         border-radius: 5px;
-        overflow: hidden;
         margin: 20px 0;
+        overflow: hidden;
       }
 
       .ad-progress-bar {
         height: 100%;
         background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
         width: 0%;
-        transition: width 0.3s linear;
+        transition: width 0.1s linear;
+      }
+
+      /* AD CONTAINER STYLES */
+      #adContainer {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 300px;
+        height: 250px;
+        background: #000;
+        border: 2px solid var(--primary-color);
+        border-radius: 12px;
+        overflow: hidden;
+        z-index: 2001;
+        box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+        display: none;
+      }
+
+      #adContainer iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
+
+      .ad-close-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 2002;
       }
 
       /* Responsive adjustments */
@@ -562,29 +611,37 @@
         #vpnCheck .vpn-check-container {
           padding: 1.5rem 1rem;
         }
+        
+        .ad-timer {
+          font-size: 2.5rem;
+        }
+
+        #adContainer {
+          width: 280px;
+          height: 200px;
+        }
       }
     </style>
   </head>
   <body>
-    <!-- AD OVERLAY (hidden by default) -->
-    <div id="adOverlay" class="ad-overlay hidden">
-      <div class="ad-overlay-content">
-        <i class="bi bi-play-circle-fill" style="font-size: 3rem; color: var(--primary-color);"></i>
-        <h2 class="mt-3">Ad is Playing</h2>
-        <p>Please wait while the ad completes. Do not close this window.</p>
-        
+    <!-- AD OVERLAY -->
+    <div id="adOverlay">
+      <div class="ad-content">
+        <i class="bi bi-play-btn-fill" style="font-size: 4rem;"></i>
+        <h2>Advertisement Playing</h2>
+        <div class="ad-timer" id="adTimer">16</div>
         <div class="ad-progress">
-          <div id="adProgressBar" class="ad-progress-bar"></div>
+          <div class="ad-progress-bar" id="adProgressBar"></div>
         </div>
-        
-        <div class="ad-timer">
-          <span id="adTimer">16</span> seconds remaining
-        </div>
-        
-        <div class="mt-4 text-muted">
-          <small>You will earn <span id="adRewardAmount">0.20</span> BDT after completion</small>
-        </div>
+        <p>Please watch the ad until completion...</p>
+        <p class="text-muted">Do not close or refresh the page</p>
       </div>
+    </div>
+
+    <!-- AD CONTAINER -->
+    <div id="adContainer">
+      <button class="ad-close-btn" id="adCloseBtn">×</button>
+      <!-- Ad content will be loaded here -->
     </div>
 
     <!-- BANNED USER SCREEN (hidden by default) -->
@@ -1010,7 +1067,7 @@
               <div
                 class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow"
               >
-                <label class="small text-muted d-block mb-1">Promo Code</label>
+                <label class="small text极
                 <span id="promoCode">-</span>
               </div>
             </div>
@@ -1033,12 +1090,11 @@
           <div class="row row-cols-2 g-3">
             <div class="col">
               <div
-                class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow"
-              >
+                class="p-3 rounded-3 f极
                 <label class="small text-muted d-block mb-1"
                   >Total Earnings</label
                 >
-                <span id="totalEarnings">0.00</span> BDT
+                <span id="total极
               </div>
             </div>
             <div class="col">
@@ -1067,8 +1123,7 @@
                   >Referral Earnings</label
                 >
                 <span id="referralEarnings">0.00</span> BDT
-              </div>
-            </div>
+              </极
           </div>
         </div>
       </div>
@@ -1102,7 +1157,7 @@
           <span>Withdraw</span>
         </a>
         <a href="#" onclick="showTab('history', this)">
-          <i class="bi bi-clock-history"></i>
+          <i class="bi极
           <span>History</span>
         </a>
         <a href="#" onclick="showTab('profile', this)">
@@ -1151,7 +1206,6 @@
       let surveyWindow = null;
       let surveyCheckInterval = null;
       let adTimerInterval = null;
-      let adDuration = 16; // seconds
 
       // Initialize the application
       document.addEventListener("DOMContentLoaded", async function () {
@@ -1186,6 +1240,11 @@
         document
           .getElementById("watchAdBtn")
           .addEventListener("click", watchAd);
+
+        // Add event listener to close ad button
+        document
+          .getElementById("adCloseBtn")
+          .addEventListener("click", closeAd);
       });
 
       // Get user IP address
@@ -1277,8 +1336,7 @@
               appConfig.dailyLimit;
             document.getElementById("minWithdraw").textContent =
               appConfig.minWithdraw;
-            document.getElementById("minWithdrawInfo").textContent =
-              appConfig.minWithdraw;
+            document.getElementById("minWithdrawInfo").极
 
             vpnRequired =
               appConfig.vpnRequired !== undefined
@@ -1433,12 +1491,13 @@
             "Checking your connection...";
 
           // Get public IP
-          let ipRes = await fetch("https://api64.ipify.org?format=json");
+          let ipRes = await fetch("https://api64.ipify.org/json/");
           let ipData = await ipRes.json();
 
           // Get IP details
           let geoRes = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
           let geoData = await geoRes.json();
+
 
           document.getElementById(
             "vpnStatus"
@@ -1532,9 +1591,7 @@
         const adReward = appConfig.adsRewards || 0.2;
         document.getElementById(
           "watchAdBtn"
-        ).innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(
-          2
-        )} BDT)`;
+        ).innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
 
         // Update referral text with correct percentage
         const referralCommission = appConfig.referralCommission || 10;
@@ -1576,95 +1633,85 @@
         }
       }
 
-      async function watchAd() {
-        if (userData.completedTasks < appConfig.dailyLimit) {
-          try {
-            // Disable button to prevent multiple clicks
-            const adButton = document.getElementById("watchAdBtn");
-            const originalText = adButton.innerHTML;
-            adButton.disabled = true;
-            adButton.innerHTML =
-              '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
-
-            // Show the ad overlay
-            const adReward = appConfig.adsRewards || 0.2;
-            document.getElementById("adRewardAmount").textContent = adReward.toFixed(2);
-            document.getElementById("adOverlay").classList.remove("hidden");
-            
-            // Start the timer
-            startAdTimer();
-            
-            // Load GigaPub Ad and wait for completion
-            await window.showGiga();
-
-            // Ad completed successfully
-            completeAdView(adReward);
-            
-          } catch (e) {
-            console.log("Ad failed or closed before completion", e);
-            hideAdOverlay();
-            showNotification(
-              "Error",
-              "Ad not completed. Please try again.",
-              "danger"
-            );
-          } finally {
-            // Re-enable button
-            const adButton = document.getElementById("watchAdBtn");
-            adButton.disabled = false;
-
-            // Update button text with current reward amount
-            const adReward = appConfig.adsRewards || 0.2;
-            adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(
-              2
-            )} BDT)`;
-          }
-        } else {
-          showNotification(
-            "Completed!",
-            "All tasks completed for today!",
-            "info"
-          );
-        }
-      }
-      
-      // Start the ad timer
-      function startAdTimer() {
-        let timeLeft = adDuration;
-        document.getElementById("adTimer").textContent = timeLeft;
-        
-        // Update progress bar
+      // Show ad overlay for 16 seconds
+      function showAdOverlay() {
+        const overlay = document.getElementById("adOverlay");
+        const timer = document.getElementById("adTimer");
         const progressBar = document.getElementById("adProgressBar");
+        
+        // Show overlay
+        overlay.classList.add("active");
+        
+        let seconds = 16;
+        timer.textContent = seconds;
         progressBar.style.width = "0%";
         
-        // Start timer interval
+        // Start timer
         adTimerInterval = setInterval(() => {
-          timeLeft--;
-          document.getElementById("adTimer").textContent = timeLeft;
+          seconds--;
+          timer.textContent = seconds;
           
           // Update progress bar
-          const progressPercent = ((adDuration - timeLeft) / adDuration) * 100;
-          progressBar.style.width = progressPercent + "%";
+          const progress = ((16 - seconds) / 16) * 100;
+          progressBar.style.width = progress + "%";
           
-          if (timeLeft <= 0) {
+          if (seconds <= 0) {
             clearInterval(adTimerInterval);
-            // If ad is still playing after timer ends, complete it
-            completeAdView(appConfig.adsRewards || 0.2);
+            overlay.classList.remove("active");
+            document.getElementById("adContainer").style.display = "none";
+            
+            // Award user for completing the ad
+            awardAdReward();
           }
         }, 1000);
       }
-      
-      // Complete ad view and award reward
-      function completeAdView(adReward) {
-        // Clear the timer if it's still running
-        if (adTimerInterval) {
-          clearInterval(adTimerInterval);
-          adTimerInterval = null;
-        }
+
+      // Show ad content
+      function showAdContent() {
+        const adContainer = document.getElementById("adContainer");
         
-        // Hide the overlay
-        hideAdOverlay();
+        // For demo purposes, we'll use a placeholder ad
+        // In a real implementation, you would load an actual ad
+        adContainer.innerHTML = `
+          <button class="ad-close-btn" id="adCloseBtn">×</button>
+          <div style="width:100%; height:100%; background:linear-gradient(135deg, #4b6cb7, #182848); display:flex; flex-direction:column; justify-content:center; align-items:center; color:white;">
+            <h4>Demo Advertisement</h4>
+            <p>Watch this ad for 16 seconds</p>
+            <div style="margin-top:20px; background:rgba(255,255,255,0.2); padding:10px; border-radius:8px;">
+              <p>Special Offer: 50% Off!</p>
+              <button style="background:var(--primary-color); border:none; padding:8px 16px; border-radius:4px; margin-top:10px; font-weight:bold;">
+                Learn More
+              </button>
+            </div>
+          </div>
+        `;
         
+        adContainer.style.display = "block";
+        
+        // Re-add event listener to close button
+        document.getElementById("adCloseBtn").addEventListener("click", closeAd);
+      }
+
+      // Close ad manually
+      function closeAd() {
+        clearInterval(adTimerInterval);
+        document.getElementById("adOverlay").classList.remove("active");
+        document.getElementById("adContainer").style.display = "none";
+        
+        // Re-enable button
+        const adButton = document.getElementById("watchAdBtn");
+        adButton.disabled = false;
+        const adReward = appConfig.adsRewards || 0.2;
+        adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
+        
+        showNotification("Info", "Ad was closed early. No reward awarded.", "info");
+      }
+
+      // Award user for completing the ad
+      function awardAdReward() {
+        // Get ad reward from app config (default to 0.20 if not set)
+        const adReward = appConfig.adsRewards || 0.2;
+
         // Update user data
         userData.completedTasks++;
         userData.balance += adReward;
@@ -1690,14 +1737,47 @@
           `You earned ${adReward.toFixed(2)} BDT!`,
           "success"
         );
+
+        // Re-enable button
+        const adButton = document.getElementById("watchAdBtn");
+        adButton.disabled = false;
+        adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
       }
-      
-      // Hide the ad overlay
-      function hideAdOverlay() {
-        document.getElementById("adOverlay").classList.add("hidden");
-        if (adTimerInterval) {
-          clearInterval(adTimerInterval);
-          adTimerInterval = null;
+
+      async function watchAd() {
+        if (userData.completedTasks < appConfig.dailyLimit) {
+          try {
+            // Disable button to prevent multiple clicks
+            const adButton = document.getElementById("watchAdBtn");
+            const originalText = adButton.innerHTML;
+            adButton.disabled = true;
+            adButton.innerHTML =
+              '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
+
+            // Show the ad content and overlay
+            showAdContent();
+            showAdOverlay();
+            
+          } catch (e) {
+            console.log("Ad failed or closed before completion", e);
+            showNotification(
+              "Error",
+              "Ad not completed. Please try again.",
+              "danger"
+            );
+            
+            // Re-enable button
+            const adButton = document.getElementById("watchAdBtn");
+            adButton.disabled = false;
+            const adReward = appConfig.adsRewards || 0.2;
+            adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
+          }
+        } else {
+          showNotification(
+            "Completed!",
+            "All tasks completed for today!",
+            "info"
+          );
         }
       }
 
@@ -1753,7 +1833,6 @@
             <div class="col-12 mb-3">
               <div class="card survey-card p-3 ${isCompleted ? "opacity-75 border-success" : "border-warning"}">
                 <div class="d-flex align-items-start">
-
                   <!-- Survey Logo -->
                   <img 
                     src="${survey.image}" 
@@ -1761,33 +1840,30 @@
                     class="rounded-circle me-3 border" 
                     style="width:55px; height:55px; object-fit:cover;"
                   >
-
                   <!-- Survey Info + Actions -->
                   <div class="flex-grow-1">
                     <h6 class="mb-1">${survey.name}</h6>
                     <p class="mb-2 text-success small fw-semibold">
                       🎁 Reward: BDT ${survey.reward.toFixed(2)}
                     </p>
-
                     <!-- Action Buttons -->
                     <div class="d-flex gap-2">
                       <button 
                         class="btn btn-sm btn-outline-primary rounded-pill px-3" 
-                        onclick="checkSurvey(${survey.id})"
-                      >
-                        🔍 Check
-                      </button>
-
-                      <button 
-                        class="btn btn-sm ${isCompleted ? "btn-secondary" : "btn-success"} rounded-pill px-3" 
                         onclick="startSurvey(${survey.id})"
                         ${isCompleted ? "disabled" : ""}
                       >
-                        ${isCompleted ? "✔ Claimed" : "⚡ Start"}
+                        🔍 Start
+                      </button>
+                      <button 
+                        class="btn btn-sm ${isCompleted ? "btn-secondary" : "btn-success"} rounded-pill px-3" 
+                        onclick="claimSurvey(${survey.id})"
+                        ${isCompleted ? "disabled" : ""}
+                      >
+                        ${isCompleted ? "✔ Claimed" : "⚡ Claim"}
                       </button>
                     </div>
                   </div>
-
                 </div>
               </div>
             </div>
@@ -1800,14 +1876,6 @@
         if (surveysContainer.innerHTML === "") {
           surveysContainer.innerHTML = `<div class="col-12 text-center text-muted">No active surveys available at the moment.</div>`;
         }
-      }
-
-      function checkSurvey(surveyId) {
-        const survey = appConfig.surveys.find((s) => s.id === surveyId);
-        if (!survey) return;
-
-        // Open the survey URL in a new tab
-        window.open(survey.url, "_blank");
       }
 
       function startSurvey(surveyId) {
@@ -1848,6 +1916,36 @@
           showNotification(
             "Completed!",
             "All tasks completed for today!",
+            "info"
+          );
+        }
+      }
+
+      function claimSurvey(surveyId) {
+        const survey = appConfig.surveys.find((s) => s.id === surveyId);
+        if (!survey) return;
+
+        // Check if user has already completed this survey
+        if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
+          showNotification(
+            "Info",
+            "You have already claimed this survey.",
+            "info"
+          );
+          return;
+        }
+
+        // Ask user if they completed the survey
+        const completed = confirm(
+          "Have you completed the survey? Click OK if you completed it, or Cancel if you didn't."
+        );
+
+        if (completed) {
+          completeSurvey(survey);
+        } else {
+          showNotification(
+            "Info",
+            "Survey not completed. No reward awarded.",
             "info"
           );
         }
@@ -2102,7 +2200,7 @@
       <tr>
         <td class="ps-4">${tx.date || "Today"}</td>
         <td>${tx.method}</td>
-        <td>${tx.amount} ৳</td>
+        <td>${tx.amount}</td>
         <td>${tx.address.substring(0, 4)}...${tx.address.slice(-4)}</td>
         <td class="text-end pe-4 ${statusClass}">${tx.status}</td>
       </tr>
@@ -2119,7 +2217,7 @@
         const notification = document.createElement("div");
         notification.className = `alert alert-${type} floating-notification alert-dismissible shadow`;
         notification.innerHTML = `
-    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+    <button type="button" class="btn-close btn-close-white极
     <strong>${title}</strong> ${message}
   `;
 
