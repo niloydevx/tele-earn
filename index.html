@@ -486,27 +486,64 @@
         font-size: 1.2rem;
       }
 
-      /* Token verification modal styles */
-      .modal-content {
+      /* Ad Watch Modal Styles */
+      .ad-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 2000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+      }
+
+      .ad-modal.show {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .ad-modal-content {
         background: var(--card-bg);
-        color: var(--primary-color);
-        border-radius: 18px;
-        border: 1px solid #333;
+        border-radius: 20px;
+        padding: 25px;
+        width: 90%;
+        max-width: 400px;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(255, 215, 0, 0.2);
       }
 
-      .modal-header {
-        border-bottom: 1px solid #333;
+      .ad-progress {
+        height: 8px;
+        background: #333;
+        border-radius: 4px;
+        margin: 20px 0;
+        overflow: hidden;
       }
 
-      .modal-footer {
-        border-top: 1px solid #333;
+      .ad-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+        width: 0%;
+        transition: width 1s linear;
       }
 
       .token-input {
         font-size: 24px;
-        text-align: center;
         letter-spacing: 8px;
-        font-weight: bold;
+        text-align: center;
+        padding: 10px;
+        width: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        border: 2px solid var(--primary-color);
+        border-radius: 10px;
+        color: var(--primary-color);
+        margin: 15px 0;
       }
 
       /* Responsive adjustments */
@@ -539,6 +576,11 @@
         #vpnCheck .vpn-check-container {
           padding: 1.5rem 1rem;
         }
+
+        .ad-modal-content {
+          padding: 20px;
+          width: 95%;
+        }
       }
     </style>
   </head>
@@ -562,26 +604,27 @@
       </div>
     </div>
 
-    <!-- Token Verification Modal -->
-    <div class="modal fade" id="tokenModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Enter Verification Token</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    <!-- AD WATCH MODAL -->
+    <div id="adModal" class="ad-modal">
+      <div class="ad-modal-content">
+        <h3 class="mb-3">🎥 Watch Ad & Earn</h3>
+        
+        <div id="adInProgress">
+          <p>Please watch the ad for <span id="adTime">15</span> seconds</p>
+          <div class="ad-progress">
+            <div id="adProgressBar" class="ad-progress-bar"></div>
           </div>
-          <div class="modal-body text-center">
-            <p>Please enter the 4-digit token shown during the ad:</p>
-            <input type="text" id="tokenInput" class="form-control token-input" maxlength="4" placeholder="____">
-            <div class="mt-3">
-              <p class="small text-muted">Token expires in: <span id="tokenTimer">60</span>s</p>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="button" class="btn btn-custom" onclick="verifyToken()">Verify</button>
-          </div>
+          <p class="small text-muted">Do not close this window</p>
         </div>
+        
+        <div id="adCompleted" class="hidden">
+          <p class="text-success">✅ Ad completed!</p>
+          <p>Enter the 4-digit token shown in the ad:</p>
+          <input type="text" id="tokenInput" class="token-input" maxlength="4" placeholder="____">
+          <button id="claimRewardBtn" class="btn btn-custom w-100">Claim Reward</button>
+        </div>
+        
+        <button id="closeAdBtn" class="btn btn-outline-secondary mt-3 w-100">Close</button>
       </div>
     </div>
 
@@ -1136,13 +1179,14 @@
       let currentSurvey = null;
       let surveyWindow = null;
       let surveyCheckInterval = null;
-      
+
       // Ad watching state
       let adInProgress = false;
       let adCompleted = false;
       let generatedToken = "";
-      let tokenTimer = null;
-      let tokenTimeLeft = 60;
+      let pendingReward = 0;
+      let penaltyTimer = 0;
+      let adTimerInterval = null;
 
       // Initialize the application
       document.addEventListener("DOMContentLoaded", async function () {
@@ -1173,17 +1217,18 @@
         // Load surveys
         loadSurveys();
 
-        // Add event listener to watch ad button
-        document
-          .getElementById("watchAdBtn")
-          .addEventListener("click", watchAd);
-          
-        // Add event listener for token input
+        // Add event listeners for ad modal
+        document.getElementById("watchAdBtn").addEventListener("click", showAdModal);
+        document.getElementById("closeAdBtn").addEventListener("click", closeAdModal);
+        document.getElementById("claimRewardBtn").addEventListener("click", claimAdReward);
         document.getElementById("tokenInput").addEventListener("input", function(e) {
-          if (this.value.length === 4) {
-            verifyToken();
+          if (e.target.value.length === 4) {
+            document.getElementById("claimRewardBtn").focus();
           }
         });
+
+        // Check for pending rewards from previous session
+        checkPendingRewards();
       });
 
       // Get user IP address
@@ -1556,154 +1601,113 @@
         }
       }
 
-      async function watchAd() {
+      // Show ad modal
+      function showAdModal() {
         if (userData.completedTasks >= appConfig.dailyLimit) {
           showNotification("Completed!", "All tasks completed for today!", "info");
           return;
         }
 
         if (adInProgress) {
-          showNotification("Info", "An ad is already in progress.", "info");
+          showNotification("Info", "An ad is already in progress", "info");
           return;
         }
 
-        try {
-          // Disable button to prevent multiple clicks
-          const adButton = document.getElementById("watchAdBtn");
-          const originalText = adButton.innerHTML;
-          adButton.disabled = true;
-          adButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
-
-          // Reset ad state
-          adInProgress = true;
-          adCompleted = false;
-          generatedToken = "";
-          
-          // Try to use GigaPub ad
-          if (typeof window.showGiga === 'function') {
-            await window.showGiga();
-            
-            // If ad completed successfully
-            adCompleted = true;
-            adInProgress = false;
-            
-            // Generate token
-            generatedToken = Math.floor(1000 + Math.random() * 9000).toString();
-            
-            // Show token modal
-            tokenTimeLeft = 60;
-            document.getElementById("tokenInput").value = "";
-            document.getElementById("tokenTimer").textContent = tokenTimeLeft;
-            
-            // Start token timer
-            if (tokenTimer) clearInterval(tokenTimer);
-            tokenTimer = setInterval(() => {
-              tokenTimeLeft--;
-              document.getElementById("tokenTimer").textContent = tokenTimeLeft;
-              
-              if (tokenTimeLeft <= 0) {
-                clearInterval(tokenTimer);
-                bootstrap.Modal.getInstance(document.getElementById('tokenModal')).hide();
-                showNotification("Error", "Token expired. Please watch the ad again.", "danger");
-              }
-            }, 1000);
-            
-            // Show modal
-            const tokenModal = new bootstrap.Modal(document.getElementById('tokenModal'));
-            tokenModal.show();
-            
-          } else {
-            // Fallback to simulated ad
-            showNotification("Info", "Using simulated ad (15 seconds)", "info");
-            
-            let adTime = 15;
-            const progressBar = document.createElement('div');
-            progressBar.className = 'progress mt-2';
-            progressBar.innerHTML = '<div class="progress-bar" role="progressbar" style="width: 0%"></div>';
-            adButton.parentNode.appendChild(progressBar);
-            
-            // Simulate ad progress
-            const adInterval = setInterval(() => {
-              adTime--;
-              progressBar.querySelector('.progress-bar').style.width = ((15 - adTime) / 15 * 100) + '%';
-              
-              if (adTime <= 0) {
-                clearInterval(adInterval);
-                adCompleted = true;
-                adInProgress = false;
-                
-                // Generate token
-                generatedToken = Math.floor(1000 + Math.random() * 9000).toString();
-                
-                // Show token modal
-                tokenTimeLeft = 60;
-                document.getElementById("tokenInput").value = "";
-                document.getElementById("tokenTimer").textContent = tokenTimeLeft;
-                
-                // Start token timer
-                if (tokenTimer) clearInterval(tokenTimer);
-                tokenTimer = setInterval(() => {
-                  tokenTimeLeft--;
-                  document.getElementById("tokenTimer").textContent = tokenTimeLeft;
-                  
-                  if (tokenTimeLeft <= 0) {
-                    clearInterval(tokenTimer);
-                    bootstrap.Modal.getInstance(document.getElementById('tokenModal')).hide();
-                    showNotification("Error", "Token expired. Please watch the ad again.", "danger");
-                  }
-                }, 1000);
-                
-                // Show modal
-                const tokenModal = new bootstrap.Modal(document.getElementById('tokenModal'));
-                tokenModal.show();
-                
-                progressBar.remove();
-              }
-            }, 1000);
-          }
-        } catch (e) {
-          console.log("Ad failed or closed before completion", e);
-          showNotification("Error", "Ad not completed. Please try again.", "danger");
-          adInProgress = false;
-        } finally {
-          // Re-enable button
-          const adButton = document.getElementById("watchAdBtn");
-          adButton.disabled = false;
-          
-          // Update button text with current reward amount
-          const adReward = appConfig.adsRewards || 0.2;
-          adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
-        }
+        // Reset modal state
+        document.getElementById("adInProgress").classList.remove("hidden");
+        document.getElementById("adCompleted").classList.add("hidden");
+        document.getElementById("tokenInput").value = "";
+        document.getElementById("adProgressBar").style.width = "0%";
+        
+        // Show the modal
+        document.getElementById("adModal").classList.add("show");
+        
+        // Start the ad
+        startAd();
       }
-      
-      function verifyToken() {
+
+      // Close ad modal
+      function closeAdModal() {
+        document.getElementById("adModal").classList.remove("show");
+        
+        // Clear any running timers
+        if (adTimerInterval) {
+          clearInterval(adTimerInterval);
+          adTimerInterval = null;
+        }
+        
+        // If ad was in progress but not completed, apply penalty
+        if (adInProgress && !adCompleted) {
+          applyAdPenalty();
+        }
+        
+        // Reset ad state
+        adInProgress = false;
+        adCompleted = false;
+      }
+
+      // Start ad watching process
+      function startAd() {
+        adInProgress = true;
+        adCompleted = false;
+        
+        const adDuration = 15; // seconds
+        let timeLeft = adDuration;
+        document.getElementById("adTime").textContent = timeLeft;
+        
+        // Start the timer
+        adTimerInterval = setInterval(() => {
+          timeLeft--;
+          document.getElementById("adTime").textContent = timeLeft;
+          
+          // Update progress bar
+          const progressPercent = ((adDuration - timeLeft) / adDuration) * 100;
+          document.getElementById("adProgressBar").style.width = progressPercent + "%";
+          
+          if (timeLeft <= 0) {
+            clearInterval(adTimerInterval);
+            adTimerInterval = null;
+            completeAd();
+          }
+        }, 1000);
+      }
+
+      // Complete ad watching
+      function completeAd() {
+        adInProgress = false;
+        adCompleted = true;
+        
+        // Generate a random 4-digit token
+        generatedToken = Math.floor(1000 + Math.random() * 9000).toString();
+        pendingReward = appConfig.adsRewards || 0.2;
+        
+        // Show the token input section
+        document.getElementById("adInProgress").classList.add("hidden");
+        document.getElementById("adCompleted").classList.remove("hidden");
+        
+        // Store pending reward in localStorage in case user closes without claiming
+        localStorage.setItem("pendingReward", pendingReward);
+        localStorage.setItem("penaltyTime", Date.now());
+        
+        // Show the token in an alert (in a real app, this would be shown in the ad)
+        showTelegramAlert(`Ad finished! Your token is: ${generatedToken}`);
+      }
+
+      // Claim ad reward after entering token
+      function claimAdReward() {
         const userToken = document.getElementById("tokenInput").value;
         
-        if (!userToken || userToken.length !== 4) {
-          showNotification("Error", "Please enter a valid 4-digit token.", "danger");
-          return;
-        }
-        
         if (userToken === generatedToken) {
-          // Clear token timer
-          if (tokenTimer) clearInterval(tokenTimer);
-          
-          // Hide modal
-          bootstrap.Modal.getInstance(document.getElementById('tokenModal')).hide();
-          
-          // Get ad reward from app config (default to 0.20 if not set)
-          const adReward = appConfig.adsRewards || 0.2;
-
-          // Update user data
+          // Correct token - award the reward
           userData.completedTasks++;
-          userData.balance += adReward;
-          userData.totalEarnings += adReward;
+          userData.balance += pendingReward;
+          userData.totalEarnings += pendingReward;
 
           // Add to history
           userData.history.unshift({
             type: "earning",
             method: "Ad View",
-            amount: adReward.toFixed(2),
+            amount: pendingReward.toFixed(2),
             address: "Ad Reward",
             status: "Completed",
             date: new Date().toLocaleDateString(),
@@ -1714,14 +1718,84 @@
 
           // Update UI
           updateUI();
-          showNotification("Success!", `You earned ${adReward.toFixed(2)} BDT!`, "success");
           
-          // Reset ad state
+          // Clear pending reward from storage
+          localStorage.removeItem("pendingReward");
+          localStorage.removeItem("penaltyTime");
+          
+          // Close the modal and show success message
+          document.getElementById("adModal").classList.remove("show");
+          showNotification("Success!", `You earned ${pendingReward.toFixed(2)} BDT!`, "success");
+          
+          // Reset state
+          generatedToken = "";
+          pendingReward = 0;
           adInProgress = false;
           adCompleted = false;
-          generatedToken = "";
         } else {
-          showNotification("Error", "Invalid token. Please try again.", "danger");
+          // Wrong token
+          showTelegramAlert("❌ Wrong token! Please try again.");
+          document.getElementById("tokenInput").value = "";
+          document.getElementById("tokenInput").focus();
+        }
+      }
+
+      // Apply penalty for not completing ad
+      function applyAdPenalty() {
+        const penaltyAmount = pendingReward / 2;
+        if (penaltyAmount > 0) {
+          userData.balance = Math.max(0, userData.balance - penaltyAmount);
+          saveUserData();
+          updateUI();
+          showNotification("Penalty", `-${penaltyAmount.toFixed(2)} BDT for not completing the ad`, "warning");
+        }
+        
+        // Set cooldown timer
+        penaltyTimer = 15;
+        document.getElementById("watchAdBtn").disabled = true;
+        
+        const cooldownInterval = setInterval(() => {
+          penaltyTimer--;
+          document.getElementById("watchAdBtn").innerHTML = `<i class="bi bi-hourglass me-2"></i> Wait (${penaltyTimer}s)`;
+          
+          if (penaltyTimer <= 0) {
+            clearInterval(cooldownInterval);
+            const adReward = appConfig.adsRewards || 0.2;
+            document.getElementById("watchAdBtn").innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
+            document.getElementById("watchAdBtn").disabled = false;
+          }
+        }, 1000);
+      }
+
+      // Check for pending rewards from previous session
+      function checkPendingRewards() {
+        const storedReward = parseFloat(localStorage.getItem("pendingReward")) || 0;
+        const penaltyStart = parseInt(localStorage.getItem("penaltyTime")) || 0;
+        
+        if (storedReward > 0) {
+          const timeElapsed = (Date.now() - penaltyStart) / 1000; // in seconds
+          
+          if (timeElapsed > 300) { // More than 5 minutes ago
+            // Apply penalty
+            const penaltyAmount = storedReward / 2;
+            userData.balance = Math.max(0, userData.balance - penaltyAmount);
+            saveUserData();
+            updateUI();
+            showNotification("Penalty", `-${penaltyAmount.toFixed(2)} BDT for not claiming previous reward`, "warning");
+          }
+          
+          // Clear stored values
+          localStorage.removeItem("pendingReward");
+          localStorage.removeItem("penaltyTime");
+        }
+      }
+
+      // Show Telegram alert
+      function showTelegramAlert(message) {
+        if (tg && typeof tg.showAlert === "function") {
+          tg.showAlert(message);
+        } else {
+          alert(message);
         }
       }
 
