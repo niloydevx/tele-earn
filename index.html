@@ -2035,7 +2035,7 @@
       function startSurveyCompletionCheck(survey) {
         // Check every 5 seconds if the survey window is closed
         surveyCheckInterval = setInterval(() => {
-          if (surveyWindow && surveyWindow.closed) {
+          if (surveyWindow && surveyWindow.clored) {
             clearInterval(surveyCheckInterval);
             surveyCheckInterval = null;
 
