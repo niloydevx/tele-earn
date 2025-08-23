@@ -486,34 +486,6 @@
         font-size: 1.2rem;
       }
 
-      /* AD CONTAINER STYLES */
-      #gigapub-ad {
-        width: 100%;
-        max-width: 600px;
-        height: 300px;
-        background: #000;
-        margin: 25px auto;
-        color: white;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 20px;
-        border-radius: 12px;
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-      }
-
-      #progress-bar {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        height: 6px;
-        background: #28a745;
-        width: 0%;
-        transition: width 1s linear;
-      }
-
       /* Responsive adjustments */
       @media (max-width: 576px) {
         .cover-img {
@@ -543,11 +515,6 @@
 
         #vpnCheck .vpn-check-container {
           padding: 1.5rem 1rem;
-        }
-        
-        #gigapub-ad {
-          height: 250px;
-          max-width: 320px;
         }
       }
     </style>
@@ -1053,21 +1020,6 @@
         </div>
       </div>
 
-      <!-- AD CONTAINER (hidden by default) -->
-      <div id="adContainer" class="container my-4 hidden">
-        <h3 class="mb-4 text-center">Watch Ad to Earn</h3>
-        <div id="gigapub-ad">
-          Ad will appear here
-          <div id="progress-bar"></div>
-        </div>
-        <div id="adStatus" class="text-center mt-3">Click "Watch Ad" to start</div>
-        <div class="text-center mt-4">
-          <button class="btn btn-outline-warning" onclick="hideAdContainer()">
-            <i class="bi bi-arrow-left"></i> Back to Rewards
-          </button>
-        </div>
-      </div>
-
       <!-- PERFECT BOTTOM NAVIGATION -->
       <div class="bottom-nav shadow-lg">
         <a href="#" onclick="showTab('home', this)" class="active">
@@ -1131,11 +1083,6 @@
       let currentSurvey = null;
       let surveyWindow = null;
       let surveyCheckInterval = null;
-      let consecutiveAds = 0;
-      let adInProgress = false;
-      let adCompleted = false;
-      let allowReward = true;
-      let cooldown = false;
 
       // Initialize the application
       document.addEventListener("DOMContentLoaded", async function () {
@@ -1170,9 +1117,6 @@
         document
           .getElementById("watchAdBtn")
           .addEventListener("click", watchAd);
-          
-        // Set up page visibility and navigation handlers
-        setupAdMonitoring();
       });
 
       // Get user IP address
@@ -1563,214 +1507,47 @@
         }
       }
 
-      function showAdContainer() {
-        document
-          .querySelectorAll("div.container")
-          .forEach((div) => div.classList.add("hidden"));
-        document.getElementById("adContainer").classList.remove("hidden");
-        document
-          .querySelectorAll(".bottom-nav a")
-          .forEach((a) => a.classList.remove("active"));
-      }
-
-      function hideAdContainer() {
-        document.getElementById("adContainer").classList.add("hidden");
-        document.getElementById("rewards").classList.remove("hidden");
-        document
-          .querySelector('.bottom-nav a[onclick*="rewards"]')
-          .classList.add("active");
-      }
-
-      function startCooldown(seconds = 20, message = "Blocked!") {
-        const adStatus = document.getElementById("adStatus");
-        const progressBar = document.getElementById("progress-bar");
-        
-        cooldown = true;
-        let time = seconds;
-        alert(message); // popup for ban message
-        adStatus.innerText = `${message} Wait ${time}s before next ad`;
-        progressBar.style.width = '0%';
-
-        const timer = setInterval(() => {
-          time--;
-          progressBar.style.width = ((seconds - time)/seconds)*100 + '%';
-          adStatus.innerText = `${message} Wait ${time}s`;
-          if(time <= 0) {
-            clearInterval(timer);
-            cooldown = false;
-            const adButton = document.getElementById("watchAdBtn");
-            adButton.disabled = false;
-            const adReward = appConfig.adsRewards || 0.2;
-            adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
-            adStatus.innerText = "You can watch ad again";
-            progressBar.style.width = '0%';
-          }
-        }, 1000);
-      }
-
-      function showSimulatedAd(duration = 10) {
-        const adContainer = document.getElementById("gigapub-ad");
-        const adStatus = document.getElementById("adStatus");
-        const progressBar = document.getElementById("progress-bar");
-        
-        let adTime = duration;
-        adContainer.innerText = `Ad in progress (${adTime}s)`;
-        progressBar.style.width = '0%';
-        adInProgress = true;
-        adCompleted = false;
-        allowReward = true;
-
-        const simulated = setInterval(() => {
-          adTime--;
-          adContainer.innerText = `Ad in progress (${adTime}s)`;
-          progressBar.style.width = ((duration - adTime)/duration)*100 + '%';
-
-          if(adTime <= 0) {
-            clearInterval(simulated);
-            adCompleted = true;
-            adInProgress = false;
-            if(allowReward) {
-              consecutiveAds++;
-              awardAdReward();
-            } else {
-              adStatus.innerText = `❌ Ad interrupted! No reward.`;
-            }
-            const adButton = document.getElementById("watchAdBtn");
-            adButton.disabled = false;
-            adContainer.innerText = "";
-            progressBar.style.width = '0%';
-          }
-        }, 1000);
-      }
-
-      function setupAdMonitoring() {
-        // Detect back button specifically
-        window.addEventListener("popstate", function (event) {
-          // Push state again to prevent leaving
-          history.pushState({page: 1}, "", "");
-          // Show popup and cooldown
-          alert("❌ You are banned for using the back button!");
-          startCooldown(20, "❌ You are banned for using the back button!");
-        });
-
-        // Detect tab switch / closing page
-        window.addEventListener("beforeunload", handleEarlyExit);
-        document.addEventListener("visibilitychange", () => {
-          if(document.hidden) handleEarlyExit();
-        });
-
-        // Push a dummy state on page load to detect back button
-        history.pushState({page: 1}, "", "");
-      }
-
-      function handleEarlyExit() {
-        if(adInProgress && !adCompleted && !cooldown){
-          allowReward = false; 
-          adInProgress = false;
-          consecutiveAds = 0;
-          const adStatus = document.getElementById("adStatus");
-          adStatus.innerText = "❌ You left the ad early! Blocked.";
-          const adContainer = document.getElementById("gigapub-ad");
-          adContainer.innerText = "";
-          const progressBar = document.getElementById("progress-bar");
-          progressBar.style.width = '0%';
-          startCooldown(20, "❌ You left the ad early! Blocked.");
-        }
-      }
-
-      function awardAdReward() {
-        // Get base ad reward from app config
-        const baseReward = appConfig.adsRewards || 0.2;
-        // Add bonus for consecutive ads
-        const bonus = consecutiveAds * 0.05;
-        const totalReward = baseReward + bonus;
-
-        // Update user data
-        userData.completedTasks++;
-        userData.balance += totalReward;
-        userData.totalEarnings += totalReward;
-
-        // Add to history
-        userData.history.unshift({
-          type: "earning",
-          method: "Ad View",
-          amount: totalReward.toFixed(2),
-          address: "Ad Reward",
-          status: "Completed",
-          date: new Date().toLocaleDateString(),
-        });
-
-        // Save to Firebase
-        saveUserData();
-
-        // Update UI
-        updateUI();
-        
-        const adStatus = document.getElementById("adStatus");
-        adStatus.innerText = `✅ Ad finished! +${totalReward.toFixed(2)} BDT (streak: ${consecutiveAds})`;
-        
-        const adButton = document.getElementById("watchAdBtn");
-        adButton.disabled = false;
-        const adReward = appConfig.adsRewards || 0.2;
-        adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
-        document.getElementById("gigapub-ad").innerText = "Ad will appear here";
-        document.getElementById("progress-bar").style.width = '0%';
-        
-        showNotification(
-          "Success!",
-          `You earned ${totalReward.toFixed(2)} BDT!`,
-          "success"
-        );
-      }
-
       async function watchAd() {
-        if (cooldown) return;
-        
         if (userData.completedTasks < appConfig.dailyLimit) {
           try {
             // Disable button to prevent multiple clicks
             const adButton = document.getElementById("watchAdBtn");
-            const adStatus = document.getElementById("adStatus");
             const originalText = adButton.innerHTML;
             adButton.disabled = true;
             adButton.innerHTML =
               '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
 
-            // Show the ad container
-            showAdContainer();
-            adStatus.innerText = "Loading ad...";
-            adInProgress = true;
-            adCompleted = false;
-            allowReward = true;
+            // Load GigaPub Ad and wait for completion
+            await window.showGiga();
 
-            // Reset consecutive ads if needed
-            consecutiveAds = consecutiveAds || 0;
+            // Get ad reward from app config (default to 0.20 if not set)
+            const adReward = appConfig.adsRewards || 0.2;
 
-            // Try to show actual Gigapub ad
-            if (typeof window.showGiga === "function") {
-              window.showGiga("gigapub-ad")
-                .then(() => {
-                  adCompleted = true;
-                  adInProgress = false;
-                  if(allowReward) {
-                    consecutiveAds++;
-                    awardAdReward();
-                  } else {
-                    adStatus.innerText = "❌ Ad was interrupted! No reward.";
-                  }
-                  adButton.disabled = false;
-                })
-                .catch(() => {
-                  adInProgress = false;
-                  consecutiveAds = 0;
-                  allowReward = false;
-                  adStatus.innerText = "❌ Ad skipped! Blocked temporarily.";
-                  startCooldown(20);
-                });
-            } else {
-              // Fallback: simulated ad
-              showSimulatedAd(10);
-            }
+            // Update user data
+            userData.completedTasks++;
+            userData.balance += adReward;
+            userData.totalEarnings += adReward;
+
+            // Add to history
+            userData.history.unshift({
+              type: "earning",
+              method: "Ad View",
+              amount: adReward.toFixed(2),
+              address: "Ad Reward",
+              status: "Completed",
+              date: new Date().toLocaleDateString(),
+            });
+
+            // Save to Firebase
+            saveUserData();
+
+            // Update UI
+            updateUI();
+            showNotification(
+              "Success!",
+              `You earned ${adReward.toFixed(2)} BDT!`,
+              "success"
+            );
           } catch (e) {
             console.log("Ad failed or closed before completion", e);
             showNotification(
@@ -1778,12 +1555,16 @@
               "Ad not completed. Please try again.",
               "danger"
             );
-            
+          } finally {
             // Re-enable button
             const adButton = document.getElementById("watchAdBtn");
             adButton.disabled = false;
+
+            // Update button text with current reward amount
             const adReward = appConfig.adsRewards || 0.2;
-            adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
+            adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(
+              2
+            )} BDT)`;
           }
         } else {
           showNotification(
@@ -1842,53 +1623,65 @@
           const isCompleted =
             userData.completedSurveys && userData.completedSurveys[survey.id];
 
-          const surveyHTML = `
-            <div class="col-12 mb-3">
-              <div class="card survey-card p-3 ${isCompleted ? "opacity-75 border-success" : "border-warning"}">
-                <div class="d-flex align-items-start">
-                  <!-- Survey Logo -->
-                  <img 
-                    src="${survey.image}" 
-                    alt="${survey.name}" 
-                    class="rounded-circle me-3 border" 
-                    style="width:55px; height:55px; object-fit:cover;"
-                  >
-                  <!-- Survey Info + Actions -->
-                  <div class="flex-grow-1">
-                    <h6 class="mb-1">${survey.name}</h6>
-                    <p class="mb-2 text-success small fw-semibold">
-                      🎁 Reward: BDT ${survey.reward.toFixed(2)}
-                    </p>
-                    <!-- Action Buttons -->
-                    <div class="d-flex gap-2">
-                      <button 
-                        class="btn btn-sm btn-outline-primary rounded-pill px-3" 
-                        onclick="startSurvey(${survey.id})"
-                        ${isCompleted ? "disabled" : ""}
-                      >
-                        🔍 Start
-                      </button>
-                      <button 
-                        class="btn btn-sm ${isCompleted ? "btn-secondary" : "btn-success"} rounded-pill px-3" 
-                        onclick="claimSurvey(${survey.id})"
-                        ${isCompleted ? "disabled" : ""}
-                      >
-                        ${isCompleted ? "✔ Claimed" : "⚡ Claim"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          `;
+const surveyHTML = `
+  <div class="col-12 mb-3">
+    <div class="card survey-card p-3 ${isCompleted ? "opacity-75 border-success" : "border-warning"}">
+      <div class="d-flex align-items-start">
 
-          surveysContainer.innerHTML += surveyHTML;
+        <!-- Survey Logo -->
+        <img 
+          src="${survey.image}" 
+          alt="${survey.name}" 
+          class="rounded-circle me-3 border" 
+          style="width:55px; height:55px; object-fit:cover;"
+        >
+
+        <!-- Survey Info + Actions -->
+        <div class="flex-grow-1">
+          <h6 class="mb-1">${survey.name}</h6>
+          <p class="mb-2 text-success small fw-semibold">
+            🎁 Reward: BDT ${survey.reward.toFixed(2)}
+          </p>
+
+          <!-- Action Buttons -->
+          <div class="d-flex gap-2">
+            <button 
+              class="btn btn-sm btn-outline-primary rounded-pill px-3" 
+              onclick="verifySurvey(${survey.id})"
+            >
+              🔍 Check
+            </button>
+
+            <button 
+              class="btn btn-sm ${isCompleted ? "btn-secondary" : "btn-success"} rounded-pill px-3" 
+              onclick="claimSurvey(${survey.id})"
+              ${isCompleted ? "disabled" : ""}
+            >
+              ${isCompleted ? "✔ Claimed" : "⚡ Claim"}
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+`;
+
+surveysContainer.innerHTML += surveyHTML;
         });
 
         // If no surveys available, show message
         if (surveysContainer.innerHTML === "") {
           surveysContainer.innerHTML = `<div class="col-12 text-center text-muted">No active surveys available at the moment.</div>`;
         }
+      }
+
+      function checkSurvey(surveyId) {
+        const survey = appConfig.surveys.find((s) => s.id === surveyId);
+        if (!survey) return;
+
+        // Open the survey URL in a new tab
+        window.open(survey.url, "_blank");
       }
 
       function startSurvey(surveyId) {
@@ -1929,36 +1722,6 @@
           showNotification(
             "Completed!",
             "All tasks completed for today!",
-            "info"
-          );
-        }
-      }
-
-      function claimSurvey(surveyId) {
-        const survey = appConfig.surveys.find((s) => s.id === surveyId);
-        if (!survey) return;
-
-        // Check if user has already completed this survey
-        if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
-          showNotification(
-            "Info",
-            "You have already claimed this survey.",
-            "info"
-          );
-          return;
-        }
-
-        // Ask user if they completed the survey
-        const completed = confirm(
-          "Have you completed the survey? Click OK if you completed it, or Cancel if you didn't."
-        );
-
-        if (completed) {
-          completeSurvey(survey);
-        } else {
-          showNotification(
-            "Info",
-            "Survey not completed. No reward awarded.",
             "info"
           );
         }
