@@ -1147,10 +1147,12 @@
       let currentSurvey = null;
       let surveyWindow = null;
       let surveyCheckInterval = null;
+      
+      // New ad watching state variables from second code
       let consecutiveAds = 0;
       let adInProgress = false;
       let adCompleted = false;
-      let allowReward = false;
+      let allowReward = true;
       let cooldown = false;
       let adTimer = null;
       let adDuration = 0;
@@ -1192,6 +1194,9 @@
           
         // Set up page visibility and navigation handlers
         setupAdMonitoring();
+        
+        // Check on load if already banned
+        checkCooldownOnLoad();
       });
 
       // Get user IP address
@@ -1600,33 +1605,42 @@
           .classList.add("active");
       }
 
+      // Start cooldown with optional message
       function startCooldown(seconds = 20, message = "Blocked!") {
         const adStatus = document.getElementById("adStatus");
         const progressBar = document.getElementById("progress-bar");
+        const adButton = document.getElementById("watchAdBtn");
         
         cooldown = true;
+        adButton.disabled = true;
+
+        let endTime = Date.now() + (seconds * 1000);
+        localStorage.setItem("banUntil", endTime); // save ban expiry
+
         let time = seconds;
         alert(message); // popup for ban message
         adStatus.innerText = `${message} Wait ${time}s before next ad`;
         progressBar.style.width = '0%';
 
         const timer = setInterval(() => {
-          time--;
-          progressBar.style.width = ((seconds - time)/seconds)*100 + '%';
-          adStatus.innerText = `${message} Wait ${time}s`;
-          if(time <= 0) {
+          time = Math.ceil((endTime - Date.now()) / 1000);
+          if (time <= 0) {
             clearInterval(timer);
             cooldown = false;
-            const adButton = document.getElementById("watchAdBtn");
+            localStorage.removeItem("banUntil");
             adButton.disabled = false;
             const adReward = appConfig.adsRewards || 0.2;
             adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
             adStatus.innerText = "You can watch ad again";
             progressBar.style.width = '0%';
+          } else {
+            progressBar.style.width = ((seconds - time)/seconds)*100 + '%';
+            adStatus.innerText = `${message} Wait ${time}s`;
           }
         }, 1000);
       }
 
+      // Simulated fallback ad
       function showSimulatedAd(duration = 10) {
         const adContainer = document.getElementById("gigapub-ad");
         const adStatus = document.getElementById("adStatus");
@@ -1650,12 +1664,14 @@
             clearInterval(simulated);
             adCompleted = true;
             adInProgress = false;
+
             if(allowReward) {
               consecutiveAds++;
               awardAdReward();
             } else {
               adStatus.innerText = `❌ Ad interrupted! No reward.`;
             }
+
             const adButton = document.getElementById("watchAdBtn");
             adButton.disabled = false;
             adContainer.innerText = "";
@@ -1664,12 +1680,29 @@
         }, 1000);
       }
 
+      // Check on load if already banned
+      function checkCooldownOnLoad() {
+        let banUntil = localStorage.getItem("banUntil");
+        if (banUntil && Date.now() < banUntil) {
+          let remaining = Math.ceil((banUntil - Date.now()) / 1000);
+          startCooldown(remaining, "⛔ You are still banned!");
+        }
+      }
+
       function setupAdMonitoring() {
         // Detect back button specifically
         window.addEventListener("popstate", function (event) {
           // Push state again to prevent leaving
           history.pushState({page: 1}, "", "");
-          // Show popup and cooldown
+          
+          if(adInProgress && !adCompleted){
+            allowReward = false;
+            adInProgress = false;
+            consecutiveAds = 0;
+            document.getElementById("gigapub-ad").innerText = "";
+            document.getElementById("progress-bar").style.width = '0%';
+          }
+
           alert("❌ You are banned for using the back button!");
           startCooldown(20, "❌ You are banned for using the back button!");
         });
