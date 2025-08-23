@@ -1636,31 +1636,30 @@
           style="width:55px; height:55px; object-fit:cover;"
         >
 
-        <!-- Survey Details -->
+        <!-- Survey Info -->
         <div class="flex-grow-1">
           <h6 class="mb-1">${survey.name}</h6>
-          <p class="mb-0 text-success small fw-semibold">
+          <p class="mb-2 text-success small fw-semibold">
             🎁 Reward: BDT ${survey.reward.toFixed(2)}
           </p>
-          ${isCompleted ? '<span class="badge bg-success mt-1">✅ Completed</span>' : ""}
-        </div>
 
-        <!-- Action Buttons -->
-        <div class="d-flex gap-2">
-          <button 
-            class="btn btn-sm btn-outline-primary rounded-pill px-3" 
-            onclick="verifySurvey(${survey.id})"
-          >
-            🔍 Check Now
-          </button>
+          <!-- Action Buttons -->
+          <div class="d-flex gap-2">
+            <button 
+              class="btn btn-sm btn-outline-primary rounded-pill px-3" 
+              onclick="verifySurvey(${survey.id})"
+            >
+              🔍 Check
+            </button>
 
-          <button 
-            class="btn btn-sm ${isCompleted ? "btn-secondary" : "btn-success"} rounded-pill px-3" 
-            onclick="claimSurvey(${survey.id})"
-            ${isCompleted ? "disabled" : ""}
-          >
-            ${isCompleted ? "✔ Claimed" : "⚡ Claim Reward"}
-          </button>
+            <button 
+              class="btn btn-sm ${isCompleted ? "btn-secondary" : "btn-success"} rounded-pill px-3" 
+              onclick="claimSurvey(${survey.id})"
+              ${isCompleted ? "disabled" : ""}
+            >
+              ${isCompleted ? "✔ Claimed" : "⚡ Claim"}
+            </button>
+          </div>
         </div>
 
       </div>
@@ -1668,7 +1667,6 @@
   </div>
 `;
 
-// Append to container
 surveysContainer.innerHTML += surveyHTML;
         });
 
