@@ -1625,48 +1625,51 @@
 
           const surveyHTML = `
   <div class="col-12 mb-3">
-    <div class="card survey-card p-3 ${
-      isCompleted ? "opacity-75 border-success" : "border-warning"
-    }">
+    <div class="card survey-card p-3 ${isCompleted ? "opacity-75 border-success" : "border-warning"}">
       <div class="d-flex align-items-center">
 
-        <!-- Logo -->
-        <img src="${survey.image}" alt="${survey.name}" 
-             class="rounded-circle me-3 border" 
-             style="width:55px; height:55px; object-fit:cover;">
+        <!-- Survey Logo -->
+        <img 
+          src="${survey.image}" 
+          alt="${survey.name}" 
+          class="rounded-circle me-3 border" 
+          style="width:55px; height:55px; object-fit:cover;"
+        >
 
-        <!-- Title + Reward -->
+        <!-- Survey Details -->
         <div class="flex-grow-1">
           <h6 class="mb-1">${survey.name}</h6>
           <p class="mb-0 text-success small fw-semibold">
             🎁 Reward: BDT ${survey.reward.toFixed(2)}
           </p>
-          ${
-            isCompleted
-              ? '<span class="badge bg-success mt-1">✅ Completed</span>'
-              : ""
-          }
+          ${isCompleted ? '<span class="badge bg-success mt-1">✅ Completed</span>' : ""}
         </div>
 
         <!-- Action Buttons -->
-<div class="d-flex gap-2">
-  <button class="btn btn-sm btn-outline-primary rounded-pill px-3" 
-          onclick="verifySurvey(${survey.id})">
-    🔍 Check Now
-  </button>
-  <button class="btn btn-sm ${
-    isCompleted ? "btn-secondary" : "btn-success"
-  } rounded-pill px-3" 
-          onclick="claimSurvey(${survey.id})" ${isCompleted ? "disabled" : ""}>
-    ${isCompleted ? "✔ Claimed" : "⚡ Claim Reward"}
-  </button>
-</div>
+        <div class="d-flex gap-2">
+          <button 
+            class="btn btn-sm btn-outline-primary rounded-pill px-3" 
+            onclick="verifySurvey(${survey.id})"
+          >
+            🔍 Check Now
+          </button>
+
+          <button 
+            class="btn btn-sm ${isCompleted ? "btn-secondary" : "btn-success"} rounded-pill px-3" 
+            onclick="claimSurvey(${survey.id})"
+            ${isCompleted ? "disabled" : ""}
+          >
+            ${isCompleted ? "✔ Claimed" : "⚡ Claim Reward"}
+          </button>
+        </div>
 
       </div>
     </div>
   </div>
 `;
-          surveysContainer.innerHTML += surveyHTML;
+
+// Append to container
+surveysContainer.innerHTML += surveyHTML;
         });
 
         // If no surveys available, show message
