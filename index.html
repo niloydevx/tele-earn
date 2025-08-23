@@ -514,6 +514,22 @@
         transition: width 1s linear;
       }
 
+      /* Penalty notification */
+      .penalty-notification {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.9);
+        color: #ff4444;
+        padding: 20px;
+        border-radius: 12px;
+        text-align: center;
+        z-index: 2000;
+        box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        border: 2px solid #ff4444;
+      }
+
       /* Responsive adjustments */
       @media (max-width: 576px) {
         .cover-img {
@@ -1136,6 +1152,9 @@
       let adCompleted = false;
       let allowReward = true;
       let cooldown = false;
+      let adTimer = null;
+      let adDuration = 0;
+      let adStartTime = 0;
 
       // Initialize the application
       document.addEventListener("DOMContentLoaded", async function () {
@@ -1619,6 +1638,8 @@
         adInProgress = true;
         adCompleted = false;
         allowReward = true;
+        adDuration = duration;
+        adStartTime = Date.now();
 
         const simulated = setInterval(() => {
           adTime--;
@@ -1668,14 +1689,61 @@
           allowReward = false; 
           adInProgress = false;
           consecutiveAds = 0;
+          
+          // Calculate penalty based on how much time was spent watching
+          const timeSpent = (Date.now() - adStartTime) / 1000;
+          const penaltyPercentage = Math.max(0.1, 1 - (timeSpent / adDuration));
+          const penaltyAmount = (userData.balance * penaltyPercentage).toFixed(2);
+          
+          // Apply penalty
+          userData.balance -= parseFloat(penaltyAmount);
+          userData.totalEarnings -= parseFloat(penaltyAmount);
+          
+          // Add to history
+          userData.history.unshift({
+            type: "penalty",
+            method: "Ad Skipped",
+            amount: "-" + penaltyAmount,
+            address: "Penalty for leaving ad early",
+            status: "Deducted",
+            date: new Date().toLocaleDateString(),
+          });
+          
+          // Save to Firebase
+          saveUserData();
+          
+          // Update UI
+          updateUI();
+          
           const adStatus = document.getElementById("adStatus");
-          adStatus.innerText = "❌ You left the ad early! Blocked.";
+          adStatus.innerText = "❌ You left the ad early! Penalty applied.";
           const adContainer = document.getElementById("gigapub-ad");
           adContainer.innerText = "";
           const progressBar = document.getElementById("progress-bar");
           progressBar.style.width = '0%';
-          startCooldown(20, "❌ You left the ad early! Blocked.");
+          
+          // Show penalty notification
+          showPenaltyNotification(penaltyAmount);
+          
+          startCooldown(20, "❌ You left the ad early! Penalty applied.");
         }
+      }
+
+      function showPenaltyNotification(amount) {
+        const penaltyDiv = document.createElement("div");
+        penaltyDiv.className = "penalty-notification";
+        penaltyDiv.innerHTML = `
+          <i class="bi bi-exclamation-triangle-fill fs-1"></i>
+          <h3>Penalty Applied!</h3>
+          <p>${amount} BDT deducted for leaving ad early</p>
+        `;
+        
+        document.body.appendChild(penaltyDiv);
+        
+        // Remove after 5 seconds
+        setTimeout(() => {
+          penaltyDiv.remove();
+        }, 5000);
       }
 
       function awardAdReward() {
@@ -2123,131 +2191,131 @@
         if (
           userData.usedPromoCodes &&
           userData.usedPromoCodes.includes(promoCode)
-        ) {
-          return showNotification(
-            "Error",
-            "You have already used this promo code!",
-            "danger"
+          ) {
+            return showNotification(
+              "Error",
+              "You have already used this promo code!",
+              "danger"
+            );
+          }
+
+          // Check if promo code exists in app config
+          if (!appConfig.promoCodes || !appConfig.promoCodes[promoCode]) {
+            return showNotification("Error", "Invalid promo code!", "danger");
+          }
+
+          const promoCodeData = appConfig.promoCodes[promoCode];
+
+          // Check if promo code is active
+          if (promoCodeData.status !== "active") {
+            return showNotification(
+              "Error",
+              "This promo code is not active!",
+              "danger"
+            );
+          }
+
+          // Apply promo code value
+          const reward = promoCodeData.value;
+          userData.balance += reward;
+          userData.totalEarnings += reward;
+
+          // Add to used promo codes
+          if (!userData.usedPromoCodes) {
+            userData.usedPromoCodes = [];
+          }
+          userData.usedPromoCodes.push(promoCode);
+
+          // Update promo code usage count in app config
+          appConfig.promoCodes[promoCode].used =
+            (appConfig.promoCodes[promoCode].used || 0) + 1;
+          database.ref("appConfig").update({
+            [`promoCodes/${promoCode}/used`]:
+              appConfig.promoCodes[promoCode].used,
+          });
+
+          // Add to history
+          userData.history.unshift({
+            type: "earning",
+            method: "Promo Code",
+            amount: reward.toFixed(2),
+            address: promoCode,
+            status: "Completed",
+            date: new Date().toLocaleDateString(),
+          });
+
+          // Save to Firebase
+          saveUserData();
+
+          // Update UI
+          updateUI();
+          showNotification(
+            "Success!",
+            `You received ${reward} BDT from promo code ${promoCode}!`,
+            "success"
           );
+
+          // Clear input
+          document.getElementById("promoCodeInput").value = "";
         }
 
-        // Check if promo code exists in app config
-        if (!appConfig.promoCodes || !appConfig.promoCodes[promoCode]) {
-          return showNotification("Error", "Invalid promo code!", "danger");
+        function filterHistory(type) {
+          let table = document.getElementById("historyTable");
+          table.innerHTML = "";
+
+          if (!userData || !userData.history) return;
+
+          let filteredData = userData.history;
+          if (type !== "all") {
+            filteredData = userData.history.filter((tx) => tx.type === type);
+          }
+
+          filteredData.slice(0, 5).forEach((tx) => {
+            let statusClass = "";
+            if (tx.status === "Pending") statusClass = "text-warning";
+            if (tx.status === "Completed") statusClass = "text-success";
+            if (tx.status === "Failed") statusClass = "text-danger";
+            if (tx.status === "Rejected") statusClass = "text-danger";
+
+            let row = `
+        <tr>
+          <td class="ps-4">${tx.date || "Today"}</td>
+          <td>${tx.method}</td>
+          <td>${tx.amount} ৳</td>
+          <td>${tx.address.substring(0, 4)}...${tx.address.slice(-4)}</td>
+          <td class="text-end pe-4 ${statusClass}">${tx.status}</td>
+        </tr>
+      `;
+            table.innerHTML += row;
+          });
         }
 
-        const promoCodeData = appConfig.promoCodes[promoCode];
-
-        // Check if promo code is active
-        if (promoCodeData.status !== "active") {
-          return showNotification(
-            "Error",
-            "This promo code is not active!",
-            "danger"
-          );
+        function loadMoreHistory() {
+          showNotification("Info", "Loading more transactions...", "info");
         }
 
-        // Apply promo code value
-        const reward = promoCodeData.value;
-        userData.balance += reward;
-        userData.totalEarnings += reward;
-
-        // Add to used promo codes
-        if (!userData.usedPromoCodes) {
-          userData.usedPromoCodes = [];
-        }
-        userData.usedPromoCodes.push(promoCode);
-
-        // Update promo code usage count in app config
-        appConfig.promoCodes[promoCode].used =
-          (appConfig.promoCodes[promoCode].used || 0) + 1;
-        database.ref("appConfig").update({
-          [`promoCodes/${promoCode}/used`]:
-            appConfig.promoCodes[promoCode].used,
-        });
-
-        // Add to history
-        userData.history.unshift({
-          type: "earning",
-          method: "Promo Code",
-          amount: reward.toFixed(2),
-          address: promoCode,
-          status: "Completed",
-          date: new Date().toLocaleDateString(),
-        });
-
-        // Save to Firebase
-        saveUserData();
-
-        // Update UI
-        updateUI();
-        showNotification(
-          "Success!",
-          `You received ${reward} BDT from promo code ${promoCode}!`,
-          "success"
-        );
-
-        // Clear input
-        document.getElementById("promoCodeInput").value = "";
-      }
-
-      function filterHistory(type) {
-        let table = document.getElementById("historyTable");
-        table.innerHTML = "";
-
-        if (!userData || !userData.history) return;
-
-        let filteredData = userData.history;
-        if (type !== "all") {
-          filteredData = userData.history.filter((tx) => tx.type === type);
-        }
-
-        filteredData.slice(0, 5).forEach((tx) => {
-          let statusClass = "";
-          if (tx.status === "Pending") statusClass = "text-warning";
-          if (tx.status === "Completed") statusClass = "text-success";
-          if (tx.status === "Failed") statusClass = "text-danger";
-          if (tx.status === "Rejected") statusClass = "text-danger";
-
-          let row = `
-      <tr>
-        <td class="ps-4">${tx.date || "Today"}</td>
-        <td>${tx.method}</td>
-        <td>${tx.amount} ৳</td>
-        <td>${tx.address.substring(0, 4)}...${tx.address.slice(-4)}</td>
-        <td class="text-end pe-4 ${statusClass}">${tx.status}</td>
-      </tr>
+        function showNotification(title, message, type) {
+          const notification = document.createElement("div");
+          notification.className = `alert alert-${type} floating-notification alert-dismissible shadow`;
+          notification.innerHTML = `
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+      <strong>${title}</strong> ${message}
     `;
-          table.innerHTML += row;
-        });
-      }
 
-      function loadMoreHistory() {
-        showNotification("Info", "Loading more transactions...", "info");
-      }
+          document.getElementById("notificationArea").appendChild(notification);
 
-      function showNotification(title, message, type) {
-        const notification = document.createElement("div");
-        notification.className = `alert alert-${type} floating-notification alert-dismissible shadow`;
-        notification.innerHTML = `
-    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
-    <strong>${title}</strong> ${message}
-  `;
+          // Auto remove after 5 seconds
+          setTimeout(() => {
+            notification.classList.add("fade");
+            setTimeout(() => notification.remove(), 300);
+          }, 5000);
+        }
 
-        document.getElementById("notificationArea").appendChild(notification);
-
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-          notification.classList.add("fade");
-          setTimeout(() => notification.remove(), 300);
-        }, 5000);
-      }
-
-      // Calculate referral earnings based on commission percentage
-      function calculateReferralEarnings(amount) {
-        const commissionPercentage = appConfig.referralCommission || 10;
-        return (amount * commissionPercentage) / 100;
-      }
+        // Calculate referral earnings based on commission percentage
+        function calculateReferralEarnings(amount) {
+          const commissionPercentage = appConfig.referralCommission || 10;
+          return (amount * commissionPercentage) / 100;
+        }
     </script>
   </body>
 </html>
