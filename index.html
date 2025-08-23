@@ -486,117 +486,32 @@
         font-size: 1.2rem;
       }
 
-      /* AD OVERLAY STYLES - FIXED */
-      #adOverlay {
-        position: fixed;
-        top: 0;
-        left: 0;
+      /* AD CONTAINER STYLES */
+      #gigapub-ad {
         width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.95);
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        color: white;
-        backdrop-filter: blur(10px);
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease;
-      }
-
-      #adOverlay.active {
-        opacity: 1;
-        pointer-events: all;
-      }
-
-      .ad-content {
-        text-align: center;
-        max-width: 90%;
-        width: 100%;
-      }
-
-      .ad-container {
-        width: 100%;
-        max-width: 400px;
+        max-width: 600px;
         height: 300px;
-        background: #222;
-        border-radius: 15px;
-        overflow: hidden;
-        margin: 0 auto 20px;
-        position: relative;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-
-      .ad-placeholder {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        background: linear-gradient(135deg, #333, #222);
-        color: #fff;
-      }
-
-      .ad-placeholder i {
-        font-size: 3rem;
-        margin-bottom: 15px;
-        color: var(--primary-color);
-      }
-
-      .ad-timer {
-        position: absolute;
-        top: 15px;
-        right: 15px;
-        background: rgba(0, 0, 0, 0.7);
-        color: var(--primary-color);
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 1.5rem;
-        font-weight: bold;
-        border: 2px solid var(--primary-color);
-      }
-
-      .ad-progress {
-        width: 80%;
-        max-width: 300px;
-        height: 10px;
-        background: #333;
-        border-radius: 5px;
-        margin: 20px 0;
-        overflow: hidden;
-      }
-
-      .ad-progress-bar {
-        height: 100%;
-        background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
-        width: 0%;
-        transition: width 0.1s linear;
-      }
-
-      .ad-close-btn {
-        position: absolute;
-        top: 15px;
-        left: 15px;
-        background: rgba(0, 0, 0, 0.7);
+        background: #000;
+        margin: 25px auto;
         color: white;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
         display: flex;
         justify-content: center;
         align-items: center;
-        font-size: 1.2rem;
-        cursor: pointer;
-        border: 1px solid #555;
+        font-size: 20px;
+        border-radius: 12px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      }
+
+      #progress-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 6px;
+        background: #28a745;
+        width: 0%;
+        transition: width 1s linear;
       }
 
       /* Responsive adjustments */
@@ -630,41 +545,14 @@
           padding: 1.5rem 1rem;
         }
         
-        .ad-container {
+        #gigapub-ad {
           height: 250px;
           max-width: 320px;
-        }
-        
-        .ad-timer {
-          width: 40px;
-          height: 40px;
-          font-size: 1.2rem;
         }
       }
     </style>
   </head>
   <body>
-    <!-- AD OVERLAY -->
-    <div id="adOverlay">
-      <div class="ad-content">
-        <div class="ad-container">
-          <div class="ad-placeholder">
-            <i class="bi bi-play-btn-fill"></i>
-            <h4>Advertisement</h4>
-            <p>Please wait while the ad loads...</p>
-          </div>
-          <div class="ad-timer" id="adTimer">16</div>
-          <div class="ad-close-btn" id="adCloseBtn">
-            <i class="bi bi-x-lg"></i>
-          </div>
-        </div>
-        <div class="ad-progress">
-          <div class="ad-progress-bar" id="adProgressBar"></div>
-        </div>
-        <p class="text-muted">Please watch the ad completely to earn rewards</p>
-      </div>
-    </div>
-
     <!-- BANNED USER SCREEN (hidden by default) -->
     <div id="bannedScreen" class="container hidden">
       <div class="banned-container">
@@ -1165,6 +1053,21 @@
         </div>
       </div>
 
+      <!-- AD CONTAINER (hidden by default) -->
+      <div id="adContainer" class="container my-4 hidden">
+        <h3 class="mb-4 text-center">Watch Ad to Earn</h3>
+        <div id="gigapub-ad">
+          Ad will appear here
+          <div id="progress-bar"></div>
+        </div>
+        <div id="adStatus" class="text-center mt-3">Click "Watch Ad" to start</div>
+        <div class="text-center mt-4">
+          <button class="btn btn-outline-warning" onclick="hideAdContainer()">
+            <i class="bi bi-arrow-left"></i> Back to Rewards
+          </button>
+        </div>
+      </div>
+
       <!-- PERFECT BOTTOM NAVIGATION -->
       <div class="bottom-nav shadow-lg">
         <a href="#" onclick="showTab('home', this)" class="active">
@@ -1228,8 +1131,8 @@
       let currentSurvey = null;
       let surveyWindow = null;
       let surveyCheckInterval = null;
+      let consecutiveAds = 0;
       let adTimerInterval = null;
-      let adCompleted = false;
 
       // Initialize the application
       document.addEventListener("DOMContentLoaded", async function () {
@@ -1264,11 +1167,6 @@
         document
           .getElementById("watchAdBtn")
           .addEventListener("click", watchAd);
-          
-        // Add event listener to close ad button
-        document
-          .getElementById("adCloseBtn")
-          .addEventListener("click", closeAdOverlay);
       });
 
       // Get user IP address
@@ -1659,57 +1557,91 @@
         }
       }
 
-      // Show ad overlay for 16 seconds
-      function showAdOverlay() {
-        const overlay = document.getElementById("adOverlay");
-        const timer = document.getElementById("adTimer");
-        const progressBar = document.getElementById("adProgressBar");
+      function showAdContainer() {
+        document
+          .querySelectorAll("div.container")
+          .forEach((div) => div.classList.add("hidden"));
+        document.getElementById("adContainer").classList.remove("hidden");
+        document
+          .querySelectorAll(".bottom-nav a")
+          .forEach((a) => a.classList.remove("active"));
+      }
+
+      function hideAdContainer() {
+        document.getElementById("adContainer").classList.add("hidden");
+        document.getElementById("rewards").classList.remove("hidden");
+        document
+          .querySelector('.bottom-nav a[onclick*="rewards"]')
+          .classList.add("active");
+      }
+
+      function startCooldown(seconds = 20) {
+        const adStatus = document.getElementById("adStatus");
+        const progressBar = document.getElementById("progress-bar");
         
-        // Reset state
-        adCompleted = false;
+        let time = seconds;
+        adStatus.innerText = `Ad skipped/incomplete! Wait ${time}s`;
+        progressBar.style.width = '0%';
         
-        // Show overlay
-        overlay.classList.add("active");
-        
-        let seconds = 16;
-        timer.textContent = seconds;
-        progressBar.style.width = "0%";
-        
-        // Start timer
-        adTimerInterval = setInterval(() => {
-          seconds--;
-          timer.textContent = seconds;
+        const timer = setInterval(() => {
+          time--;
+          let percent = ((seconds - time)/seconds)*100;
+          progressBar.style.width = percent + '%';
+          adStatus.innerText = `Wait ${time}s`;
           
-          // Update progress bar
-          const progress = ((16 - seconds) / 16) * 100;
-          progressBar.style.width = progress + "%";
+          if (time <= 0) {
+            clearInterval(timer);
+            adStatus.innerText = "You can watch ad again";
+            const adButton = document.getElementById("watchAdBtn");
+            adButton.disabled = false;
+            const adReward = appConfig.adsRewards || 0.2;
+            adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
+            document.getElementById("gigapub-ad").innerText = "Ad will appear here";
+            progressBar.style.width = '0%';
+          }
+        }, 1000);
+      }
+
+      function showSimulatedAd(duration = 10) {
+        const adContainer = document.getElementById("gigapub-ad");
+        const adStatus = document.getElementById("adStatus");
+        const progressBar = document.getElementById("progress-bar");
+        
+        let adTime = duration;
+        adContainer.innerText = `Simulated Ad (${adTime}s)`;
+        progressBar.style.width = '0%';
+        
+        const simulated = setInterval(() => {
+          adTime--;
+          adContainer.innerText = `Simulated Ad (${adTime}s)`;
+          let percent = ((duration - adTime)/duration)*100;
+          progressBar.style.width = percent + '%';
           
-          if (seconds <= 0) {
-            clearInterval(adTimerInterval);
-            adCompleted = true;
-            overlay.classList.remove("active");
-            
-            // Award reward after ad completes
+          if (adTime <= 0) {
+            clearInterval(simulated);
+            consecutiveAds++;
             awardAdReward();
           }
         }, 1000);
       }
-      
-      // Award ad reward to user
+
       function awardAdReward() {
-        // Get ad reward from app config (default to 0.20 if not set)
-        const adReward = appConfig.adsRewards || 0.2;
+        // Get base ad reward from app config
+        const baseReward = appConfig.adsRewards || 0.2;
+        // Add bonus for consecutive ads
+        const bonus = consecutiveAds * 0.05;
+        const totalReward = baseReward + bonus;
 
         // Update user data
         userData.completedTasks++;
-        userData.balance += adReward;
-        userData.totalEarnings += adReward;
+        userData.balance += totalReward;
+        userData.totalEarnings += totalReward;
 
         // Add to history
         userData.history.unshift({
           type: "earning",
           method: "Ad View",
-          amount: adReward.toFixed(2),
+          amount: totalReward.toFixed(2),
           address: "Ad Reward",
           status: "Completed",
           date: new Date().toLocaleDateString(),
@@ -1720,30 +1652,22 @@
 
         // Update UI
         updateUI();
-        showNotification(
-          "Success!",
-          `You earned ${adReward.toFixed(2)} BDT!`,
-          "success"
-        );
-      }
-      
-      // Close ad overlay manually
-      function closeAdOverlay() {
-        const overlay = document.getElementById("adOverlay");
-        if (adTimerInterval) {
-          clearInterval(adTimerInterval);
-        }
-        overlay.classList.remove("active");
         
-        if (!adCompleted) {
-          showNotification("Info", "Ad was closed early. No reward awarded.", "info");
-        }
+        const adStatus = document.getElementById("adStatus");
+        adStatus.innerText = `✅ Ad finished! +${totalReward.toFixed(2)} BDT (streak: ${consecutiveAds})`;
         
-        // Re-enable button
         const adButton = document.getElementById("watchAdBtn");
         adButton.disabled = false;
         const adReward = appConfig.adsRewards || 0.2;
         adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
+        document.getElementById("gigapub-ad").innerText = "Ad will appear here";
+        document.getElementById("progress-bar").style.width = '0%';
+        
+        showNotification(
+          "Success!",
+          `You earned ${totalReward.toFixed(2)} BDT!`,
+          "success"
+        );
       }
 
       async function watchAd() {
@@ -1756,8 +1680,28 @@
             adButton.innerHTML =
               '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
 
-            // Show the ad overlay with countdown
-            showAdOverlay();
+            // Show the ad container
+            showAdContainer();
+
+            // Reset consecutive ads if needed
+            consecutiveAds = consecutiveAds || 0;
+
+            // Try to show actual Gigapub ad
+            if (typeof window.showGiga === "function") {
+              window.showGiga("gigapub-ad")
+                .then(() => {
+                  consecutiveAds++;
+                  awardAdReward();
+                })
+                .catch((e) => {
+                  console.warn("Ad skipped/failed", e);
+                  startCooldown(20);
+                  consecutiveAds = 0;
+                });
+            } else {
+              // Fallback: simulated ad
+              showSimulatedAd(10);
+            }
           } catch (e) {
             console.log("Ad failed or closed before completion", e);
             showNotification(
