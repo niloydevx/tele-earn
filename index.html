@@ -1112,942 +1112,982 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-      // Firebase configuration
-      const firebaseConfig = {
-        apiKey: "AIzaSyDuaWMh0eIJ2tdtLxYj43ij9MGSh_Yo22M",
-        authDomain: "test-6977e.firebaseapp.com",
-        projectId: "test-6977e",
-        storageBucket: "test-6977e.firebasestorage.app",
-        messagingSenderId: "544329273038",
-        appId: "1:544329273038:web:c7a31e12bec7c80741ca9f",
-      };
+  // Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyDuaWMh0eIJ2tdtLxYj43ij9MGSh_Yo22M",
+    authDomain: "test-6977e.firebaseapp.com",
+    projectId: "test-6977e",
+    storageBucket: "test-6977e.firebasestorage.app",
+    messagingSenderId: "544329273038",
+    appId: "1:544329273038:web:c7a31e12bec7c80741ca9f",
+  };
 
-      // Initialize Firebase
-      firebase.initializeApp(firebaseConfig);
-      const database = firebase.database();
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
 
-      // Initialize Telegram Web App
-      const tg = window.Telegram.WebApp;
-      tg.expand(); // full height
+  // Initialize Telegram Web App
+  const tg = window.Telegram.WebApp;
+  tg.expand(); // full height
 
-      // Telegram user info
-      const user = tg.initDataUnsafe?.user;
-      let userId = user ? user.id : Math.floor(Math.random() * 1000000);
-      let username = user ? user.username || user.first_name : "User" + userId;
-      let userPhotoUrl = user
-        ? user.photo_url || "https://via.placeholder.com/120"
-        : "https://via.placeholder.com/120";
+  // Telegram user info
+  const user = tg.initDataUnsafe?.user;
+  let userId = user ? user.id : Math.floor(Math.random() * 1000000);
+  let username = user ? user.username || user.first_name : "User" + userId;
+  let userPhotoUrl = user
+    ? user.photo_url || "https://via.placeholder.com/120"
+    : "https://via.placeholder.com/120";
 
-      // App state
-      let userData = null;
-      let appConfig = null;
-      let vpnRequired = true;
-      let userIP = "";
-      let deviceID = "";
-      let currentSurvey = null;
-      let surveyWindow = null;
-      let surveyCheckInterval = null;
-      
-      // New ad watching state variables from second code
-      let consecutiveAds = 0;
-      let adInProgress = false;
-      let adCompleted = false;
-      let allowReward = true;
-      let cooldown = false;
-      let adTimer = null;
-      let adDuration = 0;
-      let adStartTime = 0;
+  // App state
+  let userData = null;
+  let appConfig = null;
+  let vpnRequired = true;
+  let userIP = "";
+  let deviceID = "";
+  let currentSurvey = null;
+  let surveyWindow = null;
+  let surveyCheckInterval = null;
+  
+  // New ad watching state variables from second code
+  let consecutiveAds = 0;
+  let adInProgress = false;
+  let adCompleted = false;
+  let allowReward = true;
+  let cooldown = false;
+  let adTimer = null;
+  let adDuration = 0;
+  let adStartTime = 0;
 
-      // Initialize the application
-      document.addEventListener("DOMContentLoaded", async function () {
-        // Get user IP and device info
-        await getUserIP();
-        getDeviceFingerprint();
+  // Initialize the application
+  document.addEventListener("DOMContentLoaded", async function () {
+    // Get user IP and device info
+    await getUserIP();
+    getDeviceFingerprint();
 
-        // Check if user is banned
-        const isBanned = await checkIfBanned();
-        if (isBanned) {
-          document.getElementById("bannedScreen").classList.remove("hidden");
-          document.getElementById("appContent").classList.add("hidden");
-          return;
+    // Check if user is banned
+    const isBanned = await checkIfBanned();
+    if (isBanned) {
+      document.getElementById("bannedScreen").classList.remove("hidden");
+      document.getElementById("appContent").classList.add("hidden");
+      return;
+    }
+
+    // Load app configuration
+    await loadAppConfig();
+
+    // Check VPN status
+    await checkVPN();
+
+    // Load or create user data
+    await loadUserData();
+
+    // Update UI with user data
+    updateUI();
+
+    // Load surveys
+    loadSurveys();
+
+    // Add event listener to watch ad button
+    document
+      .getElementById("watchAdBtn")
+      .addEventListener("click", watchAd);
+    
+    // Set up page visibility and navigation handlers
+    setupAdMonitoring();
+    
+    // Check on load if already banned
+    checkCooldownOnLoad();
+  });
+
+  // Get user IP address
+  async function getUserIP() {
+    try {
+      let res = await fetch("https://api.ipify.org?format=json");
+      let data = await res.json();
+      userIP = data.ip;
+    } catch (e) {
+      console.error("Failed to get IP:", e);
+      userIP = "unknown";
+    }
+  }
+
+  // Get device fingerprint
+  function getDeviceFingerprint() {
+    let ua = navigator.userAgent;
+    let screenRes = window.screen.width + "x" + window.screen.height;
+    let lang = navigator.language;
+
+    // Device ID (encoded)
+    deviceID = btoa(ua + screenRes + lang);
+  }
+
+  // Check if user is banned
+  async function checkIfBanned() {
+    return new Promise((resolve) => {
+      database.ref("bannedUsers/" + userId).once("value", (snapshot) => {
+        const bannedData = snapshot.val();
+        // Check if user exists in banned list and if ban is still active
+        if (bannedData && bannedData.banUntil > Date.now()) {
+          resolve(true);
+        } else if (bannedData && bannedData.banUntil <= Date.now()) {
+          // Remove expired ban
+          database.ref("bannedUsers/" + userId).remove();
+          resolve(false);
+        } else {
+          resolve(false);
         }
-
-        // Load app configuration
-        await loadAppConfig();
-
-        // Check VPN status
-        await checkVPN();
-
-        // Load or create user data
-        await loadUserData();
-
-        // Update UI with user data
-        updateUI();
-
-        // Load surveys
-        loadSurveys();
-
-        // Add event listener to watch ad button
-        document
-          .getElementById("watchAdBtn")
-          .addEventListener("click", watchAd);
-          
-        // Set up page visibility and navigation handlers
-        setupAdMonitoring();
-        
-        // Check on load if already banned
-        checkCooldownOnLoad();
       });
+    });
+  }
 
-      // Get user IP address
-      async function getUserIP() {
-        try {
-          let res = await fetch("https://api.ipify.org?format=json");
-          let data = await res.json();
-          userIP = data.ip;
-        } catch (e) {
-          console.error("Failed to get IP:", e);
-          userIP = "unknown";
-        }
+  // Function to ban a user
+  function banUser(seconds = 20, reason = "Blocked!") {
+    const banUntil = Date.now() + (seconds * 1000);
+    
+    // Save ban to Firebase
+    database.ref("bannedUsers/" + userId).set({
+      banUntil: banUntil,
+      reason: reason,
+      bannedAt: Date.now()
+    });
+    
+    // Start cooldown UI
+    startCooldownUI(seconds, reason);
+  }
+
+  // Function to check cooldown on load
+  async function checkCooldownOnLoad() {
+    database.ref("bannedUsers/" + userId).once("value", (snapshot) => {
+      const bannedData = snapshot.val();
+      if (bannedData && bannedData.banUntil > Date.now()) {
+        const remaining = Math.ceil((bannedData.banUntil - Date.now()) / 1000);
+        startCooldownUI(remaining, bannedData.reason || "You are still banned!");
       }
+    });
+  }
 
-      // Get device fingerprint
-      function getDeviceFingerprint() {
-        let ua = navigator.userAgent;
-        let screenRes = window.screen.width + "x" + window.screen.height;
-        let lang = navigator.language;
+  // Updated startCooldown function (renamed to startCooldownUI)
+  function startCooldownUI(seconds = 20, message = "Blocked!") {
+    const adStatus = document.getElementById("adStatus");
+    const progressBar = document.getElementById("progress-bar");
+    const adButton = document.getElementById("watchAdBtn");
+    
+    cooldown = true;
+    adButton.disabled = true;
 
-        // Device ID (encoded)
-        deviceID = btoa(ua + screenRes + lang);
-      }
+    let time = seconds;
+    alert(message);
+    adStatus.innerText = `${message} Wait ${time}s before next ad`;
+    progressBar.style.width = '0%';
 
-      // Check if user is banned
-      async function checkIfBanned() {
-        return new Promise((resolve) => {
-          database.ref("bannedUsers").once("value", (snapshot) => {
-            const bannedUsers = snapshot.val() || [];
-            resolve(bannedUsers.includes(userId.toString()));
-          });
-        });
-      }
-
-      // Load app configuration from Firebase
-      async function loadAppConfig() {
-        return new Promise((resolve) => {
-          database.ref("appConfig").once("value", (snapshot) => {
-            appConfig = snapshot.val();
-
-            if (!appConfig) {
-              // Default configuration if none exists
-              appConfig = {
-                dailyLimit: 60,
-                adsRewards: 0.2,
-                referralCommission: 10,
-                minWithdraw: 50,
-                logo: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
-                cover:
-                  "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
-                surveys: [
-                  {
-                    id: 1,
-                    name: "Consumer Survey",
-                    reward: 1.5,
-                    image:
-                      "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-                    url: "https://www.surveys.com/consumer",
-                    completedBy: {},
-                    status: "active",
-                  },
-                ],
-                vpnRequired: true,
-                promoCodes: {
-                  WELCOME10: { value: 10, status: "active", used: 0 },
-                  BONUS5: { value: 5, status: "active", used: 0 },
-                },
-                supportContact: "support@moneylnd.com",
-              };
-
-              // Save default config to Firebase
-              database.ref("appConfig").set(appConfig);
-            }
-
-            // Ensure adsRewards and referralCommission exist with defaults
-            if (appConfig.adsRewards === undefined) {
-              appConfig.adsRewards = 0.2;
-            }
-            if (appConfig.referralCommission === undefined) {
-              appConfig.referralCommission = 10;
-            }
-
-            // Apply app configuration
-            document.getElementById("logoImg").src = appConfig.logo;
-            document.getElementById("coverImg").src = appConfig.cover;
-            document.getElementById("dailyLimit").textContent =
-              appConfig.dailyLimit;
-            document.getElementById("dailyLimitText").textContent =
-              appConfig.dailyLimit;
-            document.getElementById("minWithdraw").textContent =
-              appConfig.minWithdraw;
-            document.getElementById("minWithdrawInfo").textContent =
-              appConfig.minWithdraw;
-
-            vpnRequired =
-              appConfig.vpnRequired !== undefined
-                ? appConfig.vpnRequired
-                : true;
-
-            resolve();
-          });
-        });
-      }
-
-      // Load user data from Firebase or create new user
-      async function loadUserData() {
-        return new Promise((resolve) => {
-          database.ref("users/" + userId).once("value", (snapshot) => {
-            if (snapshot.exists()) {
-              userData = snapshot.val();
-
-              // Check if user already exists with same IP or device
-              if (!userData.ip || !userData.deviceID) {
-                // Update with IP and device info for existing users
-                userData.ip = userIP;
-                userData.deviceID = deviceID;
-                database.ref("users/" + userId).update({
-                  ip: userIP,
-                  deviceID: deviceID,
-                });
-              } else if (
-                userData.ip !== userIP ||
-                userData.deviceID !== deviceID
-              ) {
-                // Check for duplicate accounts
-                checkForDuplicateAccounts();
-              }
-            } else {
-              // Check if this IP or device already has an account
-              checkForDuplicateAccounts(true);
-
-              // Create new user with default values
-              const joinDate = new Date().toISOString().split("T")[0];
-              const promoCode =
-                "ML" + Math.random().toString(36).substring(2, 8).toUpperCase();
-
-              userData = {
-                username: username,
-                photoUrl: userPhotoUrl,
-                joinDate: joinDate,
-                promoCode: promoCode,
-                balance: 0.0,
-                totalEarnings: 0.0,
-                withdrawn: 0.0,
-                referralEarnings: 0.0,
-                completedTasks: 0,
-                referrals: 0,
-                referralCode:
-                  "REF" +
-                  Math.random().toString(36).substring(2, 8).toUpperCase(),
-                history: [],
-                ip: userIP,
-                deviceID: deviceID,
-                usedPromoCodes: [],
-                completedSurveys: {},
-              };
-
-              // Save new user to Firebase
-              database.ref("users/" + userId).set(userData);
-            }
-
-            // Update username in UI
-            document.getElementById("username").textContent = userData.username;
-            document.getElementById("profileName").textContent =
-              userData.username;
-            document.getElementById("profileUsername").textContent =
-              userData.username;
-            document.getElementById("profileImg").src = userData.photoUrl;
-            document.getElementById("memberSince").textContent =
-              userData.joinDate;
-            document.getElementById("promoCode").textContent =
-              userData.promoCode;
-            document.getElementById("referralsCount").textContent =
-              userData.referrals;
-            document.getElementById("referralsCountHome").textContent =
-              userData.referrals;
-            document.getElementById(
-              "inviteLink"
-            ).value = `http://t.me/testosteroneeeeebot/money?startbot=${userData.referralCode}`;
-
-            resolve();
-          });
-        });
-      }
-
-      // Check for duplicate accounts
-      async function checkForDuplicateAccounts(isNewUser = false) {
-        database.ref("users").once("value", (snapshot) => {
-          const users = snapshot.val();
-          let duplicateFound = false;
-
-          if (users) {
-            Object.keys(users).forEach((key) => {
-              if (key !== userId.toString()) {
-                const user = users[key];
-                if (user.ip === userIP || user.deviceID === deviceID) {
-                  duplicateFound = true;
-
-                  if (isNewUser) {
-                    // Prevent creating new account
-                    showNotification(
-                      "Error",
-                      "You already have an account with this device/IP",
-                      "danger"
-                    );
-                    document
-                      .getElementById("bannedScreen")
-                      .classList.remove("hidden");
-                    document
-                      .getElementById("appContent")
-                      .classList.add("hidden");
-
-                    // Add to banned users
-                    database
-                      .ref("bannedUsers")
-                      .once("value", (bannedSnapshot) => {
-                        const bannedUsers = bannedSnapshot.val() || [];
-                        if (!bannedUsers.includes(userId.toString())) {
-                          bannedUsers.push(userId.toString());
-                          database.ref("bannedUsers").set(bannedUsers);
-                        }
-                      });
-
-                    return;
-                  }
-                }
-              }
-            });
-          }
-
-          if (duplicateFound && !isNewUser) {
-            showNotification(
-              "Warning",
-              "Multiple accounts detected",
-              "warning"
-            );
-          }
-        });
-      }
-
-      // Check VPN status
-      async function checkVPN() {
-        try {
-          document.getElementById("vpnStatus").textContent =
-            "Checking your connection...";
-
-          // Get public IP
-          let ipRes = await fetch("https://api64.ipify.org?format=json");
-          let ipData = await ipRes.json();
-
-          // Get IP details
-          let geoRes = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
-          let geoData = await geoRes.json();
-
-          document.getElementById(
-            "vpnStatus"
-          ).textContent = `Your country: ${geoData.country_name}`;
-
-          if (vpnRequired) {
-            // VPN required mode
-            if (geoData.country === "BD") {
-              document.getElementById("vpnAlert").classList.remove("d-none");
-              document.getElementById("vpnSuccess").classList.add("d-none");
-              document.getElementById("vpnOffAlert").classList.add("d-none");
-            } else {
-              document.getElementById("vpnAlert").classList.add("d-none");
-              document.getElementById("vpnSuccess").classList.remove("d-none");
-              document.getElementById("vpnOffAlert").classList.add("d-none");
-
-              // Hide VPN check and show home page after successful verification
-              setTimeout(() => {
-                document.getElementById("vpnCheck").classList.add("hidden");
-                document.getElementById("home").classList.remove("hidden");
-              }, 2000);
-            }
-          } else {
-            // VPN not required mode
-            if (geoData.country !== "BD") {
-              document.getElementById("vpnOffAlert").classList.remove("d-none");
-              document.getElementById("vpnAlert").classList.add("d-none");
-              document.getElementById("vpnSuccess").classList.add("d-none");
-            } else {
-              document.getElementById("vpnOffAlert").classList.add("d-none");
-              document.getElementById("vpnAlert").classList.add("d-none");
-              document.getElementById("vpnSuccess").classList.remove("d-none");
-
-              // Hide VPN check and show home page
-              setTimeout(() => {
-                document.getElementById("vpnCheck").classList.add("hidden");
-                document.getElementById("home").classList.remove("hidden");
-              }, 2000);
-            }
-          }
-        } catch (e) {
-          document.getElementById("vpnStatus").textContent =
-            "Failed to check IP (API error)";
-          console.error("VPN check error:", e);
-        }
-      }
-
-      // Update UI with user data
-      function updateUI() {
-        if (!userData) return;
-
-        // Format balance with commas
-        const formattedBalance = userData.balance
-          .toFixed(2)
-          .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        const formattedTotalEarnings = userData.totalEarnings
-          .toFixed(2)
-          .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        const formattedWithdrawn = userData.withdrawn
-          .toFixed(2)
-          .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        const formattedReferralEarnings = userData.referralEarnings
-          .toFixed(2)
-          .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-
-        document.getElementById("balance").innerText = formattedBalance;
-        document.getElementById("availableBalance").innerText =
-          formattedBalance;
-        document.getElementById("availableBalanceProfile").innerText =
-          formattedBalance;
-        document.getElementById("totalEarningsHome").innerText =
-          formattedTotalEarnings;
-        document.getElementById("totalEarnings").innerText =
-          formattedTotalEarnings;
-        document.getElementById("withdrawnAmount").innerText =
-          formattedWithdrawn;
-        document.getElementById("referralEarnings").innerText =
-          formattedReferralEarnings;
-        document.getElementById("completed").innerText =
-          userData.completedTasks;
-        document.getElementById("remaining").innerText =
-          appConfig.dailyLimit - userData.completedTasks;
-
-        let percent = Math.round(
-          (userData.completedTasks / appConfig.dailyLimit) * 100
-        );
-        document.getElementById("progressBar").style.width = percent + "%";
-        document.getElementById("progressBar").innerText = percent + "%";
-
-        // Update ad button with correct reward amount
+    const timer = setInterval(() => {
+      time--;
+      if (time <= 0) {
+        clearInterval(timer);
+        cooldown = false;
+        
+        // Remove ban from Firebase when it expires
+        database.ref("bannedUsers/" + userId).remove();
+        
+        adButton.disabled = false;
         const adReward = appConfig.adsRewards || 0.2;
-        document.getElementById(
-          "watchAdBtn"
-        ).innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(
-          2
-        )} BDT)`;
+        adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
+        adStatus.innerText = "You can watch ad again";
+        progressBar.style.width = '0%';
+      } else {
+        progressBar.style.width = ((seconds - time)/seconds)*100 + '%';
+        adStatus.innerText = `${message} Wait ${time}s`;
+      }
+    }, 1000);
+  }
 
-        // Update referral text with correct percentage
-        const referralCommission = appConfig.referralCommission || 10;
-        document.getElementById(
-          "referralText"
-        ).textContent = `Earn ${referralCommission}% of your referrals' earnings`;
+  // Load app configuration from Firebase
+  async function loadAppConfig() {
+    return new Promise((resolve) => {
+      database.ref("appConfig").once("value", (snapshot) => {
+        appConfig = snapshot.val();
 
-        // Update history table
-        filterHistory("all");
+        if (!appConfig) {
+          // Default configuration if none exists
+          appConfig = {
+            dailyLimit: 60,
+            adsRewards: 0.2,
+            referralCommission: 10,
+            minWithdraw: 50,
+            logo: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
+            cover:
+              "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
+            surveys: [
+              {
+                id: 1,
+                name: "Consumer Survey",
+                reward: 1.5,
+                image:
+                  "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                url: "https://www.surveys.com/consumer",
+                completedBy: {},
+                status: "active",
+              },
+            ],
+            vpnRequired: true,
+            promoCodes: {
+              WELCOME10: { value: 10, status: "active", used: 0 },
+              BONUS5: { value: 5, status: "active", used: 0 },
+            },
+            supportContact: "support@moneylnd.com",
+          };
+
+          // Save default config to Firebase
+          database.ref("appConfig").set(appConfig);
+        }
+
+        // Ensure adsRewards and referralCommission exist with defaults
+        if (appConfig.adsRewards === undefined) {
+          appConfig.adsRewards = 0.2;
+        }
+        if (appConfig.referralCommission === undefined) {
+          appConfig.referralCommission = 10;
+        }
+
+        // Apply app configuration
+        document.getElementById("logoImg").src = appConfig.logo;
+        document.getElementById("coverImg").src = appConfig.cover;
+        document.getElementById("dailyLimit").textContent =
+          appConfig.dailyLimit;
+        document.getElementById("dailyLimitText").textContent =
+          appConfig.dailyLimit;
+        document.getElementById("minWithdraw").textContent =
+          appConfig.minWithdraw;
+        document.getElementById("minWithdrawInfo").textContent =
+          appConfig.minWithdraw;
+
+        vpnRequired =
+          appConfig.vpnRequired !== undefined
+            ? appConfig.vpnRequired
+            : true;
+
+        resolve();
+      });
+    });
+  }
+
+  // Load user data from Firebase or create new user
+  async function loadUserData() {
+    return new Promise((resolve) => {
+      database.ref("users/" + userId).once("value", (snapshot) => {
+        if (snapshot.exists()) {
+          userData = snapshot.val();
+
+          // Check if user already exists with same IP or device
+          if (!userData.ip || !userData.deviceID) {
+            // Update with IP and device info for existing users
+            userData.ip = userIP;
+            userData.deviceID = deviceID;
+            database.ref("users/" + userId).update({
+              ip: userIP,
+              deviceID: deviceID,
+            });
+          } else if (
+            userData.ip !== userIP ||
+            userData.deviceID !== deviceID
+          ) {
+            // Check for duplicate accounts
+            checkForDuplicateAccounts();
+          }
+        } else {
+          // Check if this IP or device already has an account
+          checkForDuplicateAccounts(true);
+
+          // Create new user with default values
+          const joinDate = new Date().toISOString().split("T")[0];
+          const promoCode =
+            "ML" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+          userData = {
+            username: username,
+            photoUrl: userPhotoUrl,
+            joinDate: joinDate,
+            promoCode: promoCode,
+            balance: 0.0,
+            totalEarnings: 0.0,
+            withdrawn: 0.0,
+            referralEarnings: 0.0,
+            completedTasks: 0,
+            referrals: 0,
+            referralCode:
+              "REF" +
+              Math.random().toString(36).substring(2, 8).toUpperCase(),
+            history: [],
+            ip: userIP,
+            deviceID: deviceID,
+            usedPromoCodes: [],
+            completedSurveys: {},
+          };
+
+          // Save new user to Firebase
+          database.ref("users/" + userId).set(userData);
+        }
+
+        // Update username in UI
+        document.getElementById("username").textContent = userData.username;
+        document.getElementById("profileName").textContent =
+          userData.username;
+        document.getElementById("profileUsername").textContent =
+          userData.username;
+        document.getElementById("profileImg").src = userData.photoUrl;
+        document.getElementById("memberSince").textContent =
+          userData.joinDate;
+        document.getElementById("promoCode").textContent =
+          userData.promoCode;
+        document.getElementById("referralsCount").textContent =
+          userData.referrals;
+        document.getElementById("referralsCountHome").textContent =
+          userData.referrals;
+        document.getElementById(
+          "inviteLink"
+        ).value = `http://t.me/testosteroneeeeebot/money?startbot=${userData.referralCode}`;
+
+        resolve();
+      });
+    });
+  }
+
+  // Check for duplicate accounts
+  async function checkForDuplicateAccounts(isNewUser = false) {
+    database.ref("users").once("value", (snapshot) => {
+      const users = snapshot.val();
+      let duplicateFound = false;
+
+      if (users) {
+        Object.keys(users).forEach((key) => {
+          if (key !== userId.toString()) {
+            const user = users[key];
+            if (user.ip === userIP || user.deviceID === deviceID) {
+              duplicateFound = true;
+
+              if (isNewUser) {
+                // Prevent creating new account
+                showNotification(
+                  "Error",
+                  "You already have an account with this device/IP",
+                  "danger"
+                );
+                document
+                  .getElementById("bannedScreen")
+                  .classList.remove("hidden");
+                document
+                  .getElementById("appContent")
+                  .classList.add("hidden");
+
+                // Add to banned users
+                banUser(86400, "Multiple account creation detected"); // 24 hour ban
+                return;
+              }
+            }
+          }
+        });
       }
 
-      // Save user data to Firebase
-      function saveUserData() {
-        database.ref("users/" + userId).set(userData);
+      if (duplicateFound && !isNewUser) {
+        showNotification(
+          "Warning",
+          "Multiple accounts detected",
+          "warning"
+        );
       }
+    });
+  }
 
-      function showTab(tab, el) {
-        // Add fade-out effect to current tab
-        const currentTab = document.querySelector(".container:not(.hidden)");
-        if (currentTab) {
-          currentTab.style.opacity = 0;
+  // Check VPN status
+  async function checkVPN() {
+    try {
+      document.getElementById("vpnStatus").textContent =
+        "Checking your connection...";
+
+      // Get public IP
+      let ipRes = await fetch("https://api64.ipify.org?format=json");
+      let ipData = await ipRes.json();
+
+      // Get IP details
+      let geoRes = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
+      let geoData = await geoRes.json();
+
+      document.getElementById(
+        "vpnStatus"
+      ).textContent = `Your country: ${geoData.country_name}`;
+
+      if (vpnRequired) {
+        // VPN required mode
+        if (geoData.country === "BD") {
+          document.getElementById("vpnAlert").classList.remove("d-none");
+          document.getElementById("vpnSuccess").classList.add("d-none");
+          document.getElementById("vpnOffAlert").classList.add("d-none");
+        } else {
+          document.getElementById("vpnAlert").classList.add("d-none");
+          document.getElementById("vpnSuccess").classList.remove("d-none");
+          document.getElementById("vpnOffAlert").classList.add("d-none");
+
+          // Hide VPN check and show home page after successful verification
           setTimeout(() => {
-            currentTab.classList.add("hidden");
+            document.getElementById("vpnCheck").classList.add("hidden");
+            document.getElementById("home").classList.remove("hidden");
+          }, 2000);
+        }
+      } else {
+        // VPN not required mode
+        if (geoData.country !== "BD") {
+          document.getElementById("vpnOffAlert").classList.remove("d-none");
+          document.getElementById("vpnAlert").classList.add("d-none");
+          document.getElementById("vpnSuccess").classList.add("d-none");
+        } else {
+          document.getElementById("vpnOffAlert").classList.add("d-none");
+          document.getElementById("vpnAlert").classList.add("d-none");
+          document.getElementById("vpnSuccess").classList.remove("d-none");
 
-            // Show new tab
-            document
-              .querySelectorAll("div.container")
-              .forEach((div) => div.classList.add("hidden"));
-            const newTab = document.getElementById(tab);
-            newTab.classList.remove("hidden");
-            newTab.style.opacity = 1;
-
-            // Update active nav item
-            document
-              .querySelectorAll(".bottom-nav a")
-              .forEach((a) => a.classList.remove("active"));
-            el.classList.add("active");
-          }, 300);
+          // Hide VPN check and show home page
+          setTimeout(() => {
+            document.getElementById("vpnCheck").classList.add("hidden");
+            document.getElementById("home").classList.remove("hidden");
+          }, 2000);
         }
       }
+    } catch (e) {
+      document.getElementById("vpnStatus").textContent =
+        "Failed to check IP (API error)";
+      console.error("VPN check error:", e);
+    }
+  }
 
-      function showAdContainer() {
+  // Update UI with user data
+  function updateUI() {
+    if (!userData) return;
+
+    // Format balance with commas
+    const formattedBalance = userData.balance
+      .toFixed(2)
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const formattedTotalEarnings = userData.totalEarnings
+      .toFixed(2)
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const formattedWithdrawn = userData.withdrawn
+      .toFixed(2)
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const formattedReferralEarnings = userData.referralEarnings
+      .toFixed(2)
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+    document.getElementById("balance").innerText = formattedBalance;
+    document.getElementById("availableBalance").innerText =
+      formattedBalance;
+    document.getElementById("availableBalanceProfile").innerText =
+      formattedBalance;
+    document.getElementById("totalEarningsHome").innerText =
+      formattedTotalEarnings;
+    document.getElementById("totalEarnings").innerText =
+      formattedTotalEarnings;
+    document.getElementById("withdrawnAmount").innerText =
+      formattedWithdrawn;
+    document.getElementById("referralEarnings").innerText =
+      formattedReferralEarnings;
+    document.getElementById("completed").innerText =
+      userData.completedTasks;
+    document.getElementById("remaining").innerText =
+      appConfig.dailyLimit - userData.completedTasks;
+
+    let percent = Math.round(
+      (userData.completedTasks / appConfig.dailyLimit) * 100
+    );
+    document.getElementById("progressBar").style.width = percent + "%";
+    document.getElementById("progressBar").innerText = percent + "%";
+
+    // Update ad button with correct reward amount
+    const adReward = appConfig.adsRewards || 0.2;
+    document.getElementById(
+      "watchAdBtn"
+    ).innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(
+      2
+    )} BDT)`;
+
+    // Update referral text with correct percentage
+    const referralCommission = appConfig.referralCommission || 10;
+    document.getElementById(
+      "referralText"
+    ).textContent = `Earn ${referralCommission}% of your referrals' earnings`;
+
+    // Update history table
+    filterHistory("all");
+  }
+
+  // Save user data to Firebase
+  function saveUserData() {
+    database.ref("users/" + userId).set(userData);
+  }
+
+  function showTab(tab, el) {
+    // Add fade-out effect to current tab
+    const currentTab = document.querySelector(".container:not(.hidden)");
+    if (currentTab) {
+      currentTab.style.opacity = 0;
+      setTimeout(() => {
+        currentTab.classList.add("hidden");
+
+        // Show new tab
         document
           .querySelectorAll("div.container")
           .forEach((div) => div.classList.add("hidden"));
-        document.getElementById("adContainer").classList.remove("hidden");
+        const newTab = document.getElementById(tab);
+        newTab.classList.remove("hidden");
+        newTab.style.opacity = 1;
+
+        // Update active nav item
         document
           .querySelectorAll(".bottom-nav a")
           .forEach((a) => a.classList.remove("active"));
-      }
+        el.classList.add("active");
+      }, 300);
+    }
+  }
 
-      function hideAdContainer() {
-        document.getElementById("adContainer").classList.add("hidden");
-        document.getElementById("rewards").classList.remove("hidden");
-        document
-          .querySelector('.bottom-nav a[onclick*="rewards"]')
-          .classList.add("active");
-      }
+  function showAdContainer() {
+    document
+      .querySelectorAll("div.container")
+      .forEach((div) => div.classList.add("hidden"));
+    document.getElementById("adContainer").classList.remove("hidden");
+    document
+      .querySelectorAll(".bottom-nav a")
+      .forEach((a) => a.classList.remove("active"));
+  }
 
-      // Start cooldown with optional message
-      function startCooldown(seconds = 20, message = "Blocked!") {
-        const adStatus = document.getElementById("adStatus");
-        const progressBar = document.getElementById("progress-bar");
+  function hideAdContainer() {
+    document.getElementById("adContainer").classList.add("hidden");
+    document.getElementById("rewards").classList.remove("hidden");
+    document
+      .querySelector('.bottom-nav a[onclick*="rewards"]')
+      .classList.add("active");
+  }
+
+  // Simulated fallback ad
+  function showSimulatedAd(duration = 10) {
+    const adContainer = document.getElementById("gigapub-ad");
+    const adStatus = document.getElementById("adStatus");
+    const progressBar = document.getElementById("progress-bar");
+    
+    let adTime = duration;
+    adContainer.innerText = `Ad in progress (${adTime}s)`;
+    progressBar.style.width = '0%';
+    adInProgress = true;
+    adCompleted = false;
+    allowReward = true;
+    adDuration = duration;
+    adStartTime = Date.now();
+
+    const simulated = setInterval(() => {
+      adTime--;
+      adContainer.innerText = `Ad in progress (${adTime}s)`;
+      progressBar.style.width = ((duration - adTime)/duration)*100 + '%';
+
+      if(adTime <= 0) {
+        clearInterval(simulated);
+        adCompleted = true;
+        adInProgress = false;
+
+        if(allowReward) {
+          consecutiveAds++;
+          awardAdReward();
+        } else {
+          adStatus.innerText = `❌ Ad interrupted! No reward.`;
+        }
+
         const adButton = document.getElementById("watchAdBtn");
-        
-        cooldown = true;
-        adButton.disabled = true;
-
-        let endTime = Date.now() + (seconds * 1000);
-        localStorage.setItem("banUntil", endTime); // save ban expiry
-
-        let time = seconds;
-        alert(message); // popup for ban message
-        adStatus.innerText = `${message} Wait ${time}s before next ad`;
+        adButton.disabled = false;
+        adContainer.innerText = "";
         progressBar.style.width = '0%';
+      }
+    }, 1000);
+  }
 
-        const timer = setInterval(() => {
-          time = Math.ceil((endTime - Date.now()) / 1000);
-          if (time <= 0) {
-            clearInterval(timer);
-            cooldown = false;
-            localStorage.removeItem("banUntil");
-            adButton.disabled = false;
-            const adReward = appConfig.adsRewards || 0.2;
-            adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
-            adStatus.innerText = "You can watch ad again";
-            progressBar.style.width = '0%';
-          } else {
-            progressBar.style.width = ((seconds - time)/seconds)*100 + '%';
-            adStatus.innerText = `${message} Wait ${time}s`;
-          }
-        }, 1000);
+  function setupAdMonitoring() {
+    // Detect back button specifically
+    window.addEventListener("popstate", function (event) {
+      // Push state again to prevent leaving
+      history.pushState({page: 1}, "", "");
+      
+      if(adInProgress && !adCompleted){
+        allowReward = false;
+        adInProgress = false;
+        consecutiveAds = 0;
+        document.getElementById("gigapub-ad").innerText = "";
+        document.getElementById("progress-bar").style.width = '0%';
       }
 
-      // Simulated fallback ad
-      function showSimulatedAd(duration = 10) {
-        const adContainer = document.getElementById("gigapub-ad");
+      alert("❌ You are banned for using the back button!");
+      banUser(20, "❌ You are banned for using the back button!");
+    });
+
+    // Detect tab switch / closing page
+    window.addEventListener("beforeunload", handleEarlyExit);
+    document.addEventListener("visibilitychange", () => {
+      if(document.hidden) handleEarlyExit();
+    });
+
+    // Push a dummy state on page load to detect back button
+    history.pushState({page: 1}, "", "");
+  }
+
+  function handleEarlyExit() {
+    if(adInProgress && !adCompleted && !cooldown){
+      allowReward = false; 
+      adInProgress = false;
+      consecutiveAds = 0;
+      
+      // Calculate penalty based on how much time was spent watching
+      const timeSpent = (Date.now() - adStartTime) / 1000;
+      const penaltyPercentage = Math.max(0.1, 1 - (timeSpent / adDuration));
+      const penaltyAmount = (userData.balance * penaltyPercentage).toFixed(2);
+      
+      // Apply penalty
+      userData.balance -= parseFloat(penaltyAmount);
+      userData.totalEarnings -= parseFloat(penaltyAmount);
+      
+      // Add to history
+      userData.history.unshift({
+        type: "penalty",
+        method: "Ad Skipped",
+        amount: "-" + penaltyAmount,
+        address: "Penalty for leaving ad early",
+        status: "Deducted",
+        date: new Date().toLocaleDateString(),
+      });
+      
+      // Save to Firebase
+      saveUserData();
+      
+      // Update UI
+      updateUI();
+      
+      const adStatus = document.getElementById("adStatus");
+      adStatus.innerText = "❌ You left the ad early! Penalty applied.";
+      const adContainer = document.getElementById("gigapub-ad");
+      adContainer.innerText = "";
+      const progressBar = document.getElementById("progress-bar");
+      progressBar.style.width = '0%';
+      
+      // Show penalty notification
+      showPenaltyNotification(penaltyAmount);
+      
+      banUser(20, "❌ You left the ad early! Penalty applied.");
+    }
+  }
+
+  function showPenaltyNotification(amount) {
+    const penaltyDiv = document.createElement("div");
+    penaltyDiv.className = "penalty-notification";
+    penaltyDiv.innerHTML = `
+      <i class="bi bi-exclamation-triangle-fill fs-1"></i>
+      <h3>Penalty Applied!</h3>
+      <p>${amount} BDT deducted for leaving ad early</p>
+    `;
+    
+    document.body.appendChild(penaltyDiv);
+    
+    // Remove after 5 seconds
+    setTimeout(() => {
+      penaltyDiv.remove();
+    }, 5000);
+  }
+
+  function awardAdReward() {
+    // Get base ad reward from app config
+    const baseReward = appConfig.adsRewards || 0.2;
+    // Add bonus for consecutive ads
+    const bonus = consecutiveAds * 0.05;
+    const totalReward = baseReward + bonus;
+
+    // Update user data
+    userData.completedTasks++;
+    userData.balance += totalReward;
+    userData.totalEarnings += totalReward;
+
+    // Add to history
+    userData.history.unshift({
+      type: "earning",
+      method: "Ad View",
+      amount: totalReward.toFixed(2),
+      address: "Ad Reward",
+      status: "Completed",
+      date: new Date().toLocaleDateString(),
+    });
+
+    // Save to Firebase
+    saveUserData();
+
+    // Update UI
+    updateUI();
+    
+    const adStatus = document.getElementById("adStatus");
+    adStatus.innerText = `✅ Ad finished! +${totalReward.toFixed(2)} BDT (streak: ${consecutiveAds})`;
+    
+    const adButton = document.getElementById("watchAdBtn");
+    adButton.disabled = false;
+    const adReward = appConfig.adsRewards || 0.2;
+    adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
+    document.getElementById("gigapub-ad").innerText = "Ad will appear here";
+    document.getElementById("progress-bar").style.width = '0%';
+    
+    showNotification(
+      "Success!",
+      `You earned ${totalReward.toFixed(2)} BDT!`,
+      "success"
+    );
+  }
+
+  async function watchAd() {
+    if (cooldown) return;
+    
+    if (userData.completedTasks < appConfig.dailyLimit) {
+      try {
+        // Disable button to prevent multiple clicks
+        const adButton = document.getElementById("watchAdBtn");
         const adStatus = document.getElementById("adStatus");
-        const progressBar = document.getElementById("progress-bar");
-        
-        let adTime = duration;
-        adContainer.innerText = `Ad in progress (${adTime}s)`;
-        progressBar.style.width = '0%';
+        const originalText = adButton.innerHTML;
+        adButton.disabled = true;
+        adButton.innerHTML =
+          '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
+
+        // Show the ad container
+        showAdContainer();
+        adStatus.innerText = "Loading ad...";
         adInProgress = true;
         adCompleted = false;
         allowReward = true;
-        adDuration = duration;
-        adStartTime = Date.now();
 
-        const simulated = setInterval(() => {
-          adTime--;
-          adContainer.innerText = `Ad in progress (${adTime}s)`;
-          progressBar.style.width = ((duration - adTime)/duration)*100 + '%';
+        // Reset consecutive ads if needed
+        consecutiveAds = consecutiveAds || 0;
 
-          if(adTime <= 0) {
-            clearInterval(simulated);
-            adCompleted = true;
-            adInProgress = false;
-
-            if(allowReward) {
-              consecutiveAds++;
-              awardAdReward();
-            } else {
-              adStatus.innerText = `❌ Ad interrupted! No reward.`;
-            }
-
-            const adButton = document.getElementById("watchAdBtn");
-            adButton.disabled = false;
-            adContainer.innerText = "";
-            progressBar.style.width = '0%';
-          }
-        }, 1000);
-      }
-
-      // Check on load if already banned
-      function checkCooldownOnLoad() {
-        let banUntil = localStorage.getItem("banUntil");
-        if (banUntil && Date.now() < banUntil) {
-          let remaining = Math.ceil((banUntil - Date.now()) / 1000);
-          startCooldown(remaining, "⛔ You are still banned!");
+        // Try to show actual Gigapub ad
+        if (typeof window.showGiga === "function") {
+          window.showGiga("gigapub-ad")
+            .then(() => {
+              adCompleted = true;
+              adInProgress = false;
+              if(allowReward) {
+                consecutiveAds++;
+                awardAdReward();
+              } else {
+                adStatus.innerText = "❌ Ad was interrupted! No reward.";
+              }
+              adButton.disabled = false;
+            })
+            .catch(() => {
+              adInProgress = false;
+              consecutiveAds = 0;
+              allowReward = false;
+              adStatus.innerText = "❌ Ad skipped! Blocked temporarily.";
+              banUser(20, "Ad skipped! Blocked temporarily.");
+            });
+        } else {
+          // Fallback: simulated ad
+          showSimulatedAd(10);
         }
-      }
-
-      function setupAdMonitoring() {
-        // Detect back button specifically
-        window.addEventListener("popstate", function (event) {
-          // Push state again to prevent leaving
-          history.pushState({page: 1}, "", "");
-          
-          if(adInProgress && !adCompleted){
-            allowReward = false;
-            adInProgress = false;
-            consecutiveAds = 0;
-            document.getElementById("gigapub-ad").innerText = "";
-            document.getElementById("progress-bar").style.width = '0%';
-          }
-
-          alert("❌ You are banned for using the back button!");
-          startCooldown(20, "❌ You are banned for using the back button!");
-        });
-
-        // Detect tab switch / closing page
-        window.addEventListener("beforeunload", handleEarlyExit);
-        document.addEventListener("visibilitychange", () => {
-          if(document.hidden) handleEarlyExit();
-        });
-
-        // Push a dummy state on page load to detect back button
-        history.pushState({page: 1}, "", "");
-      }
-
-      function handleEarlyExit() {
-        if(adInProgress && !adCompleted && !cooldown){
-          allowReward = false; 
-          adInProgress = false;
-          consecutiveAds = 0;
-          
-          // Calculate penalty based on how much time was spent watching
-          const timeSpent = (Date.now() - adStartTime) / 1000;
-          const penaltyPercentage = Math.max(0.1, 1 - (timeSpent / adDuration));
-          const penaltyAmount = (userData.balance * penaltyPercentage).toFixed(2);
-          
-          // Apply penalty
-          userData.balance -= parseFloat(penaltyAmount);
-          userData.totalEarnings -= parseFloat(penaltyAmount);
-          
-          // Add to history
-          userData.history.unshift({
-            type: "penalty",
-            method: "Ad Skipped",
-            amount: "-" + penaltyAmount,
-            address: "Penalty for leaving ad early",
-            status: "Deducted",
-            date: new Date().toLocaleDateString(),
-          });
-          
-          // Save to Firebase
-          saveUserData();
-          
-          // Update UI
-          updateUI();
-          
-          const adStatus = document.getElementById("adStatus");
-          adStatus.innerText = "❌ You left the ad early! Penalty applied.";
-          const adContainer = document.getElementById("gigapub-ad");
-          adContainer.innerText = "";
-          const progressBar = document.getElementById("progress-bar");
-          progressBar.style.width = '0%';
-          
-          // Show penalty notification
-          showPenaltyNotification(penaltyAmount);
-          
-          startCooldown(20, "❌ You left the ad early! Penalty applied.");
-        }
-      }
-
-      function showPenaltyNotification(amount) {
-        const penaltyDiv = document.createElement("div");
-        penaltyDiv.className = "penalty-notification";
-        penaltyDiv.innerHTML = `
-          <i class="bi bi-exclamation-triangle-fill fs-1"></i>
-          <h3>Penalty Applied!</h3>
-          <p>${amount} BDT deducted for leaving ad early</p>
-        `;
+      } catch (e) {
+        console.log("Ad failed or closed before completion", e);
+        showNotification(
+          "Error",
+          "Ad not completed. Please try again.",
+          "danger"
+        );
         
-        document.body.appendChild(penaltyDiv);
-        
-        // Remove after 5 seconds
-        setTimeout(() => {
-          penaltyDiv.remove();
-        }, 5000);
-      }
-
-      function awardAdReward() {
-        // Get base ad reward from app config
-        const baseReward = appConfig.adsRewards || 0.2;
-        // Add bonus for consecutive ads
-        const bonus = consecutiveAds * 0.05;
-        const totalReward = baseReward + bonus;
-
-        // Update user data
-        userData.completedTasks++;
-        userData.balance += totalReward;
-        userData.totalEarnings += totalReward;
-
-        // Add to history
-        userData.history.unshift({
-          type: "earning",
-          method: "Ad View",
-          amount: totalReward.toFixed(2),
-          address: "Ad Reward",
-          status: "Completed",
-          date: new Date().toLocaleDateString(),
-        });
-
-        // Save to Firebase
-        saveUserData();
-
-        // Update UI
-        updateUI();
-        
-        const adStatus = document.getElementById("adStatus");
-        adStatus.innerText = `✅ Ad finished! +${totalReward.toFixed(2)} BDT (streak: ${consecutiveAds})`;
-        
+        // Re-enable button
         const adButton = document.getElementById("watchAdBtn");
         adButton.disabled = false;
         const adReward = appConfig.adsRewards || 0.2;
         adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
-        document.getElementById("gigapub-ad").innerText = "Ad will appear here";
-        document.getElementById("progress-bar").style.width = '0%';
-        
-        showNotification(
-          "Success!",
-          `You earned ${totalReward.toFixed(2)} BDT!`,
-          "success"
-        );
       }
+    } else {
+      showNotification(
+        "Completed!",
+        "All tasks completed for today!",
+        "info"
+      );
+    }
+  }
 
-      async function watchAd() {
-        if (cooldown) return;
-        
-        if (userData.completedTasks < appConfig.dailyLimit) {
-          try {
-            // Disable button to prevent multiple clicks
-            const adButton = document.getElementById("watchAdBtn");
-            const adStatus = document.getElementById("adStatus");
-            const originalText = adButton.innerHTML;
-            adButton.disabled = true;
-            adButton.innerHTML =
-              '<i class="bi bi-hourglass-split me-2"></i> Loading Ad...';
+  function showSurveyPage() {
+    document
+      .querySelectorAll("div.container")
+      .forEach((div) => div.classList.add("hidden"));
+    document.getElementById("surveyPage").classList.remove("hidden");
+    document
+      .querySelectorAll(".bottom-nav a")
+      .forEach((a) => a.classList.remove("active"));
+  }
 
-            // Show the ad container
-            showAdContainer();
-            adStatus.innerText = "Loading ad...";
-            adInProgress = true;
-            adCompleted = false;
-            allowReward = true;
+  function hideSurveyPage() {
+    // If a survey was started but not completed, don't award anything
+    if (currentSurvey) {
+      showNotification(
+        "Info",
+        "Survey was not completed. No reward awarded.",
+        "info"
+      );
+    }
 
-            // Reset consecutive ads if needed
-            consecutiveAds = consecutiveAds || 0;
+    // Reset survey state
+    currentSurvey = null;
+    if (surveyCheckInterval) {
+      clearInterval(surveyCheckInterval);
+      surveyCheckInterval = null;
+    }
 
-            // Try to show actual Gigapub ad
-            if (typeof window.showGiga === "function") {
-              window.showGiga("gigapub-ad")
-                .then(() => {
-                  adCompleted = true;
-                  adInProgress = false;
-                  if(allowReward) {
-                    consecutiveAds++;
-                    awardAdReward();
-                  } else {
-                    adStatus.innerText = "❌ Ad was interrupted! No reward.";
-                  }
-                  adButton.disabled = false;
-                })
-                .catch(() => {
-                  adInProgress = false;
-                  consecutiveAds = 0;
-                  allowReward = false;
-                  adStatus.innerText = "❌ Ad skipped! Blocked temporarily.";
-                  startCooldown(20);
-                });
-            } else {
-              // Fallback: simulated ad
-              showSimulatedAd(10);
-            }
-          } catch (e) {
-            console.log("Ad failed or closed before completion", e);
-            showNotification(
-              "Error",
-              "Ad not completed. Please try again.",
-              "danger"
-            );
-            
-            // Re-enable button
-            const adButton = document.getElementById("watchAdBtn");
-            adButton.disabled = false;
-            const adReward = appConfig.adsRewards || 0.2;
-            adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
-          }
-        } else {
-          showNotification(
-            "Completed!",
-            "All tasks completed for today!",
-            "info"
-          );
-        }
-      }
+    document.getElementById("surveyPage").classList.add("hidden");
+    document.getElementById("rewards").classList.remove("hidden");
+    document
+      .querySelector('.bottom-nav a[onclick*="rewards"]')
+      .classList.add("active");
+  }
 
-      function showSurveyPage() {
-        document
-          .querySelectorAll("div.container")
-          .forEach((div) => div.classList.add("hidden"));
-        document.getElementById("surveyPage").classList.remove("hidden");
-        document
-          .querySelectorAll(".bottom-nav a")
-          .forEach((a) => a.classList.remove("active"));
-      }
+  function loadSurveys() {
+    const surveysContainer = document.getElementById("surveysContainer");
+    surveysContainer.innerHTML = "";
 
-      function hideSurveyPage() {
-        // If a survey was started but not completed, don't award anything
-        if (currentSurvey) {
-          showNotification(
-            "Info",
-            "Survey was not completed. No reward awarded.",
-            "info"
-          );
-        }
+    if (!appConfig || !appConfig.surveys) return;
 
-        // Reset survey state
-        currentSurvey = null;
-        if (surveyCheckInterval) {
-          clearInterval(surveyCheckInterval);
-          surveyCheckInterval = null;
-        }
+    appConfig.surveys.forEach((survey) => {
+      // Check if survey is active
+      if (survey.status !== "active") return;
 
-        document.getElementById("surveyPage").classList.add("hidden");
-        document.getElementById("rewards").classList.remove("hidden");
-        document
-          .querySelector('.bottom-nav a[onclick*="rewards"]')
-          .classList.add("active");
-      }
+      // Check if user has already completed this survey
+      const isCompleted =
+        userData.completedSurveys && userData.completedSurveys[survey.id];
 
-      function loadSurveys() {
-        const surveysContainer = document.getElementById("surveysContainer");
-        surveysContainer.innerHTML = "";
-
-        if (!appConfig || !appConfig.surveys) return;
-
-        appConfig.surveys.forEach((survey) => {
-          // Check if survey is active
-          if (survey.status !== "active") return;
-
-          // Check if user has already completed this survey
-          const isCompleted =
-            userData.completedSurveys && userData.completedSurveys[survey.id];
-
-          const surveyHTML = `
-            <div class="col-12 mb-3">
-              <div class="card survey-card p-3 ${isCompleted ? "opacity-75 border-success" : "border-warning"}">
-                <div class="d-flex align-items-start">
-                  <!-- Survey Logo -->
-                  <img 
-                    src="${survey.image}" 
-                    alt="${survey.name}" 
-                    class="rounded-circle me-3 border" 
-                    style="width:55px; height:55px; object-fit:cover;"
+      const surveyHTML = `
+        <div class="col-12 mb-3">
+          <div class="card survey-card p-3 ${isCompleted ? "opacity-75 border-success" : "border-warning"}">
+            <div class="d-flex align-items-start">
+              <!-- Survey Logo -->
+              <img 
+                src="${survey.image}" 
+                alt="${survey.name}" 
+                class="rounded-circle me-3 border" 
+                style="width:55px; height:55px; object-fit:cover;"
+              >
+              <!-- Survey Info + Actions -->
+              <div class="flex-grow-1">
+                <h6 class="mb-1">${survey.name}</h6>
+                <p class="mb-2 text-success small fw-semibold">
+                  🎁 Reward: BDT ${survey.reward.toFixed(2)}
+                </p>
+                <!-- Action Buttons -->
+                <div class="d-flex gap-2">
+                  <button 
+                    class="btn btn-sm btn-outline-primary rounded-pill px-3" 
+                    onclick="startSurvey(${survey.id})"
+                    ${isCompleted ? "disabled" : ""}
                   >
-                  <!-- Survey Info + Actions -->
-                  <div class="flex-grow-1">
-                    <h6 class="mb-1">${survey.name}</h6>
-                    <p class="mb-2 text-success small fw-semibold">
-                      🎁 Reward: BDT ${survey.reward.toFixed(2)}
-                    </p>
-                    <!-- Action Buttons -->
-                    <div class="d-flex gap-2">
-                      <button 
-                        class="btn btn-sm btn-outline-primary rounded-pill px-3" 
-                        onclick="startSurvey(${survey.id})"
-                        ${isCompleted ? "disabled" : ""}
-                      >
-                        🔍 Start
-                      </button>
-                      <button 
-                        class="btn btn-sm ${isCompleted ? "btn-secondary" : "btn-success"} rounded-pill px-3" 
-                        onclick="claimSurvey(${survey.id})"
-                        ${isCompleted ? "disabled" : ""}
-                      >
-                        ${isCompleted ? "✔ Claimed" : "⚡ Claim"}
-                      </button>
-                    </div>
-                  </div>
+                    🔍 Start
+                  </button>
+                  <button 
+                    class="btn btn-sm ${isCompleted ? "btn-secondary" : "btn-success"} rounded-pill px-3" 
+                    onclick="claimSurvey(${survey.id})"
+                    ${isCompleted ? "disabled" : ""}
+                  >
+                    ${isCompleted ? "✔ Claimed" : "⚡ Claim"}
+                  </button>
                 </div>
               </div>
             </div>
-          `;
+          </div>
+        </div>
+      `;
 
-          surveysContainer.innerHTML += surveyHTML;
-        });
+      surveysContainer.innerHTML += surveyHTML;
+    });
 
-        // If no surveys available, show message
-        if (surveysContainer.innerHTML === "") {
-          surveysContainer.innerHTML = `<div class="col-12 text-center text-muted">No active surveys available at the moment.</div>`;
-        }
-      }
+    // If no surveys available, show message
+    if (surveysContainer.innerHTML === "") {
+      surveysContainer.innerHTML = `<div class="col-12 text-center text-muted">No active surveys available at the moment.</div>`;
+    }
+  }
 
-      function startSurvey(surveyId) {
-        const survey = appConfig.surveys.find((s) => s.id === surveyId);
-        if (!survey) return;
+  function startSurvey(surveyId) {
+    const survey = appConfig.surveys.find((s) => s.id === surveyId);
+    if (!survey) return;
 
-        // Check if user has already completed this survey
-        if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
-          showNotification(
-            "Info",
-            "You have already completed this survey.",
-            "info"
-          );
-          return;
-        }
+    // Check if user has already completed this survey
+    if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
+      showNotification(
+        "Info",
+        "You have already completed this survey.",
+        "info"
+      );
+      return;
+    }
 
-        if (userData.completedTasks < appConfig.dailyLimit) {
-          // Store the current survey
-          currentSurvey = survey;
+    if (userData.completedTasks < appConfig.dailyLimit) {
+      // Store the current survey
+      currentSurvey = survey;
 
-          // Open the survey URL in a new tab
-          surveyWindow = window.open(
-            survey.url,
-            "_blank",
-            "noopener,noreferrer"
-          );
+      // Open the survey URL in a new tab
+      surveyWindow = window.open(
+        survey.url,
+        "_blank",
+        "noopener,noreferrer"
+      );
 
-          // Start checking if the survey is completed
-          startSurveyCompletionCheck(survey);
+      // Start checking if the survey is completed
+      startSurveyCompletionCheck(survey);
 
-          // Show instructions
-          showNotification(
-            "Info",
-            "Survey opened in new tab. Please complete it to get your reward.",
-            "info"
-          );
-        } else {
-          showNotification(
-            "Completed!",
-            "All tasks completed for today!",
-            "info"
-          );
-        }
-      }
+      // Show instructions
+      showNotification(
+        "Info",
+        "Survey opened in new tab. Please complete it to get your reward.",
+        "info"
+      );
+    } else {
+      showNotification(
+        "Completed!",
+        "All tasks completed for today!",
+        "info"
+      );
+    }
+  }
 
-      function claimSurvey(surveyId) {
-        const survey = appConfig.surveys.find((s) => s.id === surveyId);
-        if (!survey) return;
+  function claimSurvey(surveyId) {
+    const survey = appConfig.surveys.find((s) => s.id === surveyId);
+    if (!survey) return;
 
-        // Check if user has already completed this survey
-        if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
-          showNotification(
-            "Info",
-            "You have already claimed this survey.",
-            "info"
-          );
-          return;
-        }
+    // Check if user has already completed this survey
+    if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
+      showNotification(
+        "Info",
+        "You have already claimed this survey.",
+        "info"
+      );
+      return;
+    }
+
+    // Ask user if they completed the survey
+    const completed = confirm(
+      "Have you completed the survey? Click OK if you completed it, or Cancel if you didn't."
+    );
+
+    if (completed) {
+      completeSurvey(survey);
+    } else {
+      showNotification(
+        "Info",
+        "Survey not completed. No reward awarded.",
+        "info"
+      );
+    }
+  }
+
+  function startSurveyCompletionCheck(survey) {
+    // Check every 5 seconds if the survey window is closed
+    surveyCheckInterval = setInterval(() => {
+      if (surveyWindow && surveyWindow.clored) {
+        clearInterval(surveyCheckInterval);
+        surveyCheckInterval = null;
 
         // Ask user if they completed the survey
         const completed = confirm(
@@ -2062,293 +2102,270 @@
             "Survey not completed. No reward awarded.",
             "info"
           );
+          currentSurvey = null;
         }
       }
+    }, 5000);
+  }
 
-      function startSurveyCompletionCheck(survey) {
-        // Check every 5 seconds if the survey window is closed
-        surveyCheckInterval = setInterval(() => {
-          if (surveyWindow && surveyWindow.clored) {
-            clearInterval(surveyCheckInterval);
-            surveyCheckInterval = null;
+  async function completeSurvey(survey) {
+    if (!survey) return;
 
-            // Ask user if they completed the survey
-            const completed = confirm(
-              "Have you completed the survey? Click OK if you completed it, or Cancel if you didn't."
-            );
+    // Update user data
+    userData.completedTasks++;
+    userData.balance += survey.reward;
+    userData.totalEarnings += survey.reward;
 
-            if (completed) {
-              completeSurvey(survey);
-            } else {
-              showNotification(
-                "Info",
-                "Survey not completed. No reward awarded.",
-                "info"
-              );
-              currentSurvey = null;
-            }
-          }
-        }, 5000);
-      }
+    // Mark survey as completed for this user
+    if (!userData.completedSurveys) {
+      userData.completedSurveys = {};
+    }
+    userData.completedSurveys[survey.id] = true;
 
-      async function completeSurvey(survey) {
-        if (!survey) return;
+    // Update survey completion in app config
+    if (!appConfig.surveys.find((s) => s.id === survey.id).completedBy) {
+      appConfig.surveys.find((s) => s.id === survey.id).completedBy = {};
+    }
+    appConfig.surveys.find((s) => s.id === survey.id).completedBy[
+      userId
+    ] = true;
 
-        // Update user data
-        userData.completedTasks++;
-        userData.balance += survey.reward;
-        userData.totalEarnings += survey.reward;
+    // Add to history
+    userData.history.unshift({
+      type: "earning",
+      method: "Survey",
+      amount: survey.reward.toFixed(2),
+      address: survey.name,
+      status: "Completed",
+      date: new Date().toLocaleDateString(),
+    });
 
-        // Mark survey as completed for this user
-        if (!userData.completedSurveys) {
-          userData.completedSurveys = {};
-        }
-        userData.completedSurveys[survey.id] = true;
+    // Save to Firebase
+    saveUserData();
+    database.ref("appConfig").set(appConfig);
 
-        // Update survey completion in app config
-        if (!appConfig.surveys.find((s) => s.id === survey.id).completedBy) {
-          appConfig.surveys.find((s) => s.id === survey.id).completedBy = {};
-        }
-        appConfig.surveys.find((s) => s.id === survey.id).completedBy[
-          userId
-        ] = true;
+    // Update UI
+    updateUI();
+    loadSurveys(); // Reload surveys to update completion status
+    showNotification(
+      "Success!",
+      `You earned ${survey.reward.toFixed(2)} BDT from survey!`,
+      "success"
+    );
 
-        // Add to history
-        userData.history.unshift({
-          type: "earning",
-          method: "Survey",
-          amount: survey.reward.toFixed(2),
-          address: survey.name,
-          status: "Completed",
-          date: new Date().toLocaleDateString(),
-        });
+    // Reset current survey
+    currentSurvey = null;
+  }
 
-        // Save to Firebase
-        saveUserData();
-        database.ref("appConfig").set(appConfig);
+  async function withdraw() {
+    let method = document.getElementById("method").value;
+    let amount = parseFloat(document.getElementById("amount").value);
+    let address = document.getElementById("address").value;
 
-        // Update UI
-        updateUI();
-        loadSurveys(); // Reload surveys to update completion status
-        showNotification(
-          "Success!",
-          `You earned ${survey.reward.toFixed(2)} BDT from survey!`,
-          "success"
+    if (!method || !amount || !address) {
+      return showNotification("Error", "Please fill all fields!", "danger");
+    }
+
+    if (amount < appConfig.minWithdraw) {
+      return showNotification(
+        "Error",
+        `Minimum withdrawal is ${appConfig.minWithdraw} BDT!`,
+        "danger"
+      );
+    }
+
+    if (amount > userData.balance) {
+      return showNotification("Error", "Not enough balance!", "danger");
+    }
+
+    // Update user data
+    userData.balance -= amount;
+    userData.withdrawn += amount;
+
+    // Add to history
+    userData.history.unshift({
+      type: "withdrawal",
+      method,
+      amount: amount.toFixed(2),
+      address,
+      status: "Pending",
+      date: new Date().toLocaleDateString(),
+    });
+
+    // Save to Firebase
+    saveUserData();
+
+    // Update UI
+    updateUI();
+    showNotification(
+      "Success!",
+      "Withdrawal request submitted!",
+      "success"
+    );
+
+    // Clear form
+    document.getElementById("method").value = "";
+    document.getElementById("amount").value = "";
+    document.getElementById("address").value = "";
+  }
+
+  function copyInviteLink() {
+    const copyText = document.getElementById("inviteLink");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); // For mobile devices
+    navigator.clipboard
+      .writeText(copyText.value)
+      .then(() => {
+        showNotification("Success", "Invite link copied!", "success");
+      })
+      .catch((err) => {
+        console.error("Failed to copy: ", err);
+      });
+  }
+
+  function redeemPromoCode() {
+    const promoCode = document
+      .getElementById("promoCodeInput")
+      .value.trim()
+      .toUpperCase();
+
+    if (!promoCode) {
+      return showNotification(
+        "Error",
+        "Please enter a promo code!",
+        "danger"
+      );
+    }
+
+    // Check if user already used this promo code
+    if (
+      userData.usedPromoCodes &&
+      userData.usedPromoCodes.includes(promoCode)
+      ) {
+        return showNotification(
+          "Error",
+          "You have already used this promo code!",
+          "danger"
         );
-
-        // Reset current survey
-        currentSurvey = null;
       }
 
-      async function withdraw() {
-        let method = document.getElementById("method").value;
-        let amount = parseFloat(document.getElementById("amount").value);
-        let address = document.getElementById("address").value;
+      // Check if promo code exists in app config
+      if (!appConfig.promoCodes || !appConfig.promoCodes[promoCode]) {
+        return showNotification("Error", "Invalid promo code!", "danger");
+      }
 
-        if (!method || !amount || !address) {
-          return showNotification("Error", "Please fill all fields!", "danger");
-        }
+      const promoCodeData = appConfig.promoCodes[promoCode];
 
-        if (amount < appConfig.minWithdraw) {
-          return showNotification(
-            "Error",
-            `Minimum withdrawal is ${appConfig.minWithdraw} BDT!`,
-            "danger"
-          );
-        }
-
-        if (amount > userData.balance) {
-          return showNotification("Error", "Not enough balance!", "danger");
-        }
-
-        // Update user data
-        userData.balance -= amount;
-        userData.withdrawn += amount;
-
-        // Add to history
-        userData.history.unshift({
-          type: "withdrawal",
-          method,
-          amount: amount.toFixed(2),
-          address,
-          status: "Pending",
-          date: new Date().toLocaleDateString(),
-        });
-
-        // Save to Firebase
-        saveUserData();
-
-        // Update UI
-        updateUI();
-        showNotification(
-          "Success!",
-          "Withdrawal request submitted!",
-          "success"
+      // Check if promo code is active
+      if (promoCodeData.status !== "active") {
+        return showNotification(
+          "Error",
+          "This promo code is not active!",
+          "danger"
         );
-
-        // Clear form
-        document.getElementById("method").value = "";
-        document.getElementById("amount").value = "";
-        document.getElementById("address").value = "";
       }
 
-      function copyInviteLink() {
-        const copyText = document.getElementById("inviteLink");
-        copyText.select();
-        copyText.setSelectionRange(0, 99999); // For mobile devices
-        navigator.clipboard
-          .writeText(copyText.value)
-          .then(() => {
-            showNotification("Success", "Invite link copied!", "success");
-          })
-          .catch((err) => {
-            console.error("Failed to copy: ", err);
-          });
+      // Apply promo code value
+      const reward = promoCodeData.value;
+      userData.balance += reward;
+      userData.totalEarnings += reward;
+
+      // Add to used promo codes
+      if (!userData.usedPromoCodes) {
+        userData.usedPromoCodes = [];
+      }
+      userData.usedPromoCodes.push(promoCode);
+
+      // Update promo code usage count in app config
+      appConfig.promoCodes[promoCode].used =
+        (appConfig.promoCodes[promoCode].used || 0) + 1;
+      database.ref("appConfig").update({
+        [`promoCodes/${promoCode}/used`]:
+          appConfig.promoCodes[promoCode].used,
+      });
+
+      // Add to history
+      userData.history.unshift({
+        type: "earning",
+        method: "Promo Code",
+        amount: reward.toFixed(2),
+        address: promoCode,
+        status: "Completed",
+        date: new Date().toLocaleDateString(),
+      });
+
+      // Save to Firebase
+      saveUserData();
+
+      // Update UI
+      updateUI();
+      showNotification(
+        "Success!",
+        `You received ${reward} BDT from promo code ${promoCode}!`,
+        "success"
+      );
+
+      // Clear input
+      document.getElementById("promoCodeInput").value = "";
+    }
+
+    function filterHistory(type) {
+      let table = document.getElementById("historyTable");
+      table.innerHTML = "";
+
+      if (!userData || !userData.history) return;
+
+      let filteredData = userData.history;
+      if (type !== "all") {
+        filteredData = userData.history.filter((tx) => tx.type === type);
       }
 
-      function redeemPromoCode() {
-        const promoCode = document
-          .getElementById("promoCodeInput")
-          .value.trim()
-          .toUpperCase();
+      filteredData.slice(0, 5).forEach((tx) => {
+        let statusClass = "";
+        if (tx.status === "Pending") statusClass = "text-warning";
+        if (tx.status === "Completed") statusClass = "text-success";
+        if (tx.status === "Failed") statusClass = "text-danger";
+        if (tx.status === "Rejected") statusClass = "text-danger";
 
-        if (!promoCode) {
-          return showNotification(
-            "Error",
-            "Please enter a promo code!",
-            "danger"
-          );
-        }
+        let row = `
+    <tr>
+      <td class="ps-4">${tx.date || "Today"}</td>
+      <td>${tx.method}</td>
+      <td>${tx.amount} ৳</td>
+      <td>${tx.address.substring(0, 4)}...${tx.address.slice(-4)}</td>
+      <td class="text-end pe-4 ${statusClass}">${tx.status}</td>
+    </tr>
+  `;
+        table.innerHTML += row;
+      });
+    }
 
-        // Check if user already used this promo code
-        if (
-          userData.usedPromoCodes &&
-          userData.usedPromoCodes.includes(promoCode)
-          ) {
-            return showNotification(
-              "Error",
-              "You have already used this promo code!",
-              "danger"
-            );
-          }
+    function loadMoreHistory() {
+      showNotification("Info", "Loading more transactions...", "info");
+    }
 
-          // Check if promo code exists in app config
-          if (!appConfig.promoCodes || !appConfig.promoCodes[promoCode]) {
-            return showNotification("Error", "Invalid promo code!", "danger");
-          }
+    function showNotification(title, message, type) {
+      const notification = document.createElement("div");
+      notification.className = `alert alert-${type} floating-notification alert-dismissible shadow`;
+      notification.innerHTML = `
+  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+  <strong>${title}</strong> ${message}
+`;
 
-          const promoCodeData = appConfig.promoCodes[promoCode];
+      document.getElementById("notificationArea").appendChild(notification);
 
-          // Check if promo code is active
-          if (promoCodeData.status !== "active") {
-            return showNotification(
-              "Error",
-              "This promo code is not active!",
-              "danger"
-            );
-          }
+      // Auto remove after 5 seconds
+      setTimeout(() => {
+        notification.classList.add("fade");
+        setTimeout(() => notification.remove(), 300);
+      }, 5000);
+    }
 
-          // Apply promo code value
-          const reward = promoCodeData.value;
-          userData.balance += reward;
-          userData.totalEarnings += reward;
-
-          // Add to used promo codes
-          if (!userData.usedPromoCodes) {
-            userData.usedPromoCodes = [];
-          }
-          userData.usedPromoCodes.push(promoCode);
-
-          // Update promo code usage count in app config
-          appConfig.promoCodes[promoCode].used =
-            (appConfig.promoCodes[promoCode].used || 0) + 1;
-          database.ref("appConfig").update({
-            [`promoCodes/${promoCode}/used`]:
-              appConfig.promoCodes[promoCode].used,
-          });
-
-          // Add to history
-          userData.history.unshift({
-            type: "earning",
-            method: "Promo Code",
-            amount: reward.toFixed(2),
-            address: promoCode,
-            status: "Completed",
-            date: new Date().toLocaleDateString(),
-          });
-
-          // Save to Firebase
-          saveUserData();
-
-          // Update UI
-          updateUI();
-          showNotification(
-            "Success!",
-            `You received ${reward} BDT from promo code ${promoCode}!`,
-            "success"
-          );
-
-          // Clear input
-          document.getElementById("promoCodeInput").value = "";
-        }
-
-        function filterHistory(type) {
-          let table = document.getElementById("historyTable");
-          table.innerHTML = "";
-
-          if (!userData || !userData.history) return;
-
-          let filteredData = userData.history;
-          if (type !== "all") {
-            filteredData = userData.history.filter((tx) => tx.type === type);
-          }
-
-          filteredData.slice(0, 5).forEach((tx) => {
-            let statusClass = "";
-            if (tx.status === "Pending") statusClass = "text-warning";
-            if (tx.status === "Completed") statusClass = "text-success";
-            if (tx.status === "Failed") statusClass = "text-danger";
-            if (tx.status === "Rejected") statusClass = "text-danger";
-
-            let row = `
-        <tr>
-          <td class="ps-4">${tx.date || "Today"}</td>
-          <td>${tx.method}</td>
-          <td>${tx.amount} ৳</td>
-          <td>${tx.address.substring(0, 4)}...${tx.address.slice(-4)}</td>
-          <td class="text-end pe-4 ${statusClass}">${tx.status}</td>
-        </tr>
-      `;
-            table.innerHTML += row;
-          });
-        }
-
-        function loadMoreHistory() {
-          showNotification("Info", "Loading more transactions...", "info");
-        }
-
-        function showNotification(title, message, type) {
-          const notification = document.createElement("div");
-          notification.className = `alert alert-${type} floating-notification alert-dismissible shadow`;
-          notification.innerHTML = `
-      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
-      <strong>${title}</strong> ${message}
-    `;
-
-          document.getElementById("notificationArea").appendChild(notification);
-
-          // Auto remove after 5 seconds
-          setTimeout(() => {
-            notification.classList.add("fade");
-            setTimeout(() => notification.remove(), 300);
-          }, 5000);
-        }
-
-        // Calculate referral earnings based on commission percentage
-        function calculateReferralEarnings(amount) {
-          const commissionPercentage = appConfig.referralCommission || 10;
-          return (amount * commissionPercentage) / 100;
-        }
-    </script>
+    // Calculate referral earnings based on commission percentage
+    function calculateReferralEarnings(amount) {
+      const commissionPercentage = appConfig.referralCommission || 10;
+      return (amount * commissionPercentage) / 100;
+    }
+</script>
   </body>
 </html>
