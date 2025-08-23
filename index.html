@@ -1623,10 +1623,10 @@
           const isCompleted =
             userData.completedSurveys && userData.completedSurveys[survey.id];
 
-          const surveyHTML = `
+const surveyHTML = `
   <div class="col-12 mb-3">
     <div class="card survey-card p-3 ${isCompleted ? "opacity-75 border-success" : "border-warning"}">
-      <div class="d-flex align-items-center">
+      <div class="d-flex align-items-start">
 
         <!-- Survey Logo -->
         <img 
@@ -1636,7 +1636,7 @@
           style="width:55px; height:55px; object-fit:cover;"
         >
 
-        <!-- Survey Info -->
+        <!-- Survey Info + Actions -->
         <div class="flex-grow-1">
           <h6 class="mb-1">${survey.name}</h6>
           <p class="mb-2 text-success small fw-semibold">
