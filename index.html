@@ -1322,35 +1322,40 @@ function loadSurveys() {
     const isCompleted = userData.completedSurveys && userData.completedSurveys[survey.id];
     
     const surveyHTML = `
-      <div class="col-12">
-        <div class="card survey-card p-2 ${isCompleted ? 'opacity-75' : ''}">
-          <div class="d-flex align-items-center">
-            
-            <!-- Logo -->
-            <img src="${survey.image}" alt="${survey.name}" 
-                 class="rounded-circle me-3" style="width:50px; height:50px; object-fit:cover;">
-            
-            <!-- Title + Reward -->
-            <div class="flex-grow-1">
-              <h6 class="mb-1">${survey.name}</h6>
-              <p class="mb-0 text-success small">Reward: BDT ${survey.reward.toFixed(2)}</p>
-              ${isCompleted ? '<span class="badge bg-success">Completed</span>' : ''}
-            </div>
-            
-            <!-- Buttons -->
-            <div class="d-flex gap-2">
-              <button class="btn btn-sm btn-outline-secondary" onclick="checkSurvey(${survey.id})">Check</button>
-              <button class="btn btn-sm ${isCompleted ? 'btn-secondary' : 'btn-warning'}" 
-                      onclick="startSurvey(${survey.id})" ${isCompleted ? 'disabled' : ''}>
-                ${isCompleted ? 'Completed' : 'Start'}
-              </button>
-            </div>
-            
-          </div>
+  <div class="col-12 mb-3">
+    <div class="card survey-card p-3 ${isCompleted ? 'opacity-75 border-success' : 'border-warning'}">
+      <div class="d-flex align-items-center">
+
+        <!-- Logo -->
+        <img src="${survey.image}" alt="${survey.name}" 
+             class="rounded-circle me-3 border" 
+             style="width:55px; height:55px; object-fit:cover;">
+
+        <!-- Title + Reward -->
+        <div class="flex-grow-1">
+          <h6 class="mb-1">${survey.name}</h6>
+          <p class="mb-0 text-success small fw-semibold">
+            🎁 Reward: BDT ${survey.reward.toFixed(2)}
+          </p>
+          ${isCompleted ? '<span class="badge bg-success mt-1">✅ Completed</span>' : ''}
         </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex flex-column gap-2">
+          <button class="btn btn-sm btn-outline-info" onclick="verifySurvey(${survey.id})">
+            🔍 Verify
+          </button>
+          <button class="btn btn-sm ${isCompleted ? 'btn-secondary' : 'btn-warning'}" 
+                  onclick="claimSurvey(${survey.id})" ${isCompleted ? 'disabled' : ''}>
+            ${isCompleted ? 'Claimed' : 'Claim'}
+          </button>
+        </div>
+
       </div>
-    `;
-    surveysContainer.innerHTML += surveyHTML;
+    </div>
+  </div>
+`;
+surveysContainer.innerHTML += surveyHTML;
   });
 }
 
