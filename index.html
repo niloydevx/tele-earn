@@ -1132,7 +1132,10 @@
       let surveyWindow = null;
       let surveyCheckInterval = null;
       let consecutiveAds = 0;
-      let adTimerInterval = null;
+      let adInProgress = false;
+      let adCompleted = false;
+      let allowReward = true;
+      let cooldown = false;
 
       // Initialize the application
       document.addEventListener("DOMContentLoaded", async function () {
@@ -1167,6 +1170,9 @@
         document
           .getElementById("watchAdBtn")
           .addEventListener("click", watchAd);
+          
+        // Set up page visibility and navigation handlers
+        setupAdMonitoring();
       });
 
       // Get user IP address
@@ -1575,28 +1581,28 @@
           .classList.add("active");
       }
 
-      function startCooldown(seconds = 20) {
+      function startCooldown(seconds = 20, message = "Blocked!") {
         const adStatus = document.getElementById("adStatus");
         const progressBar = document.getElementById("progress-bar");
         
+        cooldown = true;
         let time = seconds;
-        adStatus.innerText = `Ad skipped/incomplete! Wait ${time}s`;
+        alert(message); // popup for ban message
+        adStatus.innerText = `${message} Wait ${time}s before next ad`;
         progressBar.style.width = '0%';
-        
+
         const timer = setInterval(() => {
           time--;
-          let percent = ((seconds - time)/seconds)*100;
-          progressBar.style.width = percent + '%';
-          adStatus.innerText = `Wait ${time}s`;
-          
-          if (time <= 0) {
+          progressBar.style.width = ((seconds - time)/seconds)*100 + '%';
+          adStatus.innerText = `${message} Wait ${time}s`;
+          if(time <= 0) {
             clearInterval(timer);
-            adStatus.innerText = "You can watch ad again";
+            cooldown = false;
             const adButton = document.getElementById("watchAdBtn");
             adButton.disabled = false;
             const adReward = appConfig.adsRewards || 0.2;
             adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Ad (+${adReward.toFixed(2)} BDT)`;
-            document.getElementById("gigapub-ad").innerText = "Ad will appear here";
+            adStatus.innerText = "You can watch ad again";
             progressBar.style.width = '0%';
           }
         }, 1000);
@@ -1608,21 +1614,68 @@
         const progressBar = document.getElementById("progress-bar");
         
         let adTime = duration;
-        adContainer.innerText = `Simulated Ad (${adTime}s)`;
+        adContainer.innerText = `Ad in progress (${adTime}s)`;
         progressBar.style.width = '0%';
-        
+        adInProgress = true;
+        adCompleted = false;
+        allowReward = true;
+
         const simulated = setInterval(() => {
           adTime--;
-          adContainer.innerText = `Simulated Ad (${adTime}s)`;
-          let percent = ((duration - adTime)/duration)*100;
-          progressBar.style.width = percent + '%';
-          
-          if (adTime <= 0) {
+          adContainer.innerText = `Ad in progress (${adTime}s)`;
+          progressBar.style.width = ((duration - adTime)/duration)*100 + '%';
+
+          if(adTime <= 0) {
             clearInterval(simulated);
-            consecutiveAds++;
-            awardAdReward();
+            adCompleted = true;
+            adInProgress = false;
+            if(allowReward) {
+              consecutiveAds++;
+              awardAdReward();
+            } else {
+              adStatus.innerText = `❌ Ad interrupted! No reward.`;
+            }
+            const adButton = document.getElementById("watchAdBtn");
+            adButton.disabled = false;
+            adContainer.innerText = "";
+            progressBar.style.width = '0%';
           }
         }, 1000);
+      }
+
+      function setupAdMonitoring() {
+        // Detect back button specifically
+        window.addEventListener("popstate", function (event) {
+          // Push state again to prevent leaving
+          history.pushState({page: 1}, "", "");
+          // Show popup and cooldown
+          alert("❌ You are banned for using the back button!");
+          startCooldown(20, "❌ You are banned for using the back button!");
+        });
+
+        // Detect tab switch / closing page
+        window.addEventListener("beforeunload", handleEarlyExit);
+        document.addEventListener("visibilitychange", () => {
+          if(document.hidden) handleEarlyExit();
+        });
+
+        // Push a dummy state on page load to detect back button
+        history.pushState({page: 1}, "", "");
+      }
+
+      function handleEarlyExit() {
+        if(adInProgress && !adCompleted && !cooldown){
+          allowReward = false; 
+          adInProgress = false;
+          consecutiveAds = 0;
+          const adStatus = document.getElementById("adStatus");
+          adStatus.innerText = "❌ You left the ad early! Blocked.";
+          const adContainer = document.getElementById("gigapub-ad");
+          adContainer.innerText = "";
+          const progressBar = document.getElementById("progress-bar");
+          progressBar.style.width = '0%';
+          startCooldown(20, "❌ You left the ad early! Blocked.");
+        }
       }
 
       function awardAdReward() {
@@ -1671,10 +1724,13 @@
       }
 
       async function watchAd() {
+        if (cooldown) return;
+        
         if (userData.completedTasks < appConfig.dailyLimit) {
           try {
             // Disable button to prevent multiple clicks
             const adButton = document.getElementById("watchAdBtn");
+            const adStatus = document.getElementById("adStatus");
             const originalText = adButton.innerHTML;
             adButton.disabled = true;
             adButton.innerHTML =
@@ -1682,6 +1738,10 @@
 
             // Show the ad container
             showAdContainer();
+            adStatus.innerText = "Loading ad...";
+            adInProgress = true;
+            adCompleted = false;
+            allowReward = true;
 
             // Reset consecutive ads if needed
             consecutiveAds = consecutiveAds || 0;
@@ -1690,13 +1750,22 @@
             if (typeof window.showGiga === "function") {
               window.showGiga("gigapub-ad")
                 .then(() => {
-                  consecutiveAds++;
-                  awardAdReward();
+                  adCompleted = true;
+                  adInProgress = false;
+                  if(allowReward) {
+                    consecutiveAds++;
+                    awardAdReward();
+                  } else {
+                    adStatus.innerText = "❌ Ad was interrupted! No reward.";
+                  }
+                  adButton.disabled = false;
                 })
-                .catch((e) => {
-                  console.warn("Ad skipped/failed", e);
-                  startCooldown(20);
+                .catch(() => {
+                  adInProgress = false;
                   consecutiveAds = 0;
+                  allowReward = false;
+                  adStatus.innerText = "❌ Ad skipped! Blocked temporarily.";
+                  startCooldown(20);
                 });
             } else {
               // Fallback: simulated ad
@@ -1897,7 +1966,7 @@
 
       function startSurveyCompletionCheck(survey) {
         // Check every 5 seconds if the survey window is closed
-        surveyCheckInterval = setInterval(() => {
+        surveyCheckInterval = setInterval(() {
           if (surveyWindow && surveyWindow.closed) {
             clearInterval(surveyCheckInterval);
             surveyCheckInterval = null;
