@@ -1888,8 +1888,8 @@ async function watchAd() {
       userData.penaltyTime = Date.now();
       saveUserData();
       
-      // Show notification
-      showNotification("Video Completed", "Please enter the verification code shown during the video", "info");
+      // Show notification instead of alert
+      showNotification("Video Completed", `Your verification code is: ${generatedToken}`, "info");
     } else {
       // Simulate ad completion if GigaPub is not available
       simulateAd(15);
@@ -1949,6 +1949,9 @@ function simulateAd(duration = 15) {
       userData.pendingReward = pendingReward;
       userData.penaltyTime = Date.now();
       saveUserData();
+      
+      // Show notification instead of alert
+      showNotification("Video Completed", `Your verification code is: ${generatedToken}`, "info");
     }
   }, 1000);
 }
@@ -2502,6 +2505,7 @@ function showNotification(title, message, type) {
 function calculateReferralEarnings(amount) {
   const commissionPercentage = appConfig.referralCommission || 10;
   return (amount * commissionPercentage) / 100;
-}</script>
+}
+  </script>
   </body>
 </html>
