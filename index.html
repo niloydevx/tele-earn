@@ -538,6 +538,26 @@
         color: rgba(255, 215, 0, 0.8);
       }
 
+      /* Video Ad Section */
+      #videoAdSection {
+        margin-bottom: 20px;
+      }
+
+      #adProgressBar {
+        height: 8px;
+        border-radius: 4px;
+        background: #333;
+        margin: 10px 0;
+        overflow: hidden;
+      }
+
+      #adProgressFill {
+        height: 100%;
+        background: linear-gradient(90deg, #ffd700, #ffcc00);
+        width: 0%;
+        transition: width 1s linear;
+      }
+
       /* Responsive adjustments */
       @media (max-width: 576px) {
         .cover-img {
@@ -746,148 +766,36 @@
           <span class="badge badge-hot px-3 py-2">Hot Offers</span>
         </div>
 
-        <!-- VIDEO REWARDS SECTION - ENHANCED --> 
-    
-<div class="card" id="ad-section">    
-  <h2>🎁 Watch Ad & Earn Coins</h2>    
-  <p>Watch the ad for 15 seconds to get your token.</p>    
-  <button id="showAdBtn">Start Ad</button>    
-  <div id="gigapub-ad">    
-    <div id="progress-bar"></div>    
-  </div>    
-</div>    
-    
-<div class="card" id="token-section" style="display:none">    
-  <h2>Enter Token</h2>    
-  <p>Enter the 4-digit token to claim your reward:</p>    
-  <input type="text" id="tokenInput" maxlength="4">    
-  <br>    
-  <button id="claimBtn">Claim Reward</button>    
-</div>    
-    
-<div id="balance" class="card">Balance: 0 coins</div>    
-    
-<script>       
-let adInProgress = false;    
-let adCompleted = false;    
-let generatedToken = "";    
-let pendingReward = 0;    
-let penaltyTimer = 0;    
-    
-const btn = document.getElementById("showAdBtn");    
-const status = document.getElementById("gigapub-ad");    
-const progressBar = document.getElementById("progress-bar");    
-const balanceEl = document.getElementById("balance");    
-    
-// Save state before leaving (refresh/close)    
-window.addEventListener("beforeunload", ()=>{    
-  if(adCompleted && generatedToken){    
-    // যদি টোকেন না দিয়ে রিফ্রেশ করে -> pendingReward সেভ হবে    
-    localStorage.setItem("pendingReward", pendingReward);    
-    localStorage.setItem("penaltyTime", Date.now());    
-  }else{    
-    localStorage.removeItem("pendingReward");    
-  }    
-});    
-    
-// On load -> check penalty    
-window.addEventListener("load", ()=>{    
-  let storedReward = parseInt(localStorage.getItem("pendingReward")) || 0;    
-  let penaltyStart = parseInt(localStorage.getItem("penaltyTime")) || 0;    
-    
-  if(storedReward > 0){    
-    // হাফ কেটে নেওয়া হবে    
-    let penalty = Math.floor(storedReward/2);    
-    updateBalance(-penalty);    
-    alert(`❌ Token দেন নাই! -${penalty} bdt কেটে নেয়া হলো.`);    
-    
-    // 15s cooldown    
-    penaltyTimer = 15;    
-    btn.disabled = true;    
-    let cooldown = setInterval(()=>{    
-      btn.innerText = `Wait ${penaltyTimer}s`;    
-      penaltyTimer--;    
-      if(penaltyTimer < 0){    
-        clearInterval(cooldown);    
-        btn.innerText = "Start Ad";    
-        btn.disabled = false;    
-      }    
-    },1000);    
-  }    
-    
-  // clear old state    
-  localStorage.removeItem("pendingReward");    
-  localStorage.removeItem("penaltyTime");    
-});    
-    
-// Simulated / Gigapub Ad    
-function showAd(duration=15){    
-  btn.disabled = true;    
-  adInProgress = true;    
-  adCompleted = false;    
-  let adTime = duration;    
-  progressBar.style.width = '0%';    
-  status.innerText = `Ad in progress (${adTime}s)`;    
-    
-  const timer = setInterval(()=>{    
-    adTime--;    
-    progressBar.style.width = ((duration - adTime)/duration)*100 + '%';    
-    status.innerText = `Ad in progress (${adTime}s)`;    
-    if(adTime <= 0){    
-      clearInterval(timer);    
-      adCompleted = true;    
-      adInProgress = false;    
-      // Generate 4-digit token    
-      generatedToken = Math.floor(1000 + Math.random()*9000).toString();    
-      pendingReward = 10;    
-      alert("Ad finished! Your token: " + generatedToken);    
-      document.getElementById("ad-section").style.display = "none";    
-      document.getElementById("token-section").style.display = "block";    
-      progressBar.style.width = '0%';    
-    }    
-  },1000);    
-}    
-    
-btn.addEventListener("click", ()=>{    
-  if(typeof window.showGiga === "function"){    
-    window.showGiga("gigapub-ad")    
-      .then(()=>{    
-        adCompleted = true;    
-        adInProgress = false;    
-        generatedToken = Math.floor(1000 + Math.random()*9000).toString();    
-        pendingReward = 10;    
-        alert("Ad finished! Your token: " + generatedToken);    
-        document.getElementById("ad-section").style.display = "none";    
-        document.getElementById("token-section").style.display = "block";    
-      })    
-      .catch(()=>{    
-        adInProgress = false;    
-        alert("Ad could not be loaded. Using simulated ad.");    
-        showAd(15);    
-      });    
-  }else{    
-    showAd(15);    
-  }    
-});    
-    
-// Claim token reward    
-document.getElementById("claimBtn").addEventListener("click", ()=>{    
-  let userToken = document.getElementById("tokenInput").value;    
-  if(userToken === generatedToken){    
-    updateBalance(pendingReward);    
-    alert("✅ Correct token! +10 coins added.");    
-    document.getElementById("token-section").style.display = "none";    
-    document.getElementById("ad-section").style.display = "block";    
-    document.getElementById("tokenInput").value = "";    
-    adCompleted = false;    
-    generatedToken = "";    
-    pendingReward = 0;    
-    btn.disabled = false;    
-  }else{    
-    alert("❌ Wrong token! Please watch the ad carefully.");    
-  }    
-});    
-</script>    
+        <!-- VIDEO REWARDS SECTION - FIXED -->
+        <div class="card p-4 mb-4" id="videoAdSection">
+          <h5 class="mb-3">
+            <i class="bi bi-play-btn-fill me-2 text-warning"></i> Watch Video Ads
+          </h5>
+          <p class="text-muted small mb-3">
+            Watch a video ad for 15 seconds to earn rewards
+          </p>
+          
+          <div id="adProgressBar">
+            <div id="adProgressFill"></div>
+          </div>
+          
+          <div class="d-flex justify-content-between align-items-center mt-2 mb-3">
+            <span id="adTimer">15s remaining</span>
+            <span id="adReward" class="badge badge-gold">+0.20 BDT</span>
+          </div>
+          
+          <button id="startAdBtn" class="btn btn-custom w-100" onclick="startVideoAd()">
+            <i class="bi bi-play-fill me-2"></i> Start Watching Ad
+          </button>
+          
+          <div id="tokenSection" class="mt-3 hidden">
+            <p class="text-center mb-2">Enter the token shown in the ad:</p>
+            <div class="input-group">
+              <input type="text" class="form-control text-center" id="adTokenInput" placeholder="XXXX" maxlength="4">
+              <button class="btn btn-custom" onclick="verifyAdToken()">Verify</button>
+            </div>
+          </div>
+        </div>
 
         <h4 class="mb-3">Daily Offers</h4>
         <div class="row g-3">
@@ -1226,159 +1134,539 @@ document.getElementById("claimBtn").addEventListener("click", ()=>{
     <!-- End of appContent -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>// Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyDuaWMh0eIJ2tdtLxYj43ij9MGSh_Yo22M",
-  authDomain: "test-6977e.firebaseapp.com",
-  projectId: "test-6977e",
-  storageBucket: "test-6977e.firebasestorage.app",
-  messagingSenderId: "544329273038",
-  appId: "1:544329273038:web:c7a31e12bec7c80741ca9f",
-  databaseURL: "https://test-6977e-default-rtdb.firebaseio.com/",
-};
+    <script>
+      // Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyDuaWMh0eIJ2tdtLxYj43ij9MGSh_Yo22M",
+        authDomain: "test-6977e.firebaseapp.com",
+        projectId: "test-6977e",
+        storageBucket: "test-6977e.firebasestorage.app",
+        messagingSenderId: "544329273038",
+        appId: "1:544329273038:web:c7a31e12bec7c80741ca9f",
+        databaseURL: "https://test-6977e-default-rtdb.firebaseio.com/",
+      };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const database = firebase.database();
 
-// Initialize Telegram Web App
-const tg = window.Telegram.WebApp;
-if (tg && tg.initDataUnsafe) {
-  tg.expand(); // full height
-}
+      // Initialize Telegram Web App
+      const tg = window.Telegram.WebApp;
+      if (tg && tg.initDataUnsafe) {
+        tg.expand(); // full height
+      }
 
-// Telegram user info
-const user = tg && tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
-let userId = user ? user.id : Math.floor(Math.random() * 1000000);
-let username = user ? user.username || user.first_name : "User" + userId;
-let userPhotoUrl = user
-  ? user.photo_url || "https://via.placeholder.com/120"
-  : "https://via.placeholder.com/120";
+      // Telegram user info
+      const user = tg && tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
+      let userId = user ? user.id : Math.floor(Math.random() * 1000000);
+      let username = user ? user.username || user.first_name : "User" + userId;
+      let userPhotoUrl = user
+        ? user.photo_url || "https://via.placeholder.com/120"
+        : "https://via.placeholder.com/120";
 
-// App state
-let userData = null;
-let appConfig = null;
-let vpnRequired = true;
-let userIP = "";
-let deviceID = "";
+      // App state
+      let userData = null;
+      let appConfig = null;
+      let vpnRequired = true;
+      let userIP = "";
+      let deviceID = "";
+      let currentAdToken = "";
+      let adTimerInterval = null;
+      let adSecondsRemaining = 15;
 
-// Initialize the application
-document.addEventListener("DOMContentLoaded", async function () {
-  await getUserIP();
-  getDeviceFingerprint();
+      // Initialize the application
+      document.addEventListener("DOMContentLoaded", async function () {
+        await getUserIP();
+        getDeviceFingerprint();
 
-  const isBanned = await checkIfBanned();
-  if (isBanned) {
-    document.getElementById("bannedScreen").classList.remove("hidden");
-    document.getElementById("appContent").classList.add("hidden");
-    return;
-  }
-
-  await loadAppConfig();
-  await loadUserData();
-  updateUI();
-});
-
-// Get user IP address
-async function getUserIP() {
-  try {
-    let res = await fetch("https://api.ipify.org?format=json");
-    let data = await res.json();
-    userIP = data.ip;
-  } catch (e) {
-    userIP = "unknown";
-  }
-}
-
-// Get device fingerprint
-function getDeviceFingerprint() {
-  let ua = navigator.userAgent;
-  let screenRes = window.screen.width + "x" + window.screen.height;
-  let lang = navigator.language;
-  deviceID = btoa(ua + screenRes + lang);
-}
-
-// Check if user is banned
-async function checkIfBanned() {
-  return new Promise((resolve) => {
-    database
-      .ref("bannedUsers")
-      .once("value", (snapshot) => {
-        const bannedUsers = snapshot.val() || {};
-        resolve(bannedUsers[userId.toString()] || false);
-      })
-      .catch(() => resolve(false));
-  });
-}
-
-// Load app configuration from Firebase
-async function loadAppConfig() {
-  return new Promise((resolve) => {
-    database
-      .ref("appConfig")
-      .once("value", (snapshot) => {
-        appConfig = snapshot.val() || {
-          dailyLimit: 60,
-          adsRewards: 0.2,
-          referralCommission: 10,
-          minWithdraw: 50,
-          vpnRequired: true,
-        };
-        vpnRequired = appConfig.vpnRequired;
-        resolve();
-      })
-      .catch(() => resolve());
-  });
-}
-
-// Load user data from Firebase or create new user
-async function loadUserData() {
-  return new Promise((resolve) => {
-    database
-      .ref("users/" + userId)
-      .once("value", (snapshot) => {
-        if (snapshot.exists()) {
-          userData = snapshot.val();
-        } else {
-          const joinDate = new Date().toISOString().split("T")[0];
-          userData = {
-            username: username,
-            photoUrl: userPhotoUrl,
-            joinDate: joinDate,
-            balance: 0.0,
-            totalEarnings: 0.0,
-            withdrawn: 0.0,
-            referralEarnings: 0.0,
-            completedTasks: 0,
-            referrals: 0,
-            referralCode:
-              "REF" + Math.random().toString(36).substring(2, 8).toUpperCase(),
-            history: [],
-            ip: userIP,
-            deviceID: deviceID,
-            usedPromoCodes: [],
-            completedSurveys: {},
-            pendingReward: 0,
-            penaltyTime: 0
-          };
-          database.ref("users/" + userId).set(userData).catch(() => {});
+        const isBanned = await checkIfBanned();
+        if (isBanned) {
+          document.getElementById("bannedScreen").classList.remove("hidden");
+          document.getElementById("appContent").classList.add("hidden");
+          return;
         }
-        resolve();
-      })
-      .catch(() => resolve());
-  });
-}
 
-// Update UI with user data (only static elements)
-function updateUI() {
-  if (!userData) return;
-  if (document.getElementById("username")) {
-    document.getElementById("username").textContent = userData.username;
-  }
-  if (document.getElementById("profileName")) {
-    document.getElementById("profileName").textContent = userData.username;
-  }
-}
-</script>
+        await loadAppConfig();
+        await loadUserData();
+        updateUI();
+        checkVPN();
+      });
+
+      // Get user IP address
+      async function getUserIP() {
+        try {
+          let res = await fetch("https://api.ipify.org?format=json");
+          let data = await res.json();
+          userIP = data.ip;
+        } catch (e) {
+          userIP = "unknown";
+        }
+      }
+
+      // Get device fingerprint
+      function getDeviceFingerprint() {
+        let ua = navigator.userAgent;
+        let screenRes = window.screen.width + "x" + window.screen.height;
+        let lang = navigator.language;
+        deviceID = btoa(ua + screenRes + lang);
+      }
+
+      // Check if user is banned
+      async function checkIfBanned() {
+        return new Promise((resolve) => {
+          database
+            .ref("bannedUsers")
+            .once("value", (snapshot) => {
+              const bannedUsers = snapshot.val() || {};
+              resolve(bannedUsers[userId.toString()] || false);
+            })
+            .catch(() => resolve(false));
+        });
+      }
+
+      // Load app configuration from Firebase
+      async function loadAppConfig() {
+        return new Promise((resolve) => {
+          database
+            .ref("appConfig")
+            .once("value", (snapshot) => {
+              appConfig = snapshot.val() || {
+                dailyLimit: 60,
+                adsRewards: 0.2,
+                referralCommission: 10,
+                minWithdraw: 50,
+                vpnRequired: true,
+              };
+              vpnRequired = appConfig.vpnRequired;
+              resolve();
+            })
+            .catch(() => resolve());
+        });
+      }
+
+      // Load user data from Firebase or create new user
+      async function loadUserData() {
+        return new Promise((resolve) => {
+          database
+            .ref("users/" + userId)
+            .once("value", (snapshot) => {
+              if (snapshot.exists()) {
+                userData = snapshot.val();
+              } else {
+                const joinDate = new Date().toISOString().split("T")[0];
+                userData = {
+                  username: username,
+                  photoUrl: userPhotoUrl,
+                  joinDate: joinDate,
+                  balance: 0.0,
+                  totalEarnings: 0.0,
+                  withdrawn: 0.0,
+                  referralEarnings: 0.0,
+                  completedTasks: 0,
+                  referrals: 0,
+                  referralCode:
+                    "REF" + Math.random().toString(36).substring(2, 8).toUpperCase(),
+                  history: [],
+                  ip: userIP,
+                  deviceID: deviceID,
+                  usedPromoCodes: [],
+                  completedSurveys: {},
+                  pendingReward: 0,
+                  penaltyTime: 0
+                };
+                database.ref("users/" + userId).set(userData).catch(() => {});
+              }
+              resolve();
+            })
+            .catch(() => resolve());
+        });
+      }
+
+      // Save user data to Firebase
+      function saveUserData() {
+        if (!userData) return;
+        database.ref("users/" + userId).set(userData).catch((error) => {
+          console.error("Error saving user data:", error);
+        });
+      }
+
+      // Update UI with user data
+      function updateUI() {
+        if (!userData) return;
+        
+        // Update balance
+        document.getElementById("balance").textContent = userData.balance.toFixed(2);
+        document.getElementById("availableBalance").textContent = userData.balance.toFixed(2);
+        document.getElementById("availableBalanceProfile").textContent = userData.balance.toFixed(2);
+        
+        // Update user info
+        document.getElementById("username").textContent = userData.username;
+        document.getElementById("profileName").textContent = userData.username;
+        document.getElementById("profileUsername").textContent = userData.username;
+        
+        // Update earnings
+        document.getElementById("totalEarningsHome").textContent = userData.totalEarnings.toFixed(2);
+        document.getElementById("totalEarnings").textContent = userData.totalEarnings.toFixed(2);
+        
+        // Update referrals
+        document.getElementById("referralsCountHome").textContent = userData.referrals;
+        document.getElementById("referralsCount").textContent = userData.referrals;
+        
+        // Update other info
+        document.getElementById("memberSince").textContent = userData.joinDate;
+        document.getElementById("promoCode").textContent = userData.referralCode;
+        document.getElementById("withdrawnAmount").textContent = userData.withdrawn.toFixed(2);
+        document.getElementById("referralEarnings").textContent = userData.referralEarnings.toFixed(2);
+        document.getElementById("completed").textContent = userData.completedTasks;
+        document.getElementById("dailyLimit").textContent = appConfig.dailyLimit;
+        
+        // Update referral link
+        document.getElementById("inviteLink").value = `https://t.me/YourBotName?start=${userData.referralCode}`;
+        
+        // Update profile image if available
+        if (userData.photoUrl) {
+          document.getElementById("profileImg").src = userData.photoUrl;
+          document.getElementById("logoImg").src = userData.photoUrl;
+        }
+      }
+
+      // Show notification
+      function showNotification(message, type = "info") {
+        const notificationArea = document.getElementById("notificationArea");
+        const notification = document.createElement("div");
+        notification.className = `alert alert-${type} floating-notification`;
+        notification.innerHTML = `
+          <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+          ${message}
+          <button type="button" class="btn-close btn-close-white float-end" onclick="this.parentElement.remove()"></button>
+        `;
+        notificationArea.appendChild(notification);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.remove();
+          }
+        }, 5000);
+      }
+
+      // Show/hide tabs
+      function showTab(tabId, element) {
+        // Hide all containers
+        const containers = document.querySelectorAll('.container');
+        containers.forEach(container => {
+          container.classList.add('hidden');
+        });
+        
+        // Show selected container
+        document.getElementById(tabId).classList.remove('hidden');
+        
+        // Update active nav item
+        const navItems = document.querySelectorAll('.bottom-nav a');
+        navItems.forEach(item => {
+          item.classList.remove('active');
+        });
+        element.classList.add('active');
+      }
+
+      // Check VPN status
+      async function checkVPN() {
+        const vpnStatus = document.getElementById("vpnStatus");
+        const vpnAlert = document.getElementById("vpnAlert");
+        const vpnOffAlert = document.getElementById("vpnOffAlert");
+        const vpnSuccess = document.getElementById("vpnSuccess");
+        const retryBtn = document.getElementById("retryVpnCheck");
+        
+        // Reset all alerts
+        vpnStatus.classList.remove("d-none");
+        vpnAlert.classList.add("d-none");
+        vpnOffAlert.classList.add("d-none");
+        vpnSuccess.classList.add("d-none");
+        retryBtn.classList.add("d-none");
+        
+        try {
+          // Check if VPN is required based on app config
+          if (!vpnRequired) {
+            vpnStatus.classList.add("d-none");
+            vpnSuccess.classList.remove("d-none");
+            document.getElementById("vpnCheck").classList.add("hidden");
+            document.getElementById("appContent").classList.remove("hidden");
+            return;
+          }
+          
+          // Simple VPN check by looking for common VPN IP ranges
+          // This is a basic check and might not be 100% accurate
+          const response = await fetch(`https://ipapi.co/${userIP}/json/`);
+          const data = await response.json();
+          
+          // Check if the IP belongs to a known hosting/VPN provider
+          const isp = data.org ? data.org.toLowerCase() : "";
+          const isVPN = isp.includes("vpn") || isp.includes("proxy") || 
+                        isp.includes("hosting") || isp.includes("data center");
+          
+          vpnStatus.classList.add("d-none");
+          
+          if (isVPN) {
+            vpnOffAlert.classList.remove("d-none");
+            retryBtn.classList.remove("d-none");
+            document.getElementById("appContent").classList.add("hidden");
+          } else {
+            vpnSuccess.classList.remove("d-none");
+            setTimeout(() => {
+              document.getElementById("vpnCheck").classList.add("hidden");
+              document.getElementById("appContent").classList.remove("hidden");
+            }, 2000);
+          }
+        } catch (error) {
+          console.error("VPN check failed:", error);
+          vpnStatus.classList.add("d-none");
+          vpnAlert.classList.remove("d-none");
+          retryBtn.classList.remove("d-none");
+        }
+      }
+
+      // Start video ad
+      function startVideoAd() {
+        if (userData.completedTasks >= appConfig.dailyLimit) {
+          showNotification("You've reached your daily limit!", "warning");
+          return;
+        }
+        
+        const startBtn = document.getElementById("startAdBtn");
+        const tokenSection = document.getElementById("tokenSection");
+        const progressFill = document.getElementById("adProgressFill");
+        const timerText = document.getElementById("adTimer");
+        
+        // Disable button during ad
+        startBtn.disabled = true;
+        startBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Watching...';
+        
+        // Reset progress
+        progressFill.style.width = '0%';
+        adSecondsRemaining = 15;
+        timerText.textContent = `${adSecondsRemaining}s remaining`;
+        
+        // Generate a random token
+        currentAdToken = Math.floor(1000 + Math.random() * 9000).toString();
+        
+        // Start timer
+        adTimerInterval = setInterval(() => {
+          adSecondsRemaining--;
+          
+          // Update progress bar
+          const progressPercent = ((15 - adSecondsRemaining) / 15) * 100;
+          progressFill.style.width = `${progressPercent}%`;
+          
+          // Update timer text
+          timerText.textContent = `${adSecondsRemaining}s remaining`;
+          
+          // When timer completes
+          if (adSecondsRemaining <= 0) {
+            clearInterval(adTimerInterval);
+            
+            // Show token input section
+            tokenSection.classList.remove("hidden");
+            
+            // Reset button
+            startBtn.disabled = false;
+            startBtn.innerHTML = '<i class="bi bi-play-fill me-2"></i> Start Watching Ad';
+            
+            // Show the token to the user (in a real app, this would be in the ad)
+            showNotification(`Your verification token is: ${currentAdToken}`, "info");
+          }
+        }, 1000);
+      }
+
+      // Verify ad token
+      function verifyAdToken() {
+        const tokenInput = document.getElementById("adTokenInput");
+        const tokenSection = document.getElementById("tokenSection");
+        
+        if (tokenInput.value === currentAdToken) {
+          // Reward user
+          const rewardAmount = appConfig.adsRewards;
+          userData.balance += rewardAmount;
+          userData.totalEarnings += rewardAmount;
+          userData.completedTasks++;
+          
+          // Save and update UI
+          saveUserData();
+          updateUI();
+          
+          // Show success message
+          showNotification(`Success! You earned ${rewardAmount.toFixed(2)} BDT`, "success");
+          
+          // Reset ad section
+          tokenInput.value = "";
+          tokenSection.classList.add("hidden");
+          document.getElementById("adProgressFill").style.width = "0%";
+          document.getElementById("adTimer").textContent = "15s remaining";
+        } else {
+          showNotification("Invalid token. Please try again.", "danger");
+        }
+      }
+
+      // Show survey page
+      function showSurveyPage() {
+        document.getElementById("rewards").classList.add("hidden");
+        document.getElementById("surveyPage").classList.remove("hidden");
+        
+        // Load surveys (mock data for demonstration)
+        const surveysContainer = document.getElementById("surveysContainer");
+        surveysContainer.innerHTML = `
+          <div class="col-md-6">
+            <div class="survey-card">
+              <img src="https://via.placeholder.com/300x160/333/ffd700?text=Survey+1" class="survey-img" alt="Survey 1">
+              <div class="card-body">
+                <h5 class="card-title">Consumer Preferences</h5>
+                <p class="card-text">Share your opinion about products and earn 2.50 BDT</p>
+                <div class="btn-group">
+                  <button class="btn survey-btn-warning">Start Survey</button>
+                  <button class="btn survey-btn-secondary">5-7 min</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="survey-card">
+              <img src="https://via.placeholder.com/300x160/333/ffd700?text=Survey+2" class="survey-img" alt="Survey 2">
+              <div class="card-body">
+                <h5 class="card-title">Mobile Usage Habits</h5>
+                <p class="card-text">Tell us about your mobile app usage and earn 3.00 BDT</p>
+                <div class="btn-group">
+                  <button class="btn survey-btn-warning">Start Survey</button>
+                  <button class="btn survey-btn-secondary">8-10 min</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Hide survey page
+      function hideSurveyPage() {
+        document.getElementById("surveyPage").classList.add("hidden");
+        document.getElementById("rewards").classList.remove("hidden");
+      }
+
+      // Copy invite link
+      function copyInviteLink() {
+        const inviteLink = document.getElementById("inviteLink");
+        inviteLink.select();
+        document.execCommand("copy");
+        showNotification("Referral link copied to clipboard!", "success");
+      }
+
+      // Redeem promo code
+      function redeemPromoCode() {
+        const promoCodeInput = document.getElementById("promoCodeInput");
+        const code = promoCodeInput.value.trim();
+        
+        if (!code) {
+          showNotification("Please enter a promo code", "warning");
+          return;
+        }
+        
+        // Check if code was already used
+        if (userData.usedPromoCodes.includes(code)) {
+          showNotification("This promo code has already been used", "warning");
+          return;
+        }
+        
+        // In a real app, you would validate against a list of valid promo codes
+        // For demo purposes, we'll accept any code that starts with "PROMO"
+        if (code.startsWith("PROMO")) {
+          const reward = 5.0; // Reward amount
+          userData.balance += reward;
+          userData.totalEarnings += reward;
+          userData.usedPromoCodes.push(code);
+          
+          saveUserData();
+          updateUI();
+          
+          showNotification(`Promo code redeemed! You received ${reward.toFixed(2)} BDT`, "success");
+          promoCodeInput.value = "";
+        } else {
+          showNotification("Invalid promo code", "danger");
+        }
+      }
+
+      // Withdraw funds
+      function withdraw() {
+        const method = document.getElementById("method").value;
+        const amount = parseFloat(document.getElementById("amount").value);
+        const address = document.getElementById("address").value.trim();
+        
+        if (!method) {
+          showNotification("Please select a withdrawal method", "warning");
+          return;
+        }
+        
+        if (!amount || amount < appConfig.minWithdraw) {
+          showNotification(`Minimum withdrawal is ${appConfig.minWithdraw} BDT`, "warning");
+          return;
+        }
+        
+        if (amount > userData.balance) {
+          showNotification("Insufficient balance", "danger");
+          return;
+        }
+        
+        if (!address) {
+          showNotification("Please enter your wallet/account number", "warning");
+          return;
+        }
+        
+        // Process withdrawal
+        userData.balance -= amount;
+        userData.withdrawn += amount;
+        
+        // Add to history
+        const withdrawalData = {
+          date: new Date().toLocaleString(),
+          method: method,
+          amount: amount,
+          address: address,
+          status: "Pending"
+        };
+        
+        userData.history.unshift(withdrawalData);
+        
+        saveUserData();
+        updateUI();
+        
+        showNotification(`Withdrawal request of ${amount.toFixed(2)} BDT submitted successfully!`, "success");
+        
+        // Clear form
+        document.getElementById("method").value = "";
+        document.getElementById("amount").value = "";
+        document.getElementById("address").value = "";
+      }
+
+      // Filter history
+      function filterHistory(type) {
+        // Implementation would filter the history table based on type
+        showNotification(`Showing ${type} history`, "info");
+      }
+
+      // Load more history
+      function loadMoreHistory() {
+        // Implementation would load more history items
+        showNotification("Loading more history...", "info");
+      }
+
+      // Initialize the app
+      window.onload = function() {
+        // Add event listeners for bottom nav
+        const navItems = document.querySelectorAll('.bottom-nav a');
+        navItems.forEach(item => {
+          item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const tabId = this.getAttribute('onclick').match(/'([^']+)'/)[1];
+            showTab(tabId, this);
+          });
+        });
+      };
+    </script>
   </body>
 </html>
