@@ -3,122 +3,146 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Daily TON Giveaway</title>
-<!-- Bootstrap CSS -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<title>Ad Watch - Telegram WebApp</title>
 <style>
-  body {
-    background-color: #121212;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-  }
-
-  .giveaway-card {
-    background-color: #1e1e1e;
-    color: white;
-    padding: 20px 25px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    width: 350px;
-    justify-content: space-between;
-  }
-
-  .info span {
-    font-size: 14px;
-    color: #aaa;
-  }
-
-  .amount {
-    font-size: 20px;
-    font-weight: bold;
-    color: #39a0f1;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-
-  .icon {
-    font-size: 24px;
-  }
-
-  #logo {
-    width: 40px;
-    height: 40px;
-    object-fit: cover;
-    border-radius: 8px;
-  }
-
-  button {
-    font-size: 18px;
-  }
+  body { font-family: Arial; text-align:center; padding:20px; background:#f9f9f9; }
+  .card { background:#fff; padding:20px; margin:20px auto; border-radius:10px; max-width:400px; box-shadow:0 4px 8px rgba(0,0,0,0.1);}
+  button { padding:12px 20px; font-size:16px; border:none; border-radius:8px; background:#4CAF50; color:#fff; cursor:pointer; margin-top:10px; }
+  input { padding:10px; font-size:16px; width:100px; text-align:center; margin-top:10px; }
+  #progress-bar { width:0%; height:5px; background:green; margin-top:10px; border-radius:5px; }
 </style>
-</head>
-<body>
-
-<div class="giveaway-card shadow">
-  <!-- Logo on the left -->
-  <img src="https://via.placeholder.com/40" alt="Logo" id="logo">
-  
-  <div class="info flex-grow-1 ms-2">
-    <span>Daily TON giveaway</span>
-    <div class="amount">
-     BDT 10.00 <span class="icon">🎁</span>
-    </div>
-  </div>
-
-  <div id="btnContainer">
-    <button id="arrowBtn" class="btn btn-primary">Check</button>
-  </div>
-</div>
-
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  const arrowBtn = document.getElementById('arrowBtn');
-  const btnContainer = document.getElementById('btnContainer');
+  const tg = window.Telegram.WebApp;
+  tg.expand();
 
-  // Check if user already completed navigation before
-  if(sessionStorage.getItem('canClaim') === 'true'){
-    showClaimButton();
+  let balance = parseInt(localStorage.getItem('balance')) || 0;
+  let adInProgress = false;
+  let adCompleted = false;
+  let generatedToken = "";
+  let pendingReward = 0;
+  let penaltyTimer = 0;
+
+  const btn = document.getElementById("showAdBtn");
+  const status = document.getElementById("gigapub-ad");
+  const progressBar = document.getElementById("progress-bar");
+  const balanceEl = document.getElementById("balance");
+
+  function updateBalance(amount){
+    balance += amount;
+    if(balance < 0) balance = 0;
+    localStorage.setItem('balance', balance);
+    balanceEl.innerText = `Balance: ${balance} coins`;
   }
 
-  arrowBtn.addEventListener('click', () => {
-    // Save a flag that user clicked arrow
-    sessionStorage.setItem('clickedArrow', 'true');
+  function showTelegramAlert(msg){
+    if(tg && typeof tg.showAlert === "function"){
+      tg.showAlert(msg);
+    } else {
+      alert(msg);
+    }
+  }
 
-    // Redirect to your URL
-    window.location.href = 'https://example.com'; // <-- replace with your target URL
+  window.addEventListener("beforeunload", ()=>{
+    if(adCompleted && generatedToken){
+      localStorage.setItem("pendingReward", pendingReward);
+      localStorage.setItem("penaltyTime", Date.now());
+    } else {
+      localStorage.removeItem("pendingReward");
+    }
   });
 
-  // Function to show claim button
-  function showClaimButton(){
-    btnContainer.innerHTML = '<button id="claimBtn" class="btn btn-success">Claim</button>';
+  window.addEventListener("load", ()=>{
+    let storedReward = parseInt(localStorage.getItem("pendingReward")) || 0;
+    let penaltyStart = parseInt(localStorage.getItem("penaltyTime")) || 0;
 
-    const claimBtn = document.getElementById('claimBtn');
-    claimBtn.addEventListener('click', () => {
-      alert('🎉 You claimed 10 TON!');
-      claimBtn.textContent = 'Claimed';
-      claimBtn.classList.remove('btn-success');
-      claimBtn.classList.add('btn-secondary');
-      claimBtn.disabled = true;
-      sessionStorage.setItem('canClaim', 'false'); // prevent multiple claims
-    });
+    if(storedReward > 0){
+      let penalty = Math.floor(storedReward/2);
+      updateBalance(-penalty);
+      showTelegramAlert(`❌ Token not claimed! -${penalty} coins deducted.`);
+
+      penaltyTimer = 15;
+      btn.disabled = true;
+      let cooldown = setInterval(()=>{
+        btn.innerText = `Wait ${penaltyTimer}s`;
+        penaltyTimer--;
+        if(penaltyTimer < 0){
+          clearInterval(cooldown);
+          btn.innerText = "Start Ad";
+          btn.disabled = false;
+        }
+      },1000);
+    }
+
+    localStorage.removeItem("pendingReward");
+    localStorage.removeItem("penaltyTime");
+  });
+
+  function showAd(duration=15){
+    btn.disabled = true;
+    adInProgress = true;
+    adCompleted = false;
+    let adTime = duration;
+    progressBar.style.width = '0%';
+    status.innerText = `Ad in progress (${adTime}s)`;
+
+    const timer = setInterval(()=>{
+      adTime--;
+      progressBar.style.width = ((duration - adTime)/duration)*100 + '%';
+      status.innerText = `Ad in progress (${adTime}s)`;
+      if(adTime <= 0){
+        clearInterval(timer);
+        adCompleted = true;
+        adInProgress = false;
+        generatedToken = Math.floor(1000 + Math.random()*9000).toString();
+        pendingReward = 10;
+        showTelegramAlert("Ad finished! Your token: " + generatedToken);
+        document.getElementById("ad-section").style.display = "none";
+        document.getElementById("token-section").style.display = "block";
+        progressBar.style.width = '0%';
+      }
+    },1000);
   }
 
-  // Only allow claim if user navigated properly
-  window.addEventListener('pageshow', () => {
-    if(sessionStorage.getItem('clickedArrow') === 'true'){
-      // User returned from proper navigation
-      sessionStorage.setItem('canClaim', 'true');
-      sessionStorage.removeItem('clickedArrow');
-      showClaimButton();
+  btn.addEventListener("click", ()=>{
+    showAd(15);
+  });
+
+  document.getElementById("claimBtn").addEventListener("click", ()=>{
+    let userToken = document.getElementById("tokenInput").value;
+    if(userToken === generatedToken){
+      updateBalance(pendingReward);
+      showTelegramAlert("✅ Correct token! +10 coins added.");
+      document.getElementById("token-section").style.display = "none";
+      document.getElementById("ad-section").style.display = "block";
+      document.getElementById("tokenInput").value = "";
+      adCompleted = false;
+      generatedToken = "";
+      pendingReward = 0;
+      btn.disabled = false;
+    } else {
+      showTelegramAlert("❌ Wrong token! Please watch the ad carefully.");
     }
   });
 </script>
+</head>
+<body>
+<div class="card" id="ad-section">
+  <h2>🎁 Watch Ad & Earn Coins</h2>
+  <p>Watch the ad for 15 seconds to get your token.</p>
+  <button id="showAdBtn">Start Ad</button>
+  <div id="gigapub-ad">
+    <div id="progress-bar"></div>
+  </div>
+</div>
 
+<div class="card" id="token-section" style="display:none">
+  <h2>Enter Token</h2>
+  <p>Enter the 4-digit token to claim your reward:</p>
+  <input type="text" id="tokenInput" maxlength="4">
+  <br>
+  <button id="claimBtn">Claim Reward</button>
+</div>
+
+<div id="balance" class="card">Balance: 0 coins</div>
 </body>
 </html>
