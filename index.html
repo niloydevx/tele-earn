@@ -1178,6 +1178,7 @@ let adCompleted = false;
 let generatedToken = "";
 let pendingReward = 0;
 let penaltyTimer = 0;
+let adCloseButtonEnabled = false; // Controls when the close button works
 
 // Initialize the application
 document.addEventListener("DOMContentLoaded", async function () {
@@ -1865,6 +1866,10 @@ async function watchAd() {
 
     // Check if GigaPub ad function exists
     if (typeof window.showGiga === "function") {
+      // Disable close button initially
+      adCloseButtonEnabled = false;
+      
+      // Show the ad with a custom close handler
       await window.showGiga();
       
       // If GigaPub ad completed successfully
@@ -1874,6 +1879,9 @@ async function watchAd() {
         1000 + Math.random() * 9000
       ).toString();
       pendingReward = appConfig.adsRewards || 0.2;
+      
+      // Now enable the close button
+      adCloseButtonEnabled = true;
       
       // Show token section
       document.getElementById("tokenSection").style.display = "block";
@@ -1911,6 +1919,24 @@ async function watchAd() {
     statusEl.textContent = "Failed to load video. Try again.";
   }
 }
+
+// Override the GigaPub close function to control when it works
+function overrideGigaClose() {
+  if (typeof window.gigapubCloseAd === 'function') {
+    const originalClose = window.gigapubCloseAd;
+    window.gigapubCloseAd = function() {
+      if (adCloseButtonEnabled) {
+        originalClose();
+      } else {
+        // Show a message that the ad must complete first
+        showNotification("Info", "Please wait for the ad to complete first.", "info");
+      }
+    };
+  }
+}
+
+// Call the override function when the script loads
+overrideGigaClose();
 
 // Simulate ad viewing
 function simulateAd(duration = 15) {
@@ -2505,7 +2531,6 @@ function showNotification(title, message, type) {
 function calculateReferralEarnings(amount) {
   const commissionPercentage = appConfig.referralCommission || 10;
   return (amount * commissionPercentage) / 100;
-}
-  </script>
+}</script>
   </body>
 </html>
