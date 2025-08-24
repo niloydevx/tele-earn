@@ -684,38 +684,196 @@
           <span class="badge badge-hot px-3 py-2">Hot Offers</span>
         </div>
 
-        <!-- Daily Tasks with Ads -->
-        <div class="card p-4 mb-4">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-              <h5 class="mb-1">Daily Tasks Progress</h5>
-              <small class="text-muted">Complete tasks to earn more</small>
-            </div>
-            <span class="badge bg-dark px-3 py-2">
-              <span id="remaining">0</span> remaining
-            </span>
-          </div>
+        <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Tasks with Ads</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://ad.gigapub.tech/script?id=1872"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f9f9f9; padding:20px; }
+    .card { border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    #progress-bar { width:0%; height:5px; background:green; margin-top:10px; }
+    #balance { font-weight:bold; }
+  </style>
+</head>
+<body>
 
-          <div class="progress mb-4">
-            <div id="progressBar" class="progress-bar" style="width: 0%">0%</div>
-          </div>
+<div class="card p-4 mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h5 class="mb-1">Daily Tasks Progress</h5>
+      <small class="text-muted">Complete tasks to earn more</small>
+    </div>
+    <span class="badge bg-dark px-3 py-2">
+      <span id="remaining">0</span> remaining
+    </span>
+  </div>
 
-          <!-- Start Ad Button -->
-          <button class="btn btn-custom w-100 mb-3 py-3" id="watchAdBtn">
-            <i class="bi bi-play-circle me-2"></i> Watch Ad (+0.20 BDT)
-          </button>
+  <div class="progress mb-4">
+    <div id="progressBar" class="progress-bar" style="width: 0%">0%</div>
+  </div>
 
-          <!-- Gigapub Ad / Progress -->
-          <div id="gigapub-ad" class="mb-3 text-center">
-            <div id="progress-bar"></div>
-          </div>
+  <!-- Start Ad Button -->
+  <button class="btn btn-custom w-100 mb-3 py-3 btn-success" id="showAdBtn">
+    <i class="bi bi-play-circle me-2"></i> Watch Ad (+10 coins)
+  </button>
 
-          <!-- Info Section -->
-          <div class="alert alert-dark d-flex align-items-center mt-3" role="alert">
-            <i class="bi bi-info-circle-fill me-2"></i>
-            <small>Complete <span id="dailyLimitText">0</span> tasks to get bonus</small>
-          </div>
-        </div>
+  <!-- Gigapub Ad / Progress -->
+  <div id="gigapub-ad" class="mb-3 text-center">
+    <div id="progress-bar"></div>
+  </div>
+
+  <!-- Token Section -->
+  <div id="token-section" style="display:none">
+    <div class="alert alert-secondary">
+      <h6 class="mb-2">Enter Token</h6>
+      <p class="mb-2">Enter the 4-digit token to claim your reward:</p>
+      <input type="text" id="tokenInput" maxlength="4" class="form-control text-center mb-2">
+      <button class="btn btn-dark w-100" id="claimBtn">Claim Reward</button>
+    </div>
+  </div>
+
+  <!-- Info Section -->
+  <div class="alert alert-dark d-flex align-items-center mt-3" role="alert">
+    <i class="bi bi-info-circle-fill me-2"></i>
+    <small>Complete <span id="dailyLimitText">0</span> tasks to get bonus</small>
+  </div>
+</div>
+
+<!-- Balance Card -->
+<div id="balance" class="card p-3 text-center">Balance: 0 coins</div>
+
+<script>
+let balance = parseInt(localStorage.getItem('balance')) || 0;
+let adInProgress = false;
+let adCompleted = false;
+let generatedToken = "";
+let pendingReward = 0;
+let penaltyTimer = 0;
+
+const btn = document.getElementById("showAdBtn");
+const status = document.getElementById("gigapub-ad");
+const progressBar = document.getElementById("progress-bar");
+const balanceEl = document.getElementById("balance");
+
+// Update balance
+function updateBalance(amount){
+  balance += amount;
+  if(balance < 0) balance = 0;
+  localStorage.setItem('balance', balance);
+  balanceEl.innerText = `Balance: ${balance} coins`;
+}
+updateBalance(0);
+
+// Save state before leaving
+window.addEventListener("beforeunload", ()=>{
+  if(adCompleted && generatedToken){
+    localStorage.setItem("pendingReward", pendingReward);
+    localStorage.setItem("penaltyTime", Date.now());
+  }else{
+    localStorage.removeItem("pendingReward");
+  }
+});
+
+// On load check penalty
+window.addEventListener("load", ()=>{
+  let storedReward = parseInt(localStorage.getItem("pendingReward")) || 0;
+  let penaltyStart = parseInt(localStorage.getItem("penaltyTime")) || 0;
+
+  if(storedReward > 0){
+    let penalty = Math.floor(storedReward/2);
+    updateBalance(-penalty);
+    alert(`❌ Token দেন নাই! -${penalty} coins কেটে নেয়া হলো.`);
+
+    penaltyTimer = 15;
+    btn.disabled = true;
+    let cooldown = setInterval(()=>{
+      btn.innerText = `Wait ${penaltyTimer}s`;
+      penaltyTimer--;
+      if(penaltyTimer < 0){
+        clearInterval(cooldown);
+        btn.innerText = "Watch Ad (+10 coins)";
+        btn.disabled = false;
+      }
+    },1000);
+  }
+
+  localStorage.removeItem("pendingReward");
+  localStorage.removeItem("penaltyTime");
+});
+
+// Simulated / Gigapub Ad
+function showAd(duration=15){
+  btn.disabled = true;
+  adInProgress = true;
+  adCompleted = false;
+  let adTime = duration;
+  progressBar.style.width = '0%';
+  status.innerText = `Ad in progress (${adTime}s)`;
+
+  const timer = setInterval(()=>{
+    adTime--;
+    progressBar.style.width = ((duration - adTime)/duration)*100 + '%';
+    status.innerText = `Ad in progress (${adTime}s)`;
+    if(adTime <= 0){
+      clearInterval(timer);
+      adCompleted = true;
+      adInProgress = false;
+      generatedToken = Math.floor(1000 + Math.random()*9000).toString();
+      pendingReward = 10;
+      alert("Ad finished! Your token: " + generatedToken);
+      document.getElementById("token-section").style.display = "block";
+      progressBar.style.width = '0%';
+    }
+  },1000);
+}
+
+btn.addEventListener("click", ()=>{
+  if(typeof window.showGiga === "function"){
+    window.showGiga("gigapub-ad")
+      .then(()=>{
+        adCompleted = true;
+        adInProgress = false;
+        generatedToken = Math.floor(1000 + Math.random()*9000).toString();
+        pendingReward = 10;
+        alert("Ad finished! Your token: " + generatedToken);
+        document.getElementById("token-section").style.display = "block";
+      })
+      .catch(()=>{
+        adInProgress = false;
+        alert("Ad could not be loaded. Using simulated ad.");
+        showAd(15);
+      });
+  }else{
+    showAd(15);
+  }
+});
+
+// Claim token reward
+document.getElementById("claimBtn").addEventListener("click", ()=>{
+  let userToken = document.getElementById("tokenInput").value;
+  if(userToken === generatedToken){
+    updateBalance(pendingReward);
+    alert("✅ Correct token! +10 coins added.");
+    document.getElementById("token-section").style.display = "none";
+    document.getElementById("tokenInput").value = "";
+    adCompleted = false;
+    generatedToken = "";
+    pendingReward = 0;
+    btn.disabled = false;
+  }else{
+    alert("❌ Wrong token! Please watch the ad carefully.");
+  }
+});
+</script>
+
+</body>
+</html>
+
 
         <h4 class="mb-3">Daily Offers</h4>
         <div class="row g-3">
@@ -1063,7 +1221,7 @@
         storageBucket: "test-6977e.firebasestorage.app",
         messagingSenderId: "544329273038",
         appId: "1:544329273038:web:c7a31e12bec7c80741ca9f",
-        databaseURL: "https://test-6977e-default-rtdb.firebaseio.io/"
+        databaseURL: "https://test-6977e-default-rtdb.firebaseio.com/"
       };
 
       // Initialize Firebase
