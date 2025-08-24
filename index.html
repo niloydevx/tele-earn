@@ -1,106 +1,164 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Watch Ad and Claim Reward</title>
-<style>
-  body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
-  #adContainer { width: 300px; height: 250px; margin: 20px auto; border: 1px solid #ccc; }
-  button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-top: 10px; }
-  #claimBtn { display: none; background-color: #4CAF50; color: white; border: none; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ad Watch with Token</title>
+  <script src="https://ad.gigapub.tech/script?id=1872"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      text-align: center;
+      padding: 20px;
+    }
+    #adContainer {
+      position: relative;
+      width: 320px;
+      height: 250px;
+      margin: auto;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+    #overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      font-size: 22px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    #progress {
+      width: 80%;
+      height: 10px;
+      background: #333;
+      border-radius: 5px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    #bar {
+      height: 100%;
+      width: 0%;
+      background: limegreen;
+      transition: width 1s linear;
+    }
+    #tokenSection {
+      margin-top: 20px;
+      display: none;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: dodgerblue;
+      color: white;
+      font-size: 16px;
+    }
+    button:disabled {
+      background: gray;
+      cursor: not-allowed;
+    }
+  </style>
 </head>
 <body>
 
-<h2>Watch Ad to Claim Reward</h2>
-<button id="watchAdBtn">Watch Ad</button>
+<h2>🎁 Watch Ad to Get Token</h2>
 
-<div id="adContainer">Ad will appear here...</div>
+<div id="adContainer">
+  <div id="gigapub-ad"></div>
+  <div id="overlay">
+    <div>⏳ Please watch the ad fully</div>
+    <div id="progress"><div id="bar"></div></div>
+  </div>
+</div>
 
-<button id="claimBtn">Claim Reward</button>
-
-<!-- Gigapub script -->
-<script src="https://ad.gigapub.tech/script?id=1872" onload="initAd()"></script>
+<div id="tokenSection">
+  <p>Your Token: <b id="tokenValue"></b></p>
+  <input type="text" id="userInput" placeholder="Enter token">
+  <button id="claimBtn" disabled>Claim Reward</button>
+</div>
 
 <script>
-let adWatched = false;
-let rewardTimer;
+let token = "";
+let canClaim = false;
+let adCompleted = false;
+let adStartTime = Date.now();
 
-function initAd() {
-    const watchBtn = document.getElementById('watchAdBtn');
-    const claimBtn = document.getElementById('claimBtn');
-    const adContainer = document.getElementById('adContainer');
+function startProgress(duration = 15) {
+  const overlay = document.getElementById("overlay");
+  const bar = document.getElementById("bar");
+  let elapsed = 0;
 
-    // Click to watch ad
-    watchBtn.addEventListener('click', () => {
-        watchBtn.disabled = true;
-        adContainer.innerHTML = ''; // Clear previous content
+  const timer = setInterval(() => {
+    elapsed++;
+    bar.style.width = (elapsed / duration * 100) + "%";
 
-        try {
-            const ad = new GigaPubAd({
-                container: 'adContainer',
-                onAdStart: () => {
-                    console.log("Ad started");
-                    // 15-second timer before enabling reward
-                    rewardTimer = setTimeout(() => {
-                        adWatched = true;
-                        claimBtn.style.display = 'inline-block';
-                    }, 15000);
-                },
-                onAdError: (err) => {
-                    console.error("Error processing ad:", err);
-                    adContainer.innerHTML = "Failed to load ad. Please try again later.";
-                    watchBtn.disabled = false;
-                },
-                onAdComplete: () => {
-                    console.log("Ad completed");
-                }
-            });
-            ad.load();
-        } catch(e) {
-            console.error("Ad initialization failed:", e);
-            adContainer.innerHTML = "Ad cannot be loaded at this time.";
-            watchBtn.disabled = false;
-        }
-    });
-
-    // Prevent leaving page if ad not watched
-    window.addEventListener('beforeunload', function (e) {
-        if (!adWatched) {
-            e.preventDefault();
-            e.returnValue = 'You must watch the ad completely before leaving!';
-        }
-    });
-
-    // Claim reward
-    claimBtn.addEventListener('click', async () => {
-        if (!adWatched) {
-            alert("Wait at least 15 seconds before claiming reward.");
-            return;
-        }
-
-        try {
-            // Replace with your reward API
-            const response = await fetch('/api/reward', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: 'USER_ID' })
-            });
-
-            const result = await response.json();
-            if (result.success) {
-                alert("Reward added successfully!");
-                claimBtn.disabled = true;
-            } else {
-                alert("Failed to reward: " + result.message);
-            }
-        } catch (err) {
-            console.error(err);
-            alert("Error claiming reward.");
-        }
-    });
+    if (elapsed >= duration || adCompleted) {
+      clearInterval(timer);
+      overlay.style.display = "none";
+    }
+  }, 1000);
 }
+
+// Handle Claim
+document.getElementById("claimBtn").addEventListener("click", () => {
+  const userInput = document.getElementById("userInput").value;
+  const waited = (Date.now() - adStartTime) / 1000;
+
+  if (!adCompleted || waited < 15) {
+    alert("❌ Error processing ad\nYou must wait at least 15 seconds before claiming reward.");
+    return;
+  }
+
+  if (userInput === token) {
+    alert("✅ Token correct! Reward added.");
+  } else {
+    alert("❌ Wrong token, try again!");
+  }
+});
+
+// Load ad
+window.onload = () => {
+  if (typeof window.showGiga === "function") {
+    // Start overlay progress
+    startProgress(15);
+
+    try {
+      window.showGiga("gigapub-ad", {
+        onComplete: () => {
+          adCompleted = true;
+
+          // Generate secure token only after ad completes
+          token = Math.floor(1000 + Math.random() * 9000).toString();
+          document.getElementById("tokenValue").textContent = token;
+          document.getElementById("tokenSection").style.display = "block";
+          document.getElementById("claimBtn").disabled = false;
+        },
+        onError: () => {
+          alert("❌ Ad failed to load or complete. Token cannot be issued.");
+        }
+      });
+    } catch (err) {
+      console.error("Ad SDK error:", err);
+    }
+  } else {
+    console.error("GigaPub ad SDK not loaded properly.");
+  }
+};
+
+// Prevent cheating via refresh/back button
+window.onbeforeunload = () => {
+  if (!adCompleted) {
+    return "❌ You haven't completed the ad yet. Leaving will forfeit your reward!";
+  }
+};
 </script>
 
 </body>
