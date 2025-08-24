@@ -2319,5 +2319,248 @@
         return (amount * commissionPercentage) / 100;
       }
     </script>
+    <!-- Add this script to your HTML file, preferably before the closing </body> tag -->
+<script>
+// Video Rewards System with Balance Penalty
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize balance and state variables
+    let balance = parseInt(localStorage.getItem('balance')) || 0;
+    let adInProgress = false;
+    let adCompleted = false;
+    let generatedToken = "";
+    let pendingReward = 0;
+    let penaltyTimer = 0;
+    
+    // Get DOM elements
+    const btn = document.getElementById("watchAdBtn");
+    const statusEl = document.getElementById("adStatus");
+    const progressBar = document.getElementById("videoProgressBar");
+    const balanceEl = document.getElementById("balance");
+    const tokenSection = document.getElementById("tokenSection");
+    const tokenInput = document.getElementById("tokenInput");
+    const claimBtn = document.getElementById("claimBtn");
+    
+    // Update balance display
+    function updateBalanceDisplay() {
+        if (balanceEl) {
+            const formattedBalance = balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            balanceEl.innerText = formattedBalance;
+        }
+    }
+    
+    // Update balance value
+    function updateBalance(amount) {
+        balance += amount;
+        if (balance < 0) balance = 0;
+        localStorage.setItem('balance', balance);
+        updateBalanceDisplay();
+        
+        // Also update other balance displays if they exist
+        const otherBalanceElements = document.querySelectorAll('[id*="balance"], [id*="Balance"]');
+        otherBalanceElements.forEach(el => {
+            if (el !== balanceEl) {
+                const formattedBalance = balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                el.innerText = formattedBalance;
+            }
+        });
+    }
+    
+    // Save state before leaving (refresh/close)
+    window.addEventListener("beforeunload", () => {
+        if (adCompleted && generatedToken) {
+            // Save pending reward if token wasn't entered
+            localStorage.setItem("pendingReward", pendingReward);
+            localStorage.setItem("penaltyTime", Date.now());
+        } else {
+            localStorage.removeItem("pendingReward");
+        }
+    });
+    
+    // On load -> check penalty
+    window.addEventListener("load", () => {
+        let storedReward = parseInt(localStorage.getItem("pendingReward")) || 0;
+        let penaltyStart = parseInt(localStorage.getItem("penaltyTime")) || 0;
+        
+        if (storedReward > 0) {
+            // Apply penalty (half of pending reward)
+            let penalty = Math.floor(storedReward / 2);
+            updateBalance(-penalty);
+            
+            // Show penalty notification
+            showNotification("Penalty Applied", `❌ You didn't enter the token! ${penalty} BDT has been deducted from your balance.`, "danger");
+            
+            // Apply 15s cooldown
+            penaltyTimer = 15;
+            if (btn) {
+                btn.disabled = true;
+                let cooldown = setInterval(() => {
+                    btn.innerHTML = `<i class="bi bi-clock me-2"></i> Wait ${penaltyTimer}s`;
+                    penaltyTimer--;
+                    if (penaltyTimer < 0) {
+                        clearInterval(cooldown);
+                        const adReward = appConfig ? (appConfig.adsRewards || 0.2) : 0.2;
+                        btn.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
+                        btn.disabled = false;
+                    }
+                }, 1000);
+            }
+        }
+        
+        // Clear old state
+        localStorage.removeItem("pendingReward");
+        localStorage.removeItem("penaltyTime");
+        updateBalanceDisplay();
+    });
+    
+    // Simulated Ad function
+    function showAd(duration = 15) {
+        if (!btn || !statusEl) return;
+        
+        btn.disabled = true;
+        adInProgress = true;
+        adCompleted = false;
+        let adTime = duration;
+        
+        statusEl.textContent = `Video playing (${adTime}s remaining)`;
+        progressBar.style.width = '0%';
+        
+        const timer = setInterval(() => {
+            adTime--;
+            const progressPercent = ((duration - adTime) / duration) * 100;
+            progressBar.style.width = progressPercent + '%';
+            statusEl.textContent = `Video playing (${adTime}s remaining)`;
+            
+            if (adTime <= 0) {
+                clearInterval(timer);
+                adCompleted = true;
+                adInProgress = false;
+                
+                // Generate 4-digit token
+                generatedToken = Math.floor(1000 + Math.random() * 9000).toString();
+                pendingReward = appConfig ? (appConfig.adsRewards || 0.2) : 0.2;
+                
+                // Show token section
+                if (tokenSection) {
+                    tokenSection.style.display = "block";
+                }
+                
+                statusEl.textContent = "Video completed! Enter the code: " + generatedToken;
+                btn.disabled = false;
+                
+                // Show notification
+                showNotification("Video Completed", "Please enter the verification code shown during the video", "info");
+            }
+        }, 1000);
+    }
+    
+    // Handle ad button click
+    if (btn) {
+        btn.addEventListener("click", () => {
+            if (adInProgress) return;
+            
+            if (typeof window.showGiga === "function") {
+                // Use GigaPub ads if available
+                btn.disabled = true;
+                btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Loading...';
+                statusEl.textContent = "Loading video...";
+                
+                window.showGiga("gigapub-ad")
+                    .then(() => {
+                        adCompleted = true;
+                        adInProgress = false;
+                        
+                        // Generate 4-digit token
+                        generatedToken = Math.floor(1000 + Math.random() * 9000).toString();
+                        pendingReward = appConfig ? (appConfig.adsRewards || 0.2) : 0.2;
+                        
+                        // Show token section
+                        if (tokenSection) {
+                            tokenSection.style.display = "block";
+                        }
+                        
+                        statusEl.textContent = "Video completed! Enter the code shown in the video";
+                        const adReward = appConfig ? (appConfig.adsRewards || 0.2) : 0.2;
+                        btn.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
+                        btn.disabled = false;
+                        
+                        // Show notification
+                        showNotification("Video Completed", "Please enter the verification code shown during the video", "info");
+                    })
+                    .catch(() => {
+                        adInProgress = false;
+                        statusEl.textContent = "Failed to load video. Trying simulated version...";
+                        
+                        // Fallback to simulated ad
+                        setTimeout(() => {
+                            showAd(15);
+                        }, 1500);
+                    });
+            } else {
+                // Use simulated ad
+                showAd(15);
+            }
+        });
+    }
+    
+    // Handle claim button click
+    if (claimBtn) {
+        claimBtn.addEventListener("click", () => {
+            if (!tokenInput) return;
+            
+            let userToken = tokenInput.value;
+            if (userToken === generatedToken) {
+                // Correct token - award reward
+                updateBalance(pendingReward);
+                
+                // Hide token section
+                if (tokenSection) {
+                    tokenSection.style.display = "none";
+                }
+                
+                // Reset input
+                tokenInput.value = "";
+                
+                // Reset state
+                adCompleted = false;
+                generatedToken = "";
+                pendingReward = 0;
+                
+                // Show success message
+                showNotification("Success!", `✅ Correct code! +${pendingReward.toFixed(2)} BDT added to your balance.`, "success");
+                statusEl.textContent = "Reward claimed successfully!";
+                
+            } else {
+                // Wrong token
+                showNotification("Error", "❌ Wrong code! Please check and try again.", "danger");
+            }
+        });
+    }
+    
+    // Helper function to show notifications
+    function showNotification(title, message, type) {
+        // Check if notification area exists
+        const notificationArea = document.getElementById("notificationArea");
+        if (!notificationArea) return;
+        
+        const notification = document.createElement("div");
+        notification.className = `alert alert-${type} floating-notification alert-dismissible shadow`;
+        notification.innerHTML = `
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+            <strong>${title}</strong> ${message}
+        `;
+        
+        notificationArea.appendChild(notification);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            notification.classList.add("fade");
+            setTimeout(() => notification.remove(), 300);
+        }, 5000);
+    }
+    
+    // Initialize balance display
+    updateBalanceDisplay();
+});
+</script>
   </body>
 </html>
