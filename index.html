@@ -3,125 +3,74 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ad Watch with Token</title>
+<title>Ad Watch Reward</title>
 <script src="https://ad.gigapub.tech/script?id=1872"></script>
 <style>
-  body { font-family: Arial, sans-serif; background: #f9f9f9; text-align:center; padding:20px; }
-  #adContainer { position: relative; width: 320px; height: 250px; margin:auto; border:2px solid #ccc; border-radius:10px; overflow:hidden; background:#fff; }
-  #overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); color:#fff; font-size:22px; display:flex; justify-content:center; align-items:center; flex-direction:column; }
-  #progress { width:80%; height:10px; background:#333; border-radius:5px; margin-top:10px; overflow:hidden; }
-  #bar { height:100%; width:0%; background:limegreen; transition: width 1s linear; }
-  #tokenSection { margin-top:20px; display:none; }
-  button { padding:10px 20px; border:none; border-radius:8px; cursor:pointer; background:dodgerblue; color:white; font-size:16px; }
-  button:disabled { background:gray; cursor:not-allowed; }
+body { font-family: Arial,sans-serif; background:#f9f9f9; text-align:center; padding:20px; }
+#adContainer { position: relative; width: 320px; height: 250px; margin:auto; border:2px solid #ccc; border-radius:10px; overflow:hidden; background:#fff; display:none; }
+#messageSection { margin-top:20px; display:none; font-size:18px; color:green; }
+button { padding:10px 20px; border:none; border-radius:8px; cursor:pointer; background:dodgerblue; color:white; font-size:16px; }
+button:disabled { background:gray; cursor:not-allowed; }
 </style>
 </head>
 <body>
 
-<h2>🎁 Watch Ad to Get Token</h2>
+<h2>🎁 Watch Ad to Get Reward</h2>
+
+<button id="watchAdBtn">▶️ Watch Ad</button>
 
 <div id="adContainer">
   <div id="gigapub-ad"></div>
-  <div id="overlay">
-    <div>⏳ Please watch the ad fully</div>
-    <div id="progress"><div id="bar"></div></div>
-  </div>
 </div>
 
-<div id="tokenSection">
-  <p>Your Token: <b id="tokenValue"></b></p>
-  <input type="text" id="userInput" placeholder="Enter token">
-  <button id="claimBtn" disabled>Claim Reward</button>
-</div>
+<div id="messageSection">✅ Ad completed! Reward granted.</div>
 
 <script>
-let token = "";
 let adCompleted = false;
-let adStartTime = Date.now();
 
-// Prevent cheating via refresh/back
+// Warn on leaving mid-ad
 window.onbeforeunload = () => {
-  if (!adCompleted) {
+  if (!adCompleted && sessionStorage.getItem('adStartTime')) {
     return "❌ You haven't completed the ad yet. Leaving will forfeit your reward!";
   }
 };
 
-// Progress bar overlay
-function startProgress(duration = 15) {
-  const overlay = document.getElementById("overlay");
-  const bar = document.getElementById("bar");
-  let elapsed = 0;
-  const timer = setInterval(() => {
-    elapsed++;
-    bar.style.width = (elapsed / duration * 100) + "%";
-    if (elapsed >= duration || adCompleted) {
-      clearInterval(timer);
-      overlay.style.display = "none";
-    }
-  }, 1000);
-}
+document.getElementById("watchAdBtn").addEventListener("click", () => {
+  // Prevent multiple clicks
+  document.getElementById("watchAdBtn").disabled = true;
 
-// Claim button
-document.getElementById("claimBtn").addEventListener("click", () => {
-  const userInput = document.getElementById("userInput").value;
-  const waited = (Date.now() - adStartTime) / 1000;
-
-  if (!adCompleted || waited < 15) {
-    alert("❌ Error processing ad\nYou must wait at least 15 seconds before claiming reward.");
+  const storedCompleted = sessionStorage.getItem('adCompleted');
+  if(storedCompleted==='true'){
+    adCompleted = true;
+    document.getElementById("messageSection").style.display="block";
     return;
   }
 
-  if (userInput === token) {
-    alert("✅ Token correct! Reward added.");
-  } else {
-    alert("❌ Wrong token, try again!");
-  }
-});
+  // Save start time
+  sessionStorage.setItem('adStartTime', Date.now());
 
-window.onload = () => {
-  // Check session storage
-  const storedCompleted = sessionStorage.getItem('adCompleted');
-  const storedToken = sessionStorage.getItem('token');
+  // Show ad container
+  document.getElementById("adContainer").style.display = "block";
 
-  if (storedCompleted === 'true' && storedToken) {
-    adCompleted = true;
-    token = storedToken;
-    document.getElementById("tokenValue").textContent = token;
-    document.getElementById("tokenSection").style.display = "block";
-    document.getElementById("claimBtn").disabled = false;
-    document.getElementById("overlay").style.display = "none";
-    return; // Already completed, skip ad
-  } else if (sessionStorage.getItem('adStartTime')) {
-    alert("❌ Error: You must watch the ad fully before claiming reward.");
-  }
-
-  adStartTime = Date.now();
-  sessionStorage.setItem('adStartTime', adStartTime);
-
-  startProgress(15);
-
-  // Load ad
-  if (typeof window.showGiga === "function") {
-    window.showGiga("gigapub-ad", {
-      onComplete: () => {
+  // Load Gigapub ad
+  if(typeof window.showGiga==="function"){
+    window.showGiga("gigapub-ad",{
+      onComplete: ()=>{
         adCompleted = true;
-        sessionStorage.setItem('adCompleted', 'true');
-
-        token = Math.floor(1000 + Math.random() * 9000).toString();
-        sessionStorage.setItem('token', token);
-
-        document.getElementById("tokenValue").textContent = token;
-        document.getElementById("tokenSection").style.display = "block";
-        document.getElementById("claimBtn").disabled = false;
+        sessionStorage.setItem('adCompleted','true');
+        document.getElementById("messageSection").style.display="block";
       },
-      onError: () => {
-        alert("❌ Ad failed to load or complete. Token cannot be issued.");
+      onError:()=>{
+        alert("❌ Ad failed to load or complete. Reward cannot be granted.");
+        document.getElementById("watchAdBtn").disabled = false;
       }
     });
-  } else {
+  }else{
     console.error("GigaPub ad SDK not loaded properly.");
+    alert("❌ Ad SDK not ready. Try again later.");
+    document.getElementById("watchAdBtn").disabled = false;
   }
-};
+});
 </script>
 
 </body>
