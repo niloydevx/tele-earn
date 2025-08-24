@@ -20,8 +20,6 @@
   <p>Watch the ad for 15 seconds to get your token.</p>
   <button id="showAdBtn">Start Ad</button>
 
-  <!-- Gigapub Ad in fixed size -->
-
   <!-- Progress bar + status -->
   <div id="ad-status">
     <div id="progress-bar"></div>
@@ -96,19 +94,16 @@ window.addEventListener("load", ()=>{
   localStorage.removeItem("penaltyTime");
 });
 
-// Shared function (token generate + UI switch)
+// Shared function (UI switch at end)
 function finishAd(){
   adCompleted = true;
-  generatedToken = Math.floor(1000 + Math.random()*9000).toString();
-  pendingReward = 10;
-  alert("Ad finished! Your token: " + generatedToken);
   document.getElementById("ad-section").style.display = "none";
   document.getElementById("token-section").style.display = "block";
   progressBar.style.width = '0%';
   statusText.innerText = "";
 }
 
-// Simulated Ad (fallback)
+// Simulated Ad (with 5-second early token alert)
 function showAd(duration=15){
   btn.disabled = true;
   adCompleted = false;
@@ -120,9 +115,17 @@ function showAd(duration=15){
     adTime--;
     progressBar.style.width = ((duration - adTime)/duration)*100 + '%';
     statusText.innerText = `Ad in progress (${adTime}s)`;
+
+    // Show token alert 5 seconds before ad finishes
+    if(adTime === 5){
+      generatedToken = Math.floor(1000 + Math.random()*9000).toString();
+      pendingReward = 10;
+      alert("Ad almost done! Your token (in 5s): " + generatedToken);
+    }
+
     if(adTime <= 0){
       clearInterval(timer);
-      finishAd();
+      finishAd(); // final ad completion
       btn.disabled = false;
     }
   },1000);
@@ -132,7 +135,15 @@ function showAd(duration=15){
 btn.addEventListener("click", ()=>{
   if(typeof window.showGiga === "function"){
     window.showGiga("gigapub-ad-container")
-      .then(()=>{ finishAd(); })
+      .then(()=>{ 
+        // Show token 5 sec early for Gigapub fallback
+        setTimeout(()=>{
+          generatedToken = Math.floor(1000 + Math.random()*9000).toString();
+          pendingReward = 10;
+          alert("Ad almost done! Your token (in 5s): " + generatedToken);
+        }, 10000); // 15-5=10 seconds
+        setTimeout(finishAd,15000);
+      })
       .catch(()=>{
         alert("Ad could not be loaded. Using simulated ad.");
         showAd(15);
