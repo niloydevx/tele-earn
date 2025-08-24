@@ -1781,6 +1781,17 @@ function initVideoRewards() {
       .getElementById("claimBtn")
       .addEventListener("click", claimTokenReward);
   }
+
+  // Add event listener to token input for auto-submit
+  if (document.getElementById("tokenInput")) {
+    document
+      .getElementById("tokenInput")
+      .addEventListener("input", function() {
+        if (this.value.length === 4) {
+          claimTokenReward();
+        }
+      });
+  }
 }
 
 // Check for pending penalty on page load
@@ -2366,7 +2377,7 @@ function redeemPromoCode() {
   if (
     userData.usedPromoCodes &&
     userData.usedPromoCodes.includes(promoCode)
-  ) {
+    ) {
     return showNotification(
       "Error",
       "You have already used this promo code!",
