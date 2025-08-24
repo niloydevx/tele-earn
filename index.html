@@ -7,7 +7,7 @@
 <style>
   body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
   #adContainer { width: 300px; height: 250px; margin: 20px auto; border: 1px solid #ccc; }
-  button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+  button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-top: 10px; }
   #claimBtn { display: none; background-color: #4CAF50; color: white; border: none; }
 </style>
 </head>
@@ -16,7 +16,7 @@
 <h2>Watch Ad to Claim Reward</h2>
 <button id="watchAdBtn">Watch Ad</button>
 
-<div id="adContainer"></div>
+<div id="adContainer">Ad will appear here...</div>
 
 <button id="claimBtn">Claim Reward</button>
 
@@ -32,34 +32,40 @@ function initAd() {
     const claimBtn = document.getElementById('claimBtn');
     const adContainer = document.getElementById('adContainer');
 
+    // Click to watch ad
     watchBtn.addEventListener('click', () => {
         watchBtn.disabled = true;
-        adContainer.innerHTML = ''; // Clear previous ad if any
+        adContainer.innerHTML = ''; // Clear previous content
 
-        // Initialize the ad
-        const ad = new GigaPubAd({
-            container: 'adContainer',
-            onAdStart: () => {
-                console.log("Ad started");
-                // Start 15-second timer before claiming reward
-                rewardTimer = setTimeout(() => {
-                    adWatched = true;
-                    claimBtn.style.display = 'inline-block';
-                }, 15000);
-            },
-            onAdError: (err) => {
-                console.error("Error processing ad:", err);
-                alert("Ad failed to load. Please try again.");
-                watchBtn.disabled = false;
-            },
-            onAdComplete: () => {
-                console.log("Ad completed");
-            }
-        });
-        ad.load();
+        try {
+            const ad = new GigaPubAd({
+                container: 'adContainer',
+                onAdStart: () => {
+                    console.log("Ad started");
+                    // 15-second timer before enabling reward
+                    rewardTimer = setTimeout(() => {
+                        adWatched = true;
+                        claimBtn.style.display = 'inline-block';
+                    }, 15000);
+                },
+                onAdError: (err) => {
+                    console.error("Error processing ad:", err);
+                    adContainer.innerHTML = "Failed to load ad. Please try again later.";
+                    watchBtn.disabled = false;
+                },
+                onAdComplete: () => {
+                    console.log("Ad completed");
+                }
+            });
+            ad.load();
+        } catch(e) {
+            console.error("Ad initialization failed:", e);
+            adContainer.innerHTML = "Ad cannot be loaded at this time.";
+            watchBtn.disabled = false;
+        }
     });
 
-    // Prevent back/refresh if ad not watched
+    // Prevent leaving page if ad not watched
     window.addEventListener('beforeunload', function (e) {
         if (!adWatched) {
             e.preventDefault();
@@ -75,13 +81,14 @@ function initAd() {
         }
 
         try {
-            const response = await fetch('/api/reward', { // Replace with your reward API
+            // Replace with your reward API
+            const response = await fetch('/api/reward', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: 'USER_ID' })
             });
-            const result = await response.json();
 
+            const result = await response.json();
             if (result.success) {
                 alert("Reward added successfully!");
                 claimBtn.disabled = true;
