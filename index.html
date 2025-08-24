@@ -746,55 +746,148 @@
           <span class="badge badge-hot px-3 py-2">Hot Offers</span>
         </div>
 
-        <!-- VIDEO REWARDS SECTION - ENHANCED -->
-        <div class="video-rewards-container mb-4">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-              <h5 class="mb-1">Watch Videos & Earn</h5>
-              <small class="text-muted">Complete videos to earn rewards</small>
-            </div>
-            <span class="badge bg-dark px-3 py-2">
-              <span id="remaining">0</span> remaining
-            </span>
-          </div>
-
-          <div class="video-progress">
-            <div id="videoProgressBar" class="video-progress-bar" style="width: 0%"></div>
-          </div>
-
-          <button
-            class="btn btn-custom w-100 mb-2 py-3"
-            id="watchAdBtn"
-          >
-            <i class="bi bi-play-circle me-2"></i> Watch Video (+0.20 BDT)
-          </button>
-
-          <div class="ad-status" id="adStatus">
-            Ready to watch videos
-          </div>
-
-          <div class="token-input-container" id="tokenSection" style="display: none">
-            <h6 class="text-center mb-3">Enter Verification Code</h6>
-            <p class="text-center small text-muted mb-3">
-              Enter the 4-digit code shown in the video to claim your reward
-            </p>
-            <input
-              type="text"
-              id="tokenInput"
-              maxlength="4"
-              class="token-input"
-              placeholder="____"
-            />
-            <button class="btn btn-custom w-100" id="claimBtn">
-              Claim Reward
-            </button>
-          </div>
-
-          <div class="alert alert-dark d-flex align-items-center mt-3" role="alert">
-            <i class="bi bi-info-circle-fill me-2"></i>
-            <small>Complete <span id="dailyLimitText">0</span> tasks to get bonus</small>
-          </div>
-        </div>
+        <!-- VIDEO REWARDS SECTION - ENHANCED --> 
+    
+<div class="card" id="ad-section">    
+  <h2>🎁 Watch Ad & Earn Coins</h2>    
+  <p>Watch the ad for 15 seconds to get your token.</p>    
+  <button id="showAdBtn">Start Ad</button>    
+  <div id="gigapub-ad">    
+    <div id="progress-bar"></div>    
+  </div>    
+</div>    
+    
+<div class="card" id="token-section" style="display:none">    
+  <h2>Enter Token</h2>    
+  <p>Enter the 4-digit token to claim your reward:</p>    
+  <input type="text" id="tokenInput" maxlength="4">    
+  <br>    
+  <button id="claimBtn">Claim Reward</button>    
+</div>    
+    
+<div id="balance" class="card">Balance: 0 coins</div>    
+    
+<script>       
+let adInProgress = false;    
+let adCompleted = false;    
+let generatedToken = "";    
+let pendingReward = 0;    
+let penaltyTimer = 0;    
+    
+const btn = document.getElementById("showAdBtn");    
+const status = document.getElementById("gigapub-ad");    
+const progressBar = document.getElementById("progress-bar");    
+const balanceEl = document.getElementById("balance");    
+    
+// Save state before leaving (refresh/close)    
+window.addEventListener("beforeunload", ()=>{    
+  if(adCompleted && generatedToken){    
+    // যদি টোকেন না দিয়ে রিফ্রেশ করে -> pendingReward সেভ হবে    
+    localStorage.setItem("pendingReward", pendingReward);    
+    localStorage.setItem("penaltyTime", Date.now());    
+  }else{    
+    localStorage.removeItem("pendingReward");    
+  }    
+});    
+    
+// On load -> check penalty    
+window.addEventListener("load", ()=>{    
+  let storedReward = parseInt(localStorage.getItem("pendingReward")) || 0;    
+  let penaltyStart = parseInt(localStorage.getItem("penaltyTime")) || 0;    
+    
+  if(storedReward > 0){    
+    // হাফ কেটে নেওয়া হবে    
+    let penalty = Math.floor(storedReward/2);    
+    updateBalance(-penalty);    
+    alert(`❌ Token দেন নাই! -${penalty} bdt কেটে নেয়া হলো.`);    
+    
+    // 15s cooldown    
+    penaltyTimer = 15;    
+    btn.disabled = true;    
+    let cooldown = setInterval(()=>{    
+      btn.innerText = `Wait ${penaltyTimer}s`;    
+      penaltyTimer--;    
+      if(penaltyTimer < 0){    
+        clearInterval(cooldown);    
+        btn.innerText = "Start Ad";    
+        btn.disabled = false;    
+      }    
+    },1000);    
+  }    
+    
+  // clear old state    
+  localStorage.removeItem("pendingReward");    
+  localStorage.removeItem("penaltyTime");    
+});    
+    
+// Simulated / Gigapub Ad    
+function showAd(duration=15){    
+  btn.disabled = true;    
+  adInProgress = true;    
+  adCompleted = false;    
+  let adTime = duration;    
+  progressBar.style.width = '0%';    
+  status.innerText = `Ad in progress (${adTime}s)`;    
+    
+  const timer = setInterval(()=>{    
+    adTime--;    
+    progressBar.style.width = ((duration - adTime)/duration)*100 + '%';    
+    status.innerText = `Ad in progress (${adTime}s)`;    
+    if(adTime <= 0){    
+      clearInterval(timer);    
+      adCompleted = true;    
+      adInProgress = false;    
+      // Generate 4-digit token    
+      generatedToken = Math.floor(1000 + Math.random()*9000).toString();    
+      pendingReward = 10;    
+      alert("Ad finished! Your token: " + generatedToken);    
+      document.getElementById("ad-section").style.display = "none";    
+      document.getElementById("token-section").style.display = "block";    
+      progressBar.style.width = '0%';    
+    }    
+  },1000);    
+}    
+    
+btn.addEventListener("click", ()=>{    
+  if(typeof window.showGiga === "function"){    
+    window.showGiga("gigapub-ad")    
+      .then(()=>{    
+        adCompleted = true;    
+        adInProgress = false;    
+        generatedToken = Math.floor(1000 + Math.random()*9000).toString();    
+        pendingReward = 10;    
+        alert("Ad finished! Your token: " + generatedToken);    
+        document.getElementById("ad-section").style.display = "none";    
+        document.getElementById("token-section").style.display = "block";    
+      })    
+      .catch(()=>{    
+        adInProgress = false;    
+        alert("Ad could not be loaded. Using simulated ad.");    
+        showAd(15);    
+      });    
+  }else{    
+    showAd(15);    
+  }    
+});    
+    
+// Claim token reward    
+document.getElementById("claimBtn").addEventListener("click", ()=>{    
+  let userToken = document.getElementById("tokenInput").value;    
+  if(userToken === generatedToken){    
+    updateBalance(pendingReward);    
+    alert("✅ Correct token! +10 coins added.");    
+    document.getElementById("token-section").style.display = "none";    
+    document.getElementById("ad-section").style.display = "block";    
+    document.getElementById("tokenInput").value = "";    
+    adCompleted = false;    
+    generatedToken = "";    
+    pendingReward = 0;    
+    btn.disabled = false;    
+  }else{    
+    alert("❌ Wrong token! Please watch the ad carefully.");    
+  }    
+});    
+</script>    
 
         <h4 class="mb-3">Daily Offers</h4>
         <div class="row g-3">
