@@ -1178,6 +1178,7 @@ let adCompleted = false;
 let generatedToken = "";
 let pendingReward = 0;
 let penaltyTimer = 0;
+let adTimerInterval = null;
 
 // Initialize the application
 document.addEventListener("DOMContentLoaded", async function () {
@@ -1781,17 +1782,6 @@ function initVideoRewards() {
       .getElementById("claimBtn")
       .addEventListener("click", claimTokenReward);
   }
-
-  // Add event listener to token input for auto-submit
-  if (document.getElementById("tokenInput")) {
-    document
-      .getElementById("tokenInput")
-      .addEventListener("input", function() {
-        if (this.value.length === 4) {
-          claimTokenReward();
-        }
-      });
-  }
 }
 
 // Check for pending penalty on page load
@@ -1903,7 +1893,7 @@ async function watchAd() {
       showNotification("Video Completed", `Your verification code is: ${generatedToken}`, "info");
     } else {
       // Simulate ad completion if GigaPub is not available
-      simulateAd(14);
+      simulateAd(15);
     }
   } catch (e) {
     console.log("Ad failed or closed before completion", e);
@@ -1936,33 +1926,51 @@ function simulateAd(duration = 15) {
   statusEl.textContent = `Video playing (${adTime}s remaining)`;
   progressBar.style.width = '0%';
   
-  const timer = setInterval(() => {
+  // Clear any existing timer
+  if (adTimerInterval) {
+    clearInterval(adTimerInterval);
+  }
+  
+  adTimerInterval = setInterval(() => {
     adTime--;
     const progressPercent = ((duration - adTime) / duration) * 100;
     progressBar.style.width = progressPercent + '%';
     statusEl.textContent = `Video playing (${adTime}s remaining)`;
     
-    if (adTime <= 0) {
-      clearInterval(timer);
-      adCompleted = true;
-      adInProgress = false;
-      generatedToken = Math.floor(
-        1000 + Math.random() * 9000
-      ).toString();
+    // Show token 1 second before the ad ends
+    if (adTime === 1) {
+      generatedToken = Math.floor(1000 + Math.random() * 9000).toString();
       pendingReward = appConfig.adsRewards || 0.2;
       
-      // Show token section
+      // Show token section while ad is still playing
       document.getElementById("tokenSection").style.display = "block";
-      statusEl.textContent = "Video completed! Enter the code: " + generatedToken;
+      statusEl.textContent = "Enter the verification code: " + generatedToken;
+      
+      // Show notification with the token
+      showNotification("Verification Code", `Your code is: ${generatedToken}`, "info");
+    }
+    
+    if (adTime <= 0) {
+      clearInterval(adTimerInterval);
+      adTimerInterval = null;
+      adCompleted = true;
+      adInProgress = false;
+      
+      // If token wasn't already shown (edge case), show it now
+      if (!generatedToken) {
+        generatedToken = Math.floor(1000 + Math.random() * 9000).toString();
+        pendingReward = appConfig.adsRewards || 0.2;
+        document.getElementById("tokenSection").style.display = "block";
+        statusEl.textContent = "Video completed! Enter the code: " + generatedToken;
+        showNotification("Video Completed", `Your verification code is: ${generatedToken}`, "info");
+      }
+      
       adButton.disabled = false;
       
       // Save pending reward state to Firebase
       userData.pendingReward = pendingReward;
       userData.penaltyTime = Date.now();
       saveUserData();
-      
-      // Show notification instead of alert
-      showNotification("Video Completed", `Your verification code is: ${generatedToken}`, "info");
     }
   }, 1000);
 }
@@ -2516,7 +2524,6 @@ function showNotification(title, message, type) {
 function calculateReferralEarnings(amount) {
   const commissionPercentage = appConfig.referralCommission || 10;
   return (amount * commissionPercentage) / 100;
-}
-  </script>
+}</script>
   </body>
 </html>
