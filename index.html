@@ -1,166 +1,169 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ad Watch with Token</title>
-<script src="https://ad.gigapub.tech/script?id=1872"></script>
-<style>
-  body { font-family: Arial; text-align:center; padding:20px; background:#f9f9f9; }
-  .card { background:#fff; padding:20px; margin:30px auto; border-radius:10px; max-width:400px; box-shadow:0 4px 8px rgba(0,0,0,0.1);}
-  button { padding:12px 25px; font-size:16px; border:none; border-radius:8px; background:#4CAF50; color:#fff; cursor:pointer; margin-top:10px; }
-  input { padding:10px; font-size:16px; width:100px; text-align:center; margin-top:10px; }
-  #progress-bar { width:0%; height:5px; background:green; margin-top:10px; border-radius:3px; }
-</style>
-</head>
-<body>
-
-<div class="card" id="ad-section">
-  <h2>🎁 Watch Ad & Earn Coins</h2>
-  <p>Watch the ad for 15 seconds to get your token.</p>
-  <button id="showAdBtn">Start Ad</button>
-
-  <!-- এখানে শুধু Gigapub ad আসবে -->
-  <div id="gigapub-ad"></div>
-
-  <!-- Progress bar + status -->
-  <div id="ad-status">
-    <div id="progress-bar"></div>
-    <p id="statusText"></p>
-  </div>
-</div>
-
-<div class="card" id="token-section" style="display:none">
-  <h2>Enter Token</h2>
-  <p>Enter the 4-digit token to claim your reward:</p>
-  <input type="text" id="tokenInput" maxlength="4">
-  <br>
-  <button id="claimBtn">Claim Reward</button>
-</div>
-
-<div id="balance" class="card">Balance: 0 coins</div>
-
-<script>
-let balance = parseInt(localStorage.getItem('balance')) || 0;
-let adCompleted = false;
-let generatedToken = "";
-let pendingReward = 0;
-let penaltyTimer = 0;
-
-const btn = document.getElementById("showAdBtn");
-const progressBar = document.getElementById("progress-bar");
-const statusText = document.getElementById("statusText");
-const balanceEl = document.getElementById("balance");
-
-// Balance update
-function updateBalance(amount){
-  balance += amount;
-  if(balance < 0) balance = 0;
-  localStorage.setItem('balance', balance);
-  balanceEl.innerText = `Balance: ${balance} coins`;
-}
-updateBalance(0); // initial load
-
-// Save state before leaving (refresh/close)
-window.addEventListener("beforeunload", ()=>{
-  if(adCompleted && generatedToken){
-    localStorage.setItem("pendingReward", pendingReward);
-    localStorage.setItem("penaltyTime", Date.now());
-  } else {
-    localStorage.removeItem("pendingReward");
-    localStorage.removeItem("penaltyTime");
-  }
-});
-
-// On load -> check penalty
-window.addEventListener("load", ()=>{
-  let storedReward = parseInt(localStorage.getItem("pendingReward")) || 0;
-  if(storedReward > 0){
-    let penalty = Math.floor(storedReward/2);
-    updateBalance(-penalty);
-    alert(`❌ Token দেন নাই! -${penalty} coins কেটে নেয়া হলো.`);
-
-    // cooldown
-    penaltyTimer = 15;
-    btn.disabled = true;
-    let cooldown = setInterval(()=>{
-      btn.innerText = `Wait ${penaltyTimer}s`;
-      penaltyTimer--;
-      if(penaltyTimer < 0){
-        clearInterval(cooldown);
-        btn.innerText = "Start Ad";
-        btn.disabled = false;
-      }
-    },1000);
-  }
-  localStorage.removeItem("pendingReward");
-  localStorage.removeItem("penaltyTime");
-});
-
-// Shared function (token generate + UI switch)
-function finishAd(){
-  adCompleted = true;
-  generatedToken = Math.floor(1000 + Math.random()*9000).toString();
-  pendingReward = 10;
-  alert("Ad finished! Your token: " + generatedToken);
-  document.getElementById("ad-section").style.display = "none";
-  document.getElementById("token-section").style.display = "block";
-  progressBar.style.width = '0%';
-  statusText.innerText = "";
-}
-
-// Simulated Ad (fallback)
-function showAd(duration=15){
-  btn.disabled = true;
-  adCompleted = false;
-  let adTime = duration;
-  progressBar.style.width = '0%';
-  statusText.innerText = `Ad in progress (${adTime}s)`;
-
-  const timer = setInterval(()=>{
-    adTime--;
-    progressBar.style.width = ((duration - adTime)/duration)*100 + '%';
-    statusText.innerText = `Ad in progress (${adTime}s)`;
-    if(adTime <= 0){
-      clearInterval(timer);
-      finishAd();
-      btn.disabled = false;
-    }
-  },1000);
-}
-
-// Main Button (Gigapub + fallback)
-btn.addEventListener("click", ()=>{
-  if(typeof window.showGiga === "function"){
-    window.showGiga("gigapub-ad")
-      .then(()=>{ finishAd(); })
-      .catch(()=>{
-        alert("Ad could not be loaded. Using simulated ad.");
-        showAd(15);
-      });
-  } else {
-    showAd(15);
-  }
-});
-
-// Claim token reward
-document.getElementById("claimBtn").addEventListener("click", ()=>{
-  let userToken = document.getElementById("tokenInput").value;
-  if(userToken === generatedToken){
-    updateBalance(pendingReward);
-    alert("✅ Correct token! +10 coins added.");
-    document.getElementById("token-section").style.display = "none";
-    document.getElementById("ad-section").style.display = "block";
-    document.getElementById("tokenInput").value = "";
-    adCompleted = false;
-    generatedToken = "";
-    pendingReward = 0;
-    btn.disabled = false;
-  } else {
-    alert("❌ Wrong token! Please watch the ad carefully.");
-  }
-});
-</script>
-
-</body>
+<!DOCTYPE html>    
+<html lang="en">    
+<head>    
+<meta charset="UTF-8">    
+<meta name="viewport" content="width=device-width, initial-scale=1.0">    
+<title>Ad Watch with Token</title>    
+<script src="https://ad.gigapub.tech/script?id=1872"></script>    
+<style>    
+  body { font-family: Arial; text-align:center; padding:20px; background:#f9f9f9; }    
+  .card { background:#fff; padding:20px; margin:30px auto; border-radius:10px; max-width:400px; box-shadow:0 4px 8px rgba(0,0,0,0.1);}    
+  button { padding:12px 25px; font-size:16px; border:none; border-radius:8px; background:#4CAF50; color:#fff; cursor:pointer; margin-top:10px; }    
+  input { padding:10px; font-size:16px; width:100px; text-align:center; margin-top:10px; }    
+  #progress-bar { width:0%; height:5px; background:green; margin-top:10px; }    
+</style>    
+</head>    
+<body>    
+    
+<div class="card" id="ad-section">    
+  <h2>🎁 Watch Ad & Earn Coins</h2>    
+  <p>Watch the ad for 15 seconds to get your token.</p>    
+  <button id="showAdBtn">Start Ad</button>    
+  <div id="gigapub-ad">    
+    <div id="progress-bar"></div>    
+  </div>    
+</div>    
+    
+<div class="card" id="token-section" style="display:none">    
+  <h2>Enter Token</h2>    
+  <p>Enter the 4-digit token to claim your reward:</p>    
+  <input type="text" id="tokenInput" maxlength="4">    
+  <br>    
+  <button id="claimBtn">Claim Reward</button>    
+</div>    
+    
+<div id="balance" class="card">Balance: 0 coins</div>    
+    
+<script>    
+let balance = parseInt(localStorage.getItem('balance')) || 0;    
+let adInProgress = false;    
+let adCompleted = false;    
+let generatedToken = "";    
+let pendingReward = 0;    
+let penaltyTimer = 0;    
+    
+const btn = document.getElementById("showAdBtn");    
+const status = document.getElementById("gigapub-ad");    
+const progressBar = document.getElementById("progress-bar");    
+const balanceEl = document.getElementById("balance");    
+    
+// Update balance    
+function updateBalance(amount){    
+  balance += amount;    
+  if(balance < 0) balance = 0;    
+  localStorage.setItem('balance', balance);    
+  balanceEl.innerText = `Balance: ${balance} coins`;    
+}    
+    
+// Save state before leaving (refresh/close)    
+window.addEventListener("beforeunload", ()=>{    
+  if(adCompleted && generatedToken){    
+    // যদি টোকেন না দিয়ে রিফ্রেশ করে -> pendingReward সেভ হবে    
+    localStorage.setItem("pendingReward", pendingReward);    
+    localStorage.setItem("penaltyTime", Date.now());    
+  }else{    
+    localStorage.removeItem("pendingReward");    
+  }    
+});    
+    
+// On load -> check penalty    
+window.addEventListener("load", ()=>{    
+  let storedReward = parseInt(localStorage.getItem("pendingReward")) || 0;    
+  let penaltyStart = parseInt(localStorage.getItem("penaltyTime")) || 0;    
+    
+  if(storedReward > 0){    
+    // হাফ কেটে নেওয়া হবে    
+    let penalty = Math.floor(storedReward/2);    
+    updateBalance(-penalty);    
+    alert(`❌ Token দেন নাই! -${penalty} coins কেটে নেয়া হলো.`);    
+    
+    // 15s cooldown    
+    penaltyTimer = 15;    
+    btn.disabled = true;    
+    let cooldown = setInterval(()=>{    
+      btn.innerText = `Wait ${penaltyTimer}s`;    
+      penaltyTimer--;    
+      if(penaltyTimer < 0){    
+        clearInterval(cooldown);    
+        btn.innerText = "Start Ad";    
+        btn.disabled = false;    
+      }    
+    },1000);    
+  }    
+    
+  // clear old state    
+  localStorage.removeItem("pendingReward");    
+  localStorage.removeItem("penaltyTime");    
+});    
+    
+// Simulated / Gigapub Ad    
+function showAd(duration=15){    
+  btn.disabled = true;    
+  adInProgress = true;    
+  adCompleted = false;    
+  let adTime = duration;    
+  progressBar.style.width = '0%';    
+  status.innerText = `Ad in progress (${adTime}s)`;    
+    
+  const timer = setInterval(()=>{    
+    adTime--;    
+    progressBar.style.width = ((duration - adTime)/duration)*100 + '%';    
+    status.innerText = `Ad in progress (${adTime}s)`;    
+    if(adTime <= 0){    
+      clearInterval(timer);    
+      adCompleted = true;    
+      adInProgress = false;    
+      // Generate 4-digit token    
+      generatedToken = Math.floor(1000 + Math.random()*9000).toString();    
+      pendingReward = 10;    
+      alert("Ad finished! Your token: " + generatedToken);    
+      document.getElementById("ad-section").style.display = "none";    
+      document.getElementById("token-section").style.display = "block";    
+      progressBar.style.width = '0%';    
+    }    
+  },1000);    
+}    
+    
+btn.addEventListener("click", ()=>{    
+  if(typeof window.showGiga === "function"){    
+    window.showGiga("gigapub-ad")    
+      .then(()=>{    
+        adCompleted = true;    
+        adInProgress = false;    
+        generatedToken = Math.floor(1000 + Math.random()*9000).toString();    
+        pendingReward = 10;    
+        alert("Ad finished! Your token: " + generatedToken);    
+        document.getElementById("ad-section").style.display = "none";    
+        document.getElementById("token-section").style.display = "block";    
+      })    
+      .catch(()=>{    
+        adInProgress = false;    
+        alert("Ad could not be loaded. Using simulated ad.");    
+        showAd(15);    
+      });    
+  }else{    
+    showAd(15);    
+  }    
+});    
+    
+// Claim token reward    
+document.getElementById("claimBtn").addEventListener("click", ()=>{    
+  let userToken = document.getElementById("tokenInput").value;    
+  if(userToken === generatedToken){    
+    updateBalance(pendingReward);    
+    alert("✅ Correct token! +10 coins added.");    
+    document.getElementById("token-section").style.display = "none";    
+    document.getElementById("ad-section").style.display = "block";    
+    document.getElementById("tokenInput").value = "";    
+    adCompleted = false;    
+    generatedToken = "";    
+    pendingReward = 0;    
+    btn.disabled = false;    
+  }else{    
+    alert("❌ Wrong token! Please watch the ad carefully.");    
+  }    
+});    
+</script>    
+    
+</body>    
 </html>
