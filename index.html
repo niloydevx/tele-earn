@@ -990,14 +990,39 @@
           </h5>
 
           <div class="mb-3">
-            <label class="fw-bold mb-2">Withdrawal Method</label>
-            <select class="form-select mb-3" id="method">
-              <option value="">Select a method</option>
-              <option>Bkash</option>
-              <option>Nagad</option>
-              <option>Binance Id</option>
-            </select>
-          </div>
+  <label class="fw-bold mb-2">Withdrawal Method</label>
+  <select class="form-select mb-3" id="method">
+    <option value="">Select a method</option>
+  </select>
+</div>
+
+<script>
+  // Reference to your Firebase database path where withdrawal methods are stored
+  const withdrawalRef = firebase.database().ref('withdrawalMethods');
+
+  // Load methods from Firebase
+  function loadWithdrawalMethods() {
+    const select = document.getElementById("method");
+    select.innerHTML = '<option value="">Select a method</option>'; // Reset
+
+    withdrawalRef.once('value')
+      .then(snapshot => {
+        const methods = snapshot.val();
+        if (methods) {
+          Object.keys(methods).forEach(key => {
+            const option = document.createElement("option");
+            option.value = methods[key];
+            option.textContent = methods[key];
+            select.appendChild(option);
+          });
+        }
+      })
+      .catch(err => console.error("Error loading withdrawal methods:", err));
+  }
+
+  // Call this on page load
+  loadWithdrawalMethods();
+</script>
 
           <div class="mb-3">
             <label class="fw-bold mb-2">Amount (BDT)</label>
