@@ -1686,7 +1686,11 @@ async function checkForDuplicateAccounts(isNewUser = false) {
 
               if (isNewUser) {
                 // Prevent creating new account
-                showNotification("Device already registered", "danger");
+                showNotification(
+                  "Error","                
+                  "Device already registered",
+                  "danger"
+                );
                 document
                   .getElementById("bannedScreen")
                   .classList.remove("hidden");
@@ -1722,7 +1726,11 @@ async function checkForDuplicateAccounts(isNewUser = false) {
       }
 
       if (duplicateFound && !isNewUser) {
-        showNotification("Multiple accounts detected", "warning");
+        showNotification(
+          "Warning",
+          "Multiple accounts detected",
+          "warning"
+        );
       }
     })
     .catch((error) => {
@@ -2663,4 +2671,4 @@ function calculateReferralEarnings(amount) {
 }
 </script>
   </body>
-</html>
+</html
