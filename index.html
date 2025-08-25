@@ -559,6 +559,15 @@
         box-shadow: none;
       }
 
+      /* Cooldown timer styles */
+      .cooldown-timer {
+        font-size: 14px;
+        color: #ffcc00;
+        text-align: center;
+        margin-top: 10px;
+        display: none;
+      }
+
       /* Responsive adjustments */
       @media (max-width: 576px) {
         .cover-img {
@@ -791,6 +800,11 @@
           >
             <i class="bi bi-check-circle me-2"></i> Claim Reward (+0.20 BDT)
           </button>
+
+          <div class="cooldown-timer" id="cooldownTimer">
+            <i class="bi bi-clock-history me-1"></i>
+            Please wait: <span id="cooldownSeconds">15</span> seconds
+          </div>
 
           <div class="ad-status" id="adStatus">
             Ready to watch videos
@@ -1184,6 +1198,8 @@ const MIN_WAIT_SEC = 15;
 let sessionActive = false;
 let adStartTime = 0;
 let sessionClaimed = false;
+let cooldownInterval = null;
+let cooldownEndTime = 0;
 
 // Initialize the application
 document.addEventListener("DOMContentLoaded", async function () {
@@ -1216,6 +1232,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   // Initialize video rewards system
   initVideoRewards();
+  
+  // Check for active cooldown
+  checkCooldownStatus();
 });
 
 // Get user IP address
@@ -1352,7 +1371,7 @@ async function loadAppConfig() {
           document.getElementById("dailyLimitText").textContent = "60";
         }
         if (document.getElementById("minWithdraw")) {
-          document.getElementById("minWithdraw").textContent = "50";
+          document.getElementById("minWaitSec").textContent = "50";
         }
         if (document.getElementById("minWithdrawInfo")) {
           document.getElementById("minWithdrawInfo").textContent = "50";
@@ -1421,6 +1440,7 @@ async function loadUserData() {
             deviceID: deviceID,
             usedPromoCodes: [],
             completedSurveys: {},
+            lastAdAttempt: 0,
           };
 
           // Save new user to Firebase
@@ -1499,6 +1519,7 @@ async function loadUserData() {
           deviceID: deviceID,
           usedPromoCodes: [],
           completedSurveys: {},
+          lastAdAttempt: 0,
         };
         resolve();
       });
@@ -1793,6 +1814,55 @@ function waitForGiga() {
   });
 }
 
+// Check cooldown status on page load
+function checkCooldownStatus() {
+  if (userData && userData.lastAdAttempt) {
+    const now = Date.now();
+    const timeSinceLastAttempt = (now - userData.lastAdAttempt) / 1000;
+    const timeRemaining = MIN_WAIT_SEC - timeSinceLastAttempt;
+    
+    if (timeRemaining > 0) {
+      // Still in cooldown period
+      startCooldown(timeRemaining);
+    }
+  }
+}
+
+// Start cooldown timer
+function startCooldown(seconds) {
+  const adButton = document.getElementById("watchAdBtn");
+  const claimButton = document.getElementById("claimRewardBtn");
+  const cooldownTimer = document.getElementById("cooldownTimer");
+  const cooldownSeconds = document.getElementById("cooldownSeconds");
+  
+  // Disable buttons and show cooldown timer
+  adButton.disabled = true;
+  claimButton.style.display = "none";
+  cooldownTimer.style.display = "block";
+  
+  let remainingSeconds = Math.ceil(seconds);
+  cooldownSeconds.textContent = remainingSeconds;
+  
+  // Update cooldown timer
+  cooldownInterval = setInterval(() => {
+    remainingSeconds--;
+    cooldownSeconds.textContent = remainingSeconds;
+    
+    if (remainingSeconds <= 0) {
+      clearInterval(cooldownInterval);
+      cooldownTimer.style.display = "none";
+      adButton.disabled = false;
+      
+      // Reset ad button text
+      const adReward = appConfig.adsRewards || 0.2;
+      adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
+      
+      // Update status
+      document.getElementById("adStatus").textContent = "Ready to watch videos";
+    }
+  }, 1000);
+}
+
 // Watch ad function for video rewards
 async function watchAd() {
   if (userData.completedTasks >= appConfig.dailyLimit) {
@@ -1826,6 +1896,10 @@ async function watchAd() {
     // Update status
     statusEl.textContent = "Loading ad…";
     setProgress(0);
+
+    // Record ad attempt time
+    userData.lastAdAttempt = Date.now();
+    saveUserData();
 
     // Wait for GigaPub to load
     await waitForGiga();
@@ -1893,9 +1967,12 @@ function claimReward() {
 
   let elapsed = (Date.now() - adStartTime) / 1000;
   if (elapsed < MIN_WAIT_SEC) {
+    // Start cooldown period
+    startCooldown(MIN_WAIT_SEC - elapsed);
+    
     showNotification(
       "Error",
-      `You must wait at least ${MIN_WAIT_SEC}s. Waited: ${elapsed.toFixed(2)}s`,
+      `You must wait at least ${MIN_WAIT_SEC}s. Please wait and try again.`,
       "danger"
     );
     return;
@@ -1915,6 +1992,7 @@ function claimReward() {
   userData.completedTasks++;
   userData.balance += rewardAmount;
   userData.totalEarnings += rewardAmount;
+  userData.lastAdAttempt = 0; // Reset cooldown
 
   // Add to history
   userData.history.unshift({
