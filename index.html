@@ -997,22 +997,20 @@
 </div>
 
 <script>
-  // Reference to your Firebase database path where withdrawal methods are stored
-  const withdrawalRef = firebase.database().ref('withdrawalMethods');
-
-  // Load methods from Firebase
+  // Load payment/withdrawal methods from appConfig.paymentMethods
   function loadWithdrawalMethods() {
     const select = document.getElementById("method");
     select.innerHTML = '<option value="">Select a method</option>'; // Reset
 
-    withdrawalRef.once('value')
+    // Fetch appConfig from Firebase
+    firebase.database().ref('appConfig').once('value')
       .then(snapshot => {
-        const methods = snapshot.val();
-        if (methods) {
-          Object.keys(methods).forEach(key => {
+        const appConfig = snapshot.val();
+        if (appConfig && appConfig.paymentMethods) {
+          appConfig.paymentMethods.forEach(method => {
             const option = document.createElement("option");
-            option.value = methods[key];
-            option.textContent = methods[key];
+            option.value = method;
+            option.textContent = method;
             select.appendChild(option);
           });
         }
@@ -1020,7 +1018,7 @@
       .catch(err => console.error("Error loading withdrawal methods:", err));
   }
 
-  // Call this on page load
+  // Call on page load
   loadWithdrawalMethods();
 </script>
 
