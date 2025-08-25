@@ -1686,7 +1686,7 @@ async function checkForDuplicateAccounts(isNewUser = false) {
 
               if (isNewUser) {
                 // Prevent creating new account
-                showNotification("Account already exists on this device.");
+                showNotification("Device already registered", "danger");
                 document
                   .getElementById("bannedScreen")
                   .classList.remove("hidden");
@@ -1722,7 +1722,7 @@ async function checkForDuplicateAccounts(isNewUser = false) {
       }
 
       if (duplicateFound && !isNewUser) {
-        showNotification("Multiple accounts detected.");
+        showNotification("Multiple accounts detected", "warning");
       }
     })
     .catch((error) => {
@@ -1913,7 +1913,11 @@ function saveUserData() {
     .set(userData)
     .catch((error) => {
       console.error("Error saving user data:", error);
-      showNotification("Failed to save data. Check your connection.");
+      showNotification(
+        "Error",
+        "Failed to save data. Please check your connection.",
+        "danger"
+      );
     });
 }
 
@@ -2022,12 +2026,20 @@ function startCooldown(seconds) {
 // Watch ad function for video rewards
 async function watchAd() {
   if (userData.completedTasks >= appConfig.dailyLimit) {
-    showNotification("All tasks completed for today!");
+    showNotification(
+      "Completed!",
+      "All tasks completed for today!",
+      "info"
+    );
     return;
   }
 
   if (sessionActive) {
-    showNotification("Complete the current video first.");
+    showNotification(
+      "Info",
+      "Please complete the current video first",
+      "info"
+    );
     return;
   }
 
@@ -2066,7 +2078,11 @@ async function watchAd() {
     claimButton.disabled = false;
   } catch (e) {
     console.error("Ad failed or closed before completion", e);
-    showNotification("Video not loaded. Try again.");
+    showNotification(
+      "Error",
+      "Video not loaded. Please try again.",
+      "danger"
+    );
     
     // Reset button state
     const adButton = document.getElementById("watchAdBtn");
@@ -2092,12 +2108,20 @@ function setProgress(p) {
 // Claim reward after watching ad
 function claimReward() {
   if (!sessionActive) {
-    showNotification("No active ad session.");
+    showNotification(
+      "Error",
+      "No active ad session",
+      "danger"
+    );
     return;
   }
 
   if (sessionClaimed) {
-    showNotification("Reward already claimed for this session");
+    showNotification(
+      "Info",
+      "Reward already claimed for this session",
+      "info"
+    );
     return;
   }
 
@@ -2281,7 +2305,11 @@ function startSurvey(surveyId) {
 
   // Check if user has already completed this survey
   if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
-    showNotification("You have already completed this.");
+    showNotification(
+      "Info",
+      "You have already completed this survey.",
+      "info"
+    );
     return;
   }
 
@@ -2303,9 +2331,16 @@ function startSurvey(surveyId) {
     );
 
     // Show instructions
-    showNotification("Finish the survey & click Verify to claim.");
+    showNotification(
+      "Info",
+      "Survey opened in new tab. Complete it and click Verify to claim your reward.",
+      "info"
+    );
   } else {
-    showNotification("All tasks completed for today!"
+    showNotification(
+      "Completed!",
+      "All tasks completed for today!",
+      "info"
     );
   }
 }
@@ -2317,15 +2352,25 @@ function verifySurvey(surveyId) {
 
   // Check if user has completed this survey
   if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
-    showNotification("Reward already claimed.");
+    showNotification(
+      "Info",
+      "You have already claimed the reward for this survey.",
+      "info"
+    );
   } else {
     // Ask user if they completed the survey
-    const completed = confirm("Survey done? OK to claim.");
+    const completed = confirm(
+      "Have you completed the survey? Click OK to claim your reward, or Cancel if you didn't finish it."
+    );
 
     if (completed) {
       completeSurvey(survey);
     } else {
-      showNotification("Complete the survey before claiming.");
+      showNotification(
+        "Info",
+        "Survey not completed. Please finish the survey before claiming.",
+        "info"
+      );
     }
   }
 }
