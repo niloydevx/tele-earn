@@ -568,6 +568,116 @@
         display: none;
       }
 
+      /* NEW SURVEY CARD STYLES */
+      .giveaway-card {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(14px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: white;
+        padding: 28px 32px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        width: 100%;
+        justify-content: space-between;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+        transition: all 0.25s ease-in-out;
+        margin-bottom: 20px;
+      }
+
+      .giveaway-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 16px 40px rgba(0,0,0,0.55);
+      }
+
+      .info span {
+        font-size: 14px;
+        color: #bbb;
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      .amount {
+        font-size: 22px;
+        font-weight: 700;
+        color: #00e5ff;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        text-shadow: 0 0 10px rgba(0,229,255,0.6);
+      }
+
+      .icon {
+        font-size: 22px;
+      }
+
+      .survey-logo {
+        width: 54px;
+        height: 54px;
+        object-fit: cover;
+        border-radius: 14px;
+        border: 2px solid #00e5ff;
+        box-shadow: 0 0 10px rgba(0,229,255,0.5);
+      }
+
+      .survey-btn {
+        font-size: 15px;
+        font-weight: 600;
+        padding: 8px 20px;
+        border-radius: 14px;
+        transition: all 0.25s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .survey-check-btn {
+        background: linear-gradient(45deg, #0066ff, #00c6ff);
+        border: none;
+        color: white;
+      }
+
+      .survey-check-btn:hover:not(:disabled) {
+        background: linear-gradient(45deg, #0044cc, #0099cc);
+        transform: scale(1.07);
+        box-shadow: 0 4px 12px rgba(0,198,255,0.5);
+      }
+
+      .survey-claim-btn {
+        background: linear-gradient(45deg, #00c851, #2bbbad);
+        border: none;
+        color: white;
+      }
+
+      .survey-claim-btn:hover:not(:disabled) {
+        background: linear-gradient(45deg, #009944, #229988);
+        box-shadow: 0 4px 12px rgba(0,200,120,0.5);
+      }
+
+      .survey-claimed-btn {
+        background: #6c757d;
+        border: none;
+        color: white;
+        cursor: not-allowed;
+      }
+
+      /* Toast Custom Styling */
+      .toast-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+      }
+
+      .toast {
+        background: rgba(40,40,40,0.95);
+        color: #fff;
+        border-radius: 12px;
+        padding: 12px 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      }
+
       /* Responsive adjustments */
       @media (max-width: 576px) {
         .cover-img {
@@ -597,6 +707,12 @@
 
         #vpnCheck .vpn-check-container {
           padding: 1.5rem 1rem;
+        }
+        
+        .giveaway-card {
+          padding: 20px;
+          flex-direction: column;
+          text-align: center;
         }
       }
     </style>
@@ -690,7 +806,7 @@
         <div class="position-relative mb-4 mt-2">
           <img
             id="coverImg"
-            src="https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg"
+            src="https://res.cloudinary/demo/image/upload/v1648039207/sample.jpg"
             class="img-fluid cover-img shadow-lg w-100"
             alt="Cover"
           />
@@ -1115,7 +1231,7 @@
       <!-- SURVEY PAGE (hidden by default) -->
       <div id="surveyPage" class="container survey-container hidden">
         <h3 class="mb-4 fw-bold text-center">✨ Available Surveys</h3>
-        <div class="row g-4" id="surveysContainer">
+        <div id="surveysContainer">
           <!-- Surveys will be loaded dynamically -->
         </div>
 
@@ -2074,7 +2190,7 @@ function hideSurveyPage() {
     .classList.add("active");
 }
 
-// Load surveys
+// Load surveys with new design
 function loadSurveys() {
   const surveysContainer = document.getElementById("surveysContainer");
   if (!surveysContainer) return;
@@ -2092,45 +2208,19 @@ function loadSurveys() {
       userData.completedSurveys && userData.completedSurveys[survey.id];
 
     const surveyHTML = `
-      <div class="col-12 mb-3">
-        <div class="card survey-card p-3 ${
-          isCompleted ? "opacity-75 border-success" : "border-warning"
-        }">
-          <div class="d-flex align-items-start">
-            <!-- Survey Logo -->
-            <img 
-              src="${survey.image}" 
-              alt="${survey.name}" 
-              class="rounded-circle me-3 border" 
-              style="width:55px; height:55px; object-fit:cover;"
-            >
-            <!-- Survey Info + Actions -->
-            <div class="flex-grow-1">
-              <h6 class="mb-1">${survey.name}</h6>
-              <p class="mb-2 text-success small fw-semibold">
-                🎁 Reward: BDT ${survey.reward.toFixed(2)}
-              </p>
-              <!-- Action Buttons -->
-              <div class="d-flex gap-2">
-                <button 
-                  class="btn btn-sm btn-outline-primary rounded-pill px-3" 
-                  onclick="startSurvey(${survey.id})"
-                  ${isCompleted ? "disabled" : ""}
-                >
-                  🔍 Start Survey
-                </button>
-                <button 
-                  class="btn btn-sm ${
-                    isCompleted ? "btn-success" : "btn-secondary"
-                  } rounded-pill px-3" 
-                  onclick="verifySurvey(${survey.id})"
-                  ${!isCompleted ? "disabled" : ""}
-                >
-                  ${isCompleted ? "✔ Claimed" : "Claim Reward"}
-                </button>
-              </div>
-            </div>
+      <div class="giveaway-card">
+        <img src="${survey.image}" alt="${survey.name}" class="survey-logo">
+        <div class="info flex-grow-1 ms-2">
+          <span>${survey.name}</span>
+          <div class="amount">
+            BDT ${survey.reward.toFixed(2)} <span class="icon">🎁</span>
           </div>
+        </div>
+        <div class="survey-btn-container">
+          ${isCompleted ? 
+            `<button class="survey-btn survey-claimed-btn" disabled>Claimed</button>` : 
+            `<button class="survey-btn survey-check-btn" onclick="startSurvey(${survey.id})">Check</button>`
+          }
         </div>
       </div>
     `;
@@ -2188,25 +2278,14 @@ function startSurvey(surveyId) {
   }
 }
 
-// Verify survey
-function verifySurvey(surveyId) {
-  const survey = appConfig.surveys.find((s) => s.id === surveyId);
-  if (!survey) return;
-
-  // Check if user has completed this survey
-  if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
-    completeSurvey(survey);
-  } else {
-    showNotification(
-      "Info",
-      "Please complete the survey first before claiming reward.",
-      "info"
-    );
-  }
-}
-
 // Start survey completion check
 function startSurveyCompletionCheck(survey) {
+  // Change button to claim button
+  const btnContainer = document.querySelector(`.giveaway-card:has(button[onclick="startSurvey(${survey.id})"]) .survey-btn-container`);
+  if (btnContainer) {
+    btnContainer.innerHTML = `<button class="survey-btn survey-claim-btn" onclick="completeSurvey(${survey.id})">Claim</button>`;
+  }
+
   // Check every 5 seconds if the survey window is closed
   surveyCheckInterval = setInterval(() => {
     if (surveyWindow && surveyWindow.closed) {
@@ -2219,13 +2298,17 @@ function startSurveyCompletionCheck(survey) {
       );
 
       if (completed) {
-        completeSurvey(survey);
+        completeSurvey(survey.id);
       } else {
         showNotification(
           "Info",
           "Survey not completed. No reward awarded.",
           "info"
         );
+        // Reset button back to check button
+        if (btnContainer) {
+          btnContainer.innerHTML = `<button class="survey-btn survey-check-btn" onclick="startSurvey(${survey.id})">Check</button>`;
+        }
         currentSurvey = null;
       }
     }
@@ -2233,7 +2316,8 @@ function startSurveyCompletionCheck(survey) {
 }
 
 // Complete survey
-async function completeSurvey(survey) {
+async function completeSurvey(surveyId) {
+  const survey = appConfig.surveys.find((s) => s.id === surveyId);
   if (!survey) return;
 
   // Update user data
@@ -2465,7 +2549,7 @@ function filterHistory(type) {
     filteredData = userData.history.filter((tx) => tx.type === type);
   }
 
-  filteredData.slice(0, 5).forEach((tx) => {
+  filteredData.slice(0, 5).forEach((tx) {
     let statusClass = "";
     if (tx.status === "Pending") statusClass = "text-warning";
     if (tx.status === "Completed") statusClass = "text-success";
