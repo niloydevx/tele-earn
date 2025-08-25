@@ -1686,11 +1686,7 @@ async function checkForDuplicateAccounts(isNewUser = false) {
 
               if (isNewUser) {
                 // Prevent creating new account
-                showNotification(
-                  "Error",
-                  "You already have an account with this device/IP",
-                  "danger"
-                );
+                showNotification("Account already exists on this device.");
                 document
                   .getElementById("bannedScreen")
                   .classList.remove("hidden");
@@ -1726,11 +1722,7 @@ async function checkForDuplicateAccounts(isNewUser = false) {
       }
 
       if (duplicateFound && !isNewUser) {
-        showNotification(
-          "Warning",
-          "Multiple accounts detected",
-          "warning"
-        );
+        showNotification("Multiple accounts detected.");
       }
     })
     .catch((error) => {
@@ -1921,11 +1913,7 @@ function saveUserData() {
     .set(userData)
     .catch((error) => {
       console.error("Error saving user data:", error);
-      showNotification(
-        "Error",
-        "Failed to save data. Please check your connection.",
-        "danger"
-      );
+      showNotification("Failed to save data. Check your connection.");
     });
 }
 
@@ -2034,20 +2022,12 @@ function startCooldown(seconds) {
 // Watch ad function for video rewards
 async function watchAd() {
   if (userData.completedTasks >= appConfig.dailyLimit) {
-    showNotification(
-      "Completed!",
-      "All tasks completed for today!",
-      "info"
-    );
+    showNotification("All tasks completed for today!");
     return;
   }
 
   if (sessionActive) {
-    showNotification(
-      "Info",
-      "Please complete the current video first",
-      "info"
-    );
+    showNotification("Complete the current video first.");
     return;
   }
 
@@ -2086,11 +2066,7 @@ async function watchAd() {
     claimButton.disabled = false;
   } catch (e) {
     console.error("Ad failed or closed before completion", e);
-    showNotification(
-      "Error",
-      "Video not loaded. Please try again.",
-      "danger"
-    );
+    showNotification("Video not loaded. Try again.");
     
     // Reset button state
     const adButton = document.getElementById("watchAdBtn");
@@ -2116,20 +2092,12 @@ function setProgress(p) {
 // Claim reward after watching ad
 function claimReward() {
   if (!sessionActive) {
-    showNotification(
-      "Error",
-      "No active ad session",
-      "danger"
-    );
+    showNotification("No active ad session.");
     return;
   }
 
   if (sessionClaimed) {
-    showNotification(
-      "Info",
-      "Reward already claimed for this session",
-      "info"
-    );
+    showNotification("Reward already claimed for this session");
     return;
   }
 
@@ -2313,11 +2281,7 @@ function startSurvey(surveyId) {
 
   // Check if user has already completed this survey
   if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
-    showNotification(
-      "Info",
-      "You have already completed this survey.",
-      "info"
-    );
+    showNotification("You have already completed this.");
     return;
   }
 
@@ -2339,16 +2303,9 @@ function startSurvey(surveyId) {
     );
 
     // Show instructions
-    showNotification(
-      "Info",
-      "Survey opened in new tab. Complete it and click Verify to claim your reward.",
-      "info"
-    );
+    showNotification("Finish the survey & click Verify to claim.");
   } else {
-    showNotification(
-      "Completed!",
-      "All tasks completed for today!",
-      "info"
+    showNotification("All tasks completed for today!"
     );
   }
 }
@@ -2360,25 +2317,15 @@ function verifySurvey(surveyId) {
 
   // Check if user has completed this survey
   if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
-    showNotification(
-      "Info",
-      "You have already claimed the reward for this survey.",
-      "info"
-    );
+    showNotification("Reward already claimed.");
   } else {
     // Ask user if they completed the survey
-    const completed = confirm(
-      "Have you completed the survey? Click OK to claim your reward, or Cancel if you didn't finish it."
-    );
+    const completed = confirm("Survey done? OK to claim.");
 
     if (completed) {
       completeSurvey(survey);
     } else {
-      showNotification(
-        "Info",
-        "Survey not completed. Please finish the survey before claiming.",
-        "info"
-      );
+      showNotification("Complete the survey before claiming.");
     }
   }
 }
