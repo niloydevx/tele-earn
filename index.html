@@ -2264,7 +2264,7 @@ function loadSurveys() {
         <button class="survey-btn survey-btn-primary" onclick="startSurvey(${survey.id})" ${isCompleted ? "disabled" : ""}>
           <i class="bi bi-play-circle"></i> Start Survey
         </button>
-        <button class="survey-btn survey-btn-secondary" onclick="verifySurvey(${survey.id})" ${isCompleted ? "" : "disabled"}>
+        <button class="survey-btn survey-btn-secondary" onclick="verifySurvey(${survey.id})" ${isCompleted ? "" : "disabled"} id="verifyBtn-${survey.id}">
           ${isCompleted ? '<i class="bi bi-check-circle"></i> Claimed' : '<i class="bi bi-arrow-repeat"></i> Verify'}
         </button>
       </div>
@@ -2274,7 +2274,7 @@ function loadSurveys() {
   });
 }
 
-// Start survey
+// Start survey - MODIFIED to enable verify button instantly
 function startSurvey(surveyId) {
   const survey = appConfig.surveys.find((s) => s.id === surveyId);
   if (!survey) return;
@@ -2293,6 +2293,12 @@ function startSurvey(surveyId) {
     // Store the current survey
     currentSurvey = survey;
 
+    // Enable the verify button instantly
+    const verifyButton = document.getElementById(`verifyBtn-${surveyId}`);
+    if (verifyButton) {
+      verifyButton.disabled = false;
+    }
+
     // Open the survey URL in a new tab
     surveyWindow = window.open(
       survey.url,
@@ -2300,13 +2306,10 @@ function startSurvey(surveyId) {
       "noopener,noreferrer"
     );
 
-    // Start checking if the survey is completed
-    startSurveyCompletionCheck(survey);
-
     // Show instructions
     showNotification(
       "Info",
-      "Survey opened in new tab. Please complete it to get your reward.",
+      "Survey opened in new tab. Complete it and click Verify to claim your reward.",
       "info"
     );
   } else {
@@ -2318,7 +2321,7 @@ function startSurvey(surveyId) {
   }
 }
 
-// Verify survey
+// Verify survey - MODIFIED to handle instant verification
 function verifySurvey(surveyId) {
   const survey = appConfig.surveys.find((s) => s.id === surveyId);
   if (!survey) return;
@@ -2331,39 +2334,21 @@ function verifySurvey(surveyId) {
       "info"
     );
   } else {
-    showNotification(
-      "Info",
-      "Please complete the survey first before claiming reward.",
-      "info"
+    // Ask user if they completed the survey
+    const completed = confirm(
+      "Have you completed the survey? Click OK to claim your reward, or Cancel if you didn't finish it."
     );
-  }
-}
 
-// Start survey completion check
-function startSurveyCompletionCheck(survey) {
-  // Check every 5 seconds if the survey window is closed
-  surveyCheckInterval = setInterval(() => {
-    if (surveyWindow && surveyWindow.closed) {
-      clearInterval(surveyCheckInterval);
-      surveyCheckInterval = null;
-
-      // Ask user if they completed the survey
-      const completed = confirm(
-        "Have you completed the survey? Click OK if you completed it, or Cancel if you didn't."
+    if (completed) {
+      completeSurvey(survey);
+    } else {
+      showNotification(
+        "Info",
+        "Survey not completed. Please finish the survey before claiming.",
+        "info"
       );
-
-      if (completed) {
-        completeSurvey(survey);
-      } else {
-        showNotification(
-          "Info",
-          "Survey not completed. No reward awarded.",
-          "info"
-        );
-        currentSurvey = null;
-      }
     }
-  }, 5000);
+  }
 }
 
 // Complete survey
