@@ -568,6 +568,115 @@
         display: none;
       }
 
+      /* NEW SURVEY STYLES */
+      .survey-item {
+        background: var(--card-bg);
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 215, 0, 0.1);
+        transition: all 0.3s ease;
+      }
+
+      .survey-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(255, 215, 0, 0.25);
+      }
+
+      .survey-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .survey-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        margin-right: 12px;
+        object-fit: cover;
+        border: 1px solid rgba(255, 215, 0, 0.3);
+      }
+
+      .survey-title {
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 4px;
+      }
+
+      .survey-reward {
+        color: #00ff88;
+        font-weight: 700;
+        font-size: 1.1rem;
+      }
+
+      .survey-description {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+        margin-bottom: 16px;
+        line-height: 1.4;
+      }
+
+      .survey-actions {
+        display: flex;
+        gap: 10px;
+      }
+
+      .survey-btn {
+        flex: 1;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-weight: 600;
+        text-align: center;
+        transition: all 0.2s ease;
+        border: none;
+      }
+
+      .survey-btn-primary {
+        background: linear-gradient(135deg, #ffd700, #ffcc00);
+        color: #000;
+      }
+
+      .survey-btn-primary:hover:not(:disabled) {
+        background: linear-gradient(135deg, #ffcc00, #ffd700);
+        transform: translateY(-2px);
+      }
+
+      .survey-btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--primary-color);
+        border: 1px solid rgba(255, 215, 0, 0.3);
+      }
+
+      .survey-btn-secondary:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: var(--primary-color);
+      }
+
+      .survey-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      .survey-completed {
+        background: rgba(0, 255, 136, 0.1);
+        border: 1px solid rgba(0, 255, 136, 0.3);
+      }
+
+      .survey-completed-badge {
+        background: linear-gradient(135deg, #00c851, #007e33);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
       /* Responsive adjustments */
       @media (max-width: 576px) {
         .cover-img {
@@ -597,6 +706,10 @@
 
         #vpnCheck .vpn-check-container {
           padding: 1.5rem 1rem;
+        }
+        
+        .survey-actions {
+          flex-direction: column;
         }
       }
     </style>
@@ -1112,17 +1225,21 @@
         </div>
       </div>
 
-      <!-- SURVEY PAGE (hidden by default) -->
+      <!-- SURVEY PAGE (hidden by default) - UPDATED DESIGN -->
       <div id="surveyPage" class="container survey-container hidden">
-        <h3 class="mb-4 fw-bold text-center">✨ Available Surveys</h3>
-        <div class="row g-4" id="surveysContainer">
-          <!-- Surveys will be loaded dynamically -->
-        </div>
-
-        <div class="text-center mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h3 class="m-0 fw-bold">✨ Available Surveys</h3>
           <button class="btn btn-outline-warning" onclick="hideSurveyPage()">
             <i class="bi bi-arrow-left"></i> Back to Rewards
           </button>
+        </div>
+        
+        <div id="surveysContainer">
+          <!-- Surveys will be loaded dynamically -->
+        </div>
+        
+        <div class="text-center mt-4">
+          <p class="text-muted">Complete surveys to earn rewards!</p>
         </div>
       </div>
 
@@ -1304,6 +1421,26 @@ async function loadAppConfig() {
                 completedBy: {},
                 status: "active",
               },
+              {
+                id: 2,
+                name: "Product Feedback",
+                reward: 2.0,
+                image:
+                  "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                url: "https://www.surveys.com/product",
+                completedBy: {},
+                status: "active",
+              },
+              {
+                id: 3,
+                name: "Market Research",
+                reward: 3.5,
+                image:
+                  "https://images.unsplash.com/photo-1556761175-b413da4baf72?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                url: "https://www.surveys.com/market",
+                completedBy: {},
+                status: "active",
+              }
             ],
             vpnRequired: true,
             promoCodes: {
@@ -2074,74 +2211,68 @@ function hideSurveyPage() {
     .classList.add("active");
 }
 
-// Load surveys
+// Load surveys - UPDATED FUNCTION
 function loadSurveys() {
   const surveysContainer = document.getElementById("surveysContainer");
   if (!surveysContainer) return;
   
   surveysContainer.innerHTML = "";
 
-  if (!appConfig || !appConfig.surveys) return;
-
-  appConfig.surveys.forEach((survey) => {
-    // Check if survey is active
-    if (survey.status !== "active") return;
-
-    // Check if user has already completed this survey
-    const isCompleted =
-      userData.completedSurveys && userData.completedSurveys[survey.id];
-
-    const surveyHTML = `
-      <div class="col-12 mb-3">
-        <div class="card survey-card p-3 ${
-          isCompleted ? "opacity-75 border-success" : "border-warning"
-        }">
-          <div class="d-flex align-items-start">
-            <!-- Survey Logo -->
-            <img 
-              src="${survey.image}" 
-              alt="${survey.name}" 
-              class="rounded-circle me-3 border" 
-              style="width:55px; height:55px; object-fit:cover;"
-            >
-            <!-- Survey Info + Actions -->
-            <div class="flex-grow-1">
-              <h6 class="mb-1">${survey.name}</h6>
-              <p class="mb-2 text-success small fw-semibold">
-                🎁 Reward: BDT ${survey.reward.toFixed(2)}
-              </p>
-              <!-- Action Buttons -->
-              <div class="d-flex gap-2">
-                <button 
-                  class="btn btn-sm btn-outline-primary rounded-pill px-3" 
-                  onclick="startSurvey(${survey.id})"
-                  ${isCompleted ? "disabled" : ""}
-                >
-                  🔍 Start Survey
-                </button>
-                <button 
-                  class="btn btn-sm ${
-                    isCompleted ? "btn-success" : "btn-secondary"
-                  } rounded-pill px-3" 
-                  onclick="verifySurvey(${survey.id})"
-                  ${!isCompleted ? "disabled" : ""}
-                >
-                  ${isCompleted ? "✔ Claimed" : "Claim Reward"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+  if (!appConfig || !appConfig.surveys) {
+    surveysContainer.innerHTML = `
+      <div class="text-center text-muted py-4">
+        <i class="bi bi-inbox display-4 d-block mb-3"></i>
+        <p>No surveys available at the moment. Check back later!</p>
       </div>
     `;
-
-    surveysContainer.innerHTML += surveyHTML;
-  });
-
-  // If no surveys available, show message
-  if (surveysContainer.innerHTML === "") {
-    surveysContainer.innerHTML = `<div class="col-12 text-center text-muted">No active surveys available at the moment.</div>`;
+    return;
   }
+
+  // Filter active surveys
+  const activeSurveys = appConfig.surveys.filter(survey => survey.status === "active");
+  
+  if (activeSurveys.length === 0) {
+    surveysContainer.innerHTML = `
+      <div class="text-center text-muted py-4">
+        <i class="bi bi-inbox display-4 d-block mb-3"></i>
+        <p>No surveys available at the moment. Check back later!</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Create survey items
+  activeSurveys.forEach((survey) => {
+    // Check if user has already completed this survey
+    const isCompleted = userData.completedSurveys && userData.completedSurveys[survey.id];
+    
+    const surveyItem = document.createElement("div");
+    surveyItem.className = `survey-item ${isCompleted ? "survey-completed" : ""}`;
+    
+    surveyItem.innerHTML = `
+      <div class="survey-header">
+        <img src="${survey.image}" alt="${survey.name}" class="survey-icon">
+        <div class="flex-grow-1">
+          <div class="survey-title">${survey.name}</div>
+          <div class="survey-reward">+ ${survey.reward.toFixed(2)} BDT</div>
+        </div>
+        ${isCompleted ? '<span class="survey-completed-badge"><i class="bi bi-check-circle-fill"></i> Completed</span>' : ''}
+      </div>
+      <div class="survey-description">
+        Complete this survey to earn ${survey.reward.toFixed(2)} BDT. This should take approximately 5-10 minutes.
+      </div>
+      <div class="survey-actions">
+        <button class="survey-btn survey-btn-primary" onclick="startSurvey(${survey.id})" ${isCompleted ? "disabled" : ""}>
+          <i class="bi bi-play-circle"></i> Start Survey
+        </button>
+        <button class="survey-btn survey-btn-secondary" onclick="verifySurvey(${survey.id})" ${!isCompleted ? "disabled" : ""}>
+          ${isCompleted ? '<i class="bi bi-check-circle"></i> Claimed' : '<i class="bi bi-arrow-repeat"></i> Verify'}
+        </button>
+      </div>
+    `;
+    
+    surveysContainer.appendChild(surveyItem);
+  });
 }
 
 // Start survey
