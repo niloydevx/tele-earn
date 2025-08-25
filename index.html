@@ -2265,7 +2265,7 @@ function loadSurveys() {
         <button class="survey-btn survey-btn-primary" onclick="startSurvey(${survey.id})" ${isCompleted ? "disabled" : ""}>
           <i class="bi bi-play-circle"></i> Start Survey
         </button>
-        <button class="survey-btn survey-btn-secondary" onclick="verifySurvey(${survey.id})" ${!isCompleted ? "disabled" : ""}>
+        <button class="survey-btn survey-btn-secondary" onclick="verifySurvey(${survey.id})" ${isCompleted ? "" : "disabled"}>
           ${isCompleted ? '<i class="bi bi-check-circle"></i> Claimed' : '<i class="bi bi-arrow-repeat"></i> Verify'}
         </button>
       </div>
@@ -2326,7 +2326,11 @@ function verifySurvey(surveyId) {
 
   // Check if user has completed this survey
   if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
-    completeSurvey(survey);
+    showNotification(
+      "Info",
+      "You have already claimed the reward for this survey.",
+      "info"
+    );
   } else {
     showNotification(
       "Info",
