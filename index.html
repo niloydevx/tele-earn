@@ -996,32 +996,6 @@
   </select>
 </div>
 
-<script>
-  // Load payment/withdrawal methods from appConfig.paymentMethods
-  function loadWithdrawalMethods() {
-    const select = document.getElementById("method");
-    select.innerHTML = '<option value="">Select a method</option>'; // Reset
-
-    // Fetch appConfig from Firebase
-    firebase.database().ref('appConfig').once('value')
-      .then(snapshot => {
-        const appConfig = snapshot.val();
-        if (appConfig && appConfig.paymentMethods) {
-          appConfig.paymentMethods.forEach(method => {
-            const option = document.createElement("option");
-            option.value = method;
-            option.textContent = method;
-            select.appendChild(option);
-          });
-        }
-      })
-      .catch(err => console.error("Error loading withdrawal methods:", err));
-  }
-
-  // Call on page load
-  loadWithdrawalMethods();
-</script>
-
           <div class="mb-3">
             <label class="fw-bold mb-2">Amount (BDT)</label>
             <input
@@ -1293,7 +1267,7 @@
     <!-- End of appContent -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script> 
+<script>
 // Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDuaWMh0eIJ2tdtLxYj43ij9MGSh_Yo22M",
@@ -1375,6 +1349,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   
   // Check for active cooldown
   checkCooldownStatus();
+  
+  // Load withdrawal methods
+  loadWithdrawalMethods();
 });
 
 // Get user IP address
@@ -1433,6 +1410,7 @@ async function loadAppConfig() {
             logo: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
             cover:
               "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
+            paymentMethods: ["bKash", "Nagad", "Rocket"], // Added default payment methods
             surveys: [
               {
                 id: 1,
@@ -1488,6 +1466,11 @@ async function loadAppConfig() {
         }
         if (appConfig.referralCommission === undefined) {
           appConfig.referralCommission = 10;
+        }
+        
+        // Ensure paymentMethods exists with defaults
+        if (!appConfig.paymentMethods) {
+          appConfig.paymentMethods = ["bKash", "Nagad", "Rocket"];
         }
 
         // Apply app configuration
@@ -1751,6 +1734,31 @@ async function checkForDuplicateAccounts(isNewUser = false) {
     .catch((error) => {
       console.error("Error checking for duplicates:", error);
     });
+}
+
+// Load payment/withdrawal methods from appConfig.paymentMethods
+function loadWithdrawalMethods() {
+  const select = document.getElementById("method");
+  select.innerHTML = '<option value="">Select a method</option>'; // Reset
+
+  // Check if we have payment methods in appConfig
+  if (appConfig && appConfig.paymentMethods && appConfig.paymentMethods.length > 0) {
+    appConfig.paymentMethods.forEach(method => {
+      const option = document.createElement("option");
+      option.value = method;
+      option.textContent = method;
+      select.appendChild(option);
+    });
+  } else {
+    // Use default methods if none configured
+    const defaultMethods = ["bKash", "Nagad", "Rocket"];
+    defaultMethods.forEach(method => {
+      const option = document.createElement("option");
+      option.value = method;
+      option.textContent = method;
+      select.appendChild(option);
+    });
+  }
 }
 
 // Check VPN status
