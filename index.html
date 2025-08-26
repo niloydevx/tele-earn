@@ -995,6 +995,9 @@
             <label class="fw-bold mb-2">Withdrawal Method</label>
             <select class="form-select mb-3" id="method">
               <option value="">Select a method</option>
+              <option value="bKash">bKash</option>
+              <option value="Nagad">Nagad</option>
+              <option value="Rocket">Rocket</option>
             </select>
           </div>
 
@@ -1309,7 +1312,7 @@
       let surveyWindow = null;
       let surveyCheckInterval = null;
 
-      // Video rewards state (using the new logic)
+      // Video rewards state
       const MIN_WAIT_SEC = 15;
       let sessionActive = false;
       let adStartTime = 0;
@@ -1351,9 +1354,6 @@
         
         // Check for active cooldown
         checkCooldownStatus();
-        
-        // Load withdrawal methods
-        loadWithdrawalMethods();
       });
 
       // Get user IP address
@@ -1412,7 +1412,6 @@
                   logo: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
                   cover:
                     "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
-                  paymentMethods: ["bKash", "Nagad", "Rocket"], // Added default payment methods
                   surveys: [
                     {
                       id: 1,
@@ -1468,11 +1467,6 @@
               }
               if (appConfig.referralCommission === undefined) {
                 appConfig.referralCommission = 10;
-              }
-              
-              // Ensure paymentMethods exists with defaults
-              if (!appConfig.paymentMethods) {
-                appConfig.paymentMethods = ["bKash", "Nagad", "Rocket"];
               }
 
               // Apply app configuration
@@ -1736,31 +1730,6 @@
           .catch((error) => {
             console.error("Error checking for duplicates:", error);
           });
-      }
-
-      // Load payment/withdrawal methods from appConfig.paymentMethods
-      function loadWithdrawalMethods() {
-        const select = document.getElementById("method");
-        select.innerHTML = '<option value="">Select a method</option>'; // Reset
-
-        // Check if we have payment methods in appConfig
-        if (appConfig && appConfig.paymentMethods && appConfig.paymentMethods.length > 0) {
-          appConfig.paymentMethods.forEach(method => {
-            const option = document.createElement("option");
-            option.value = method;
-            option.textContent = method;
-            select.appendChild(option);
-          });
-        } else {
-          // Use default methods if none configured
-          const defaultMethods = ["bKash", "Nagad", "Rocket"];
-          defaultMethods.forEach(method => {
-            const option = document.createElement("option");
-            option.value = method;
-            option.textContent = method;
-            select.appendChild(option);
-          });
-        }
       }
 
       // Check VPN status
@@ -2460,20 +2429,8 @@
           return showNotification("Error", "Not enough balance!", "danger");
         }
 
-        // Calculate withdrawal amount with fee
-        const withdrawalFee = 5;
-        const totalAmount = amount + withdrawalFee;
-        
-        if (totalAmount > userData.balance) {
-          return showNotification(
-            "Error", 
-            `You need ${totalAmount.toFixed(2)} BDT (${amount.toFixed(2)} + ${withdrawalFee} fee) to withdraw!`, 
-            "danger"
-          );
-        }
-
         // Update user data
-        userData.balance -= totalAmount;
+        userData.balance -= amount;
         userData.withdrawn += amount;
 
         // Add to history
@@ -2493,7 +2450,7 @@
         updateUI();
         showNotification(
           "Success!",
-          `Withdrawal request submitted for ${amount.toFixed(2)} BDT! Processing fee: ${withdrawalFee} BDT.`,
+          "Withdrawal request submitted!",
           "success"
         );
 
@@ -2522,7 +2479,7 @@
           });
       }
 
-      // Redeem promo code - FIXED
+      // Redeem promo code
       function redeemPromoCode() {
         const promoCode = document
           .getElementById("promoCodeInput")
