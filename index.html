@@ -471,7 +471,6 @@
 
       .alert-primary {
         background-color: #1a1a2e;
-        width: 90%;
         color: var(--accent-color);
         border: 1px solid var(--primary-color);
       }
@@ -486,7 +485,6 @@
       .alert-danger {
         background-color: #330000;
         color: #ff6666;
-        width: 90%;
         border: 1px solid #ff0000;
       }
 
@@ -995,6 +993,9 @@
             <label class="fw-bold mb-2">Withdrawal Method</label>
             <select class="form-select mb-3" id="method">
               <option value="">Select a method</option>
+              <option>Bkash</option>
+              <option>Nagad</option>
+              <option>Binance Id</option>
             </select>
           </div>
 
@@ -1269,7 +1270,8 @@
     <!-- End of appContent -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>// Firebase configuration
+<script> 
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDuaWMh0eIJ2tdtLxYj43ij9MGSh_Yo22M",
   authDomain: "test-6977e.firebaseapp.com",
@@ -1350,9 +1352,6 @@ document.addEventListener("DOMContentLoaded", async function () {
   
   // Check for active cooldown
   checkCooldownStatus();
-  
-  // Load withdrawal methods
-  loadWithdrawalMethods();
 });
 
 // Get user IP address
@@ -1411,7 +1410,6 @@ async function loadAppConfig() {
             logo: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
             cover:
               "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
-            paymentMethods: ["bKash", "Nagad", "Rocket"], // Added default payment methods
             surveys: [
               {
                 id: 1,
@@ -1467,11 +1465,6 @@ async function loadAppConfig() {
         }
         if (appConfig.referralCommission === undefined) {
           appConfig.referralCommission = 10;
-        }
-        
-        // Ensure paymentMethods exists with defaults
-        if (!appConfig.paymentMethods) {
-          appConfig.paymentMethods = ["bKash", "Nagad", "Rocket"];
         }
 
         // Apply app configuration
@@ -1686,7 +1679,7 @@ async function checkForDuplicateAccounts(isNewUser = false) {
               if (isNewUser) {
                 // Prevent creating new account
                 showNotification(
-                  "Error",             
+                  "Error",
                   "You already have an account with this device/IP",
                   "danger"
                 );
@@ -1735,31 +1728,6 @@ async function checkForDuplicateAccounts(isNewUser = false) {
     .catch((error) => {
       console.error("Error checking for duplicates:", error);
     });
-}
-
-// Load payment/withdrawal methods from appConfig.paymentMethods
-function loadWithdrawalMethods() {
-  const select = document.getElementById("method");
-  select.innerHTML = '<option value="">Select a method</option>'; // Reset
-
-  // Check if we have payment methods in appConfig
-  if (appConfig && appConfig.paymentMethods && appConfig.paymentMethods.length > 0) {
-    appConfig.paymentMethods.forEach(method => {
-      const option = document.createElement("option");
-      option.value = method;
-      option.textContent = method;
-      select.appendChild(option);
-    });
-  } else {
-    // Use default methods if none configured
-    const defaultMethods = ["bKash", "Nagad", "Rocket"];
-    defaultMethods.forEach(method => {
-      const option = document.createElement("option");
-      option.value = method;
-      option.textContent = method;
-      select.appendChild(option);
-    });
-  }
 }
 
 // Check VPN status
@@ -2360,8 +2328,8 @@ function verifySurvey(surveyId) {
   // Check if user has completed this survey
   if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
     showNotification(
-      "!",
-      "You have already claimed.",
+      "Info",
+      "You have already claimed the reward for this survey.",
       "info"
     );
   } else {
@@ -2437,7 +2405,7 @@ async function completeSurvey(survey) {
   currentSurvey = null;
 }
 
-// Withdraw funds - UPDATED FUNCTION
+// Withdraw funds
 async function withdraw() {
   let method = document.getElementById("method").value;
   let amount = parseFloat(document.getElementById("amount").value);
@@ -2459,20 +2427,8 @@ async function withdraw() {
     return showNotification("Error", "Not enough balance!", "danger");
   }
 
-  // Calculate withdrawal fee (5 BDT)
-  const withdrawalFee = 5;
-  const totalDeduction = amount + withdrawalFee;
-  
-  if (totalDeduction > userData.balance) {
-    return showNotification(
-      "Error", 
-      `Insufficient balance for withdrawal fee. You need ${withdrawalFee} BDT fee.`, 
-      "danger"
-    );
-  }
-
   // Update user data
-  userData.balance -= totalDeduction;
+  userData.balance -= amount;
   userData.withdrawn += amount;
 
   // Add to history
@@ -2483,7 +2439,6 @@ async function withdraw() {
     address,
     status: "Pending",
     date: new Date().toLocaleDateString(),
-    fee: withdrawalFee
   });
 
   // Save to Firebase
@@ -2493,7 +2448,7 @@ async function withdraw() {
   updateUI();
   showNotification(
     "Success!",
-    `Withdrawal request submitted! ${withdrawalFee} BDT fee deducted.`,
+    "Withdrawal request submitted!",
     "success"
   );
 
@@ -2680,6 +2635,7 @@ function showNotification(title, message, type) {
 function calculateReferralEarnings(amount) {
   const commissionPercentage = appConfig.referralCommission || 10;
   return (amount * commissionPercentage) / 100;
-}</script>
+}
+</script>
   </body>
 </html>
