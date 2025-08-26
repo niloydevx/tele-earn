@@ -992,11 +992,11 @@
           </h5>
 
           <div class="mb-3">
-  <label class="fw-bold mb-2">Withdrawal Method</label>
-  <select class="form-select mb-3" id="method">
-    <option value="">Select a method</option>
-  </select>
-</div>
+            <label class="fw-bold mb-2">Withdrawal Method</label>
+            <select class="form-select mb-3" id="method">
+              <option value="">Select a method</option>
+            </select>
+          </div>
 
           <div class="mb-3">
             <label class="fw-bold mb-2">Amount (BDT)</label>
@@ -2264,7 +2264,7 @@ function loadSurveys() {
   
   if (activeSurveys.length === 0) {
     surveysContainer.innerHTML = `
-      <div class="text-center text-muted py-4">
+      <div class="text-center text-matured py-4">
         <i class="bi bi-inbox display-4 d-block mb-3"></i>
         <p>No surveys available at the moment. Check back later!</p>
       </div>
@@ -2361,8 +2361,8 @@ function verifySurvey(surveyId) {
   // Check if user has completed this survey
   if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
     showNotification(
-      "!",
-      "You have already claimed.",
+      "Info",
+      "You have already claimed this survey reward.",
       "info"
     );
   } else {
@@ -2510,7 +2510,7 @@ function copyInviteLink() {
     });
 }
 
-// Redeem promo code
+// Redeem promo code - FIXED FUNCTION
 function redeemPromoCode() {
   const promoCode = document
     .getElementById("promoCodeInput")
@@ -2671,4 +2671,4 @@ function calculateReferralEarnings(amount) {
 }
 </script>
   </body>
-</html>
+</html>1
