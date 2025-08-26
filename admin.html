@@ -6,6 +6,10 @@
   <title>Money Land - Admin Panel</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <style>
     :root {
       --primary-color: #ffd700;
@@ -672,1855 +676,1955 @@
     .editable-field:hover {
       background-color: rgba(255, 215, 0, 0.2);
     }
+
+    /* Login Page Styles */
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--dark-bg);
+      padding: 20px;
+    }
+
+    .login-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+      width: 100%;
+      max-width: 400px;
+      border: 1px solid rgba(255, 215, 0, 0.1);
+    }
+
+    .login-logo {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .login-logo h2 {
+      background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .login-form .form-group {
+      margin-bottom: 20px;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 12px;
+      font-weight: 600;
+    }
+
+    .change-password-card {
+      max-width: 500px;
+      margin: 50px auto;
+    }
   </style>
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
-  <!-- Toast Container -->
-  <div class="toast-container"></div>
-
-  <div class="admin-container">
-    <!-- Header -->
-    <div class="admin-header text-center mb-4">
-      <h1><i class="bi bi-gear-fill me-2"></i>Money Land Admin Panel</h1>
-      <p class="text-muted">Manage your application settings and users</p>
-    </div>
-
-    <div class="row">
-      <!-- Navigation Sidebar -->
-      <div class="col-lg-3 col-md-4 mb-4">
-        <div class="card admin-nav">
-          <div class="card-body p-3">
-            <div
-              class="nav flex-column nav-pills"
-              id="v-pills-tab"
-              role="tablist"
-              aria-orientation="vertical"
-            >
-              <button
-                class="nav-link active"
-                id="v-pills-home-tab"
-                data-bs-toggle="pill"
-                data-bs-target="#v-pills-home"
-                type="button"
-                role="tab"
-              >
-                <i class="bi bi-speedometer2"></i> Dashboard
-              </button>
-              <button
-                class="nav-link"
-                id="v-pills-app-tab"
-                data-bs-toggle="pill"
-                data-bs-target="#v-pills-app"
-                type="button"
-                role="tab"
-              >
-                <i class="bi bi-sliders"></i> App Settings
-              </button>
-              <button
-                class="nav-link"
-                id="v-pills-surveys-tab"
-                data-bs-toggle="pill"
-                data-bs-target="#v-pills-surveys"
-                type="button"
-                role="tab"
-              >
-                <i class="bi bi-clipboard-data"></i> Surveys
-              </button>
-              <button
-                class="nav-link"
-                id="v-pills-promo-tab"
-                data-bs-toggle="pill"
-                data-bs-target="#v-pills-promo"
-                type="button"
-                role="tab"
-              >
-                <i class="bi bi-ticket-perforated"></i> Promo Codes
-              </button>
-              <button
-                class="nav-link"
-                id="v-pills-withdrawals-tab"
-                data-bs-toggle="pill"
-                data-bs-target="#v-pills-withdrawals"
-                type="button"
-                role="tab"
-              >
-                <i class="bi bi-cash-coin"></i> Withdrawals
-              </button>
-              <button
-                class="nav-link"
-                id="v-pills-users-tab"
-                data-bs-toggle="pill"
-                data-bs-target="#v-pills-users"
-                type="button"
-                role="tab"
-              >
-                <i class="bi bi-people"></i> Users
-              </button>
-            </div>
-          </div>
-        </div>
+  <!-- Login Page -->
+  <div id="loginPage" class="login-container">
+    <div class="login-card">
+      <div class="login-logo">
+        <h2><i class="bi bi-currency-exchange"></i> Money Land</h2>
+        <p class="text-secondary">Admin Panel Login</p>
       </div>
-
-      <!-- Content Area -->
-      <div class="col-lg-9 col-md-8">
-        <div class="tab-content" id="v-pills-tabContent">
-          <!-- Dashboard Tab -->
-          <div
-            class="tab-pane fade show active"
-            id="v-pills-home"
-            role="tabpanel"
-          >
-            <div class="card">
-              <div class="card-header">
-                <h5 class="mb-0">
-                  <i class="bi bi-speedometer2 me-2"></i>Dashboard Overview
-                </h5>
-              </div>
-              <div class="card-body">
-                <div class="row">
-                  <div class="col-xl-3 col-md-6">
-                    <div class="stat-card card bg-dark">
-                      <i class="bi bi-people text-info"></i>
-                      <h5>Total Users</h5>
-                      <h3 class="fw-bold" id="totalUsers">0</h3>
-                    </div>
-                  </div>
-                  <div class="col-xl-3 col-md-6">
-                    <div class="stat-card card bg-dark">
-                      <i class="bi bi-cash-coin text-success"></i>
-                      <h5>Total Earnings</h5>
-                      <h3 class="fw-bold" id="totalEarnings">0.00</h3>
-                    </div>
-                  </div>
-                  <div class="col-xl-3 col-md-6">
-                    <div class="stat-card card bg-dark">
-                      <i class="bi bi-wallet2 text-warning"></i>
-                      <h5>Pending Withdrawals</h5>
-                      <h3 class="fw-bold" id="pendingWithdrawals">0</h3>
-                    </div>
-                  </div>
-                  <div class="col-xl-3 col-md-6">
-                    <div class="stat-card card bg-dark">
-                      <i class="bi bi-shield-exclamation text-danger"></i>
-                      <h5>Banned Users</h5>
-                      <h3 class="fw-bold" id="bannedUsers">0</h3>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="row mt-4">
-                  <div class="col-md-6">
-                    <div class="stat-card card bg-dark">
-                      <i class="bi bi-graph-up text-primary"></i>
-                      <h5>Active Surveys</h5>
-                      <h3 class="fw-bold" id="activeSurveys">0</h3>
-                    </div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="stat-card card bg-dark">
-                      <i class="bi bi-ticket-perforated text-info"></i>
-                      <h5>Active Promo Codes</h5>
-                      <h3 class="fw-bold" id="activePromos">0</h3>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- App Settings Tab -->
-          <div class="tab-pane fade" id="v-pills-app" role="tabpanel">
-            <div class="card">
-              <div class="card-header">
-                <h5 class="mb-0">
-                  <i class="bi bi-sliders me-2"></i>Application Settings
-                </h5>
-              </div>
-              <div class="card-body">
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label class="form-label">Daily Tasks Limit</label>
-                    <input
-                      type="number"
-                      class="form-control"
-                      id="dailyLimit"
-                      value="60"
-                    />
-                  </div>
-
-                  <div class="col-md-6 mb-3">
-                    <label class="form-label">Ads rewards (BDT)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      class="form-control"
-                      id="adsRewards"
-                      value="0.20"
-                    />
-                  </div>
-
-                  <div class="col-md-6 mb-3">
-                    <label class="form-label"
-                      >Referral Commission (%)</label
-                    >
-                    <input
-                      type="number"
-                      class="form-control"
-                      id="referralCommission"
-                      value="10"
-                    />
-                  </div>
-
-                  <div class="col-md-6 mb-3">
-                    <label class="form-label">Minimum Withdrawal (BDT)</label>
-                    <input
-                      type="number"
-                      class="form-control"
-                      id="minWithdraw"
-                      value="50"
-                    />
-                  </div>
-                </div>
-
-                <div class="row">
-                  <!-- Logo Upload -->
-                  <div class="col-md-6 mb-3">
-                    <label class="form-label">Logo Image URL</label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      id="logoUrl"
-                      placeholder="Enter logo URL"
-                    />
-                    <div class="form-text">Current Logo:</div>
-                    <img
-                      id="logoPreview"
-                      class="preview-image mt-2"
-                      src=""
-                      style="max-width: 150px; display: block"
-                    />
-                  </div>
-
-                  <!-- Cover Upload -->
-                  <div class="col-md-6 mb-3">
-                    <label class="form-label">Cover Image URL</label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      id="coverUrl"
-                      placeholder="Enter cover URL"
-                    />
-                    <div class="form-text">Current Cover:</div>
-                    <img
-                      id="coverPreview"
-                      class="preview-image mt-2"
-                      src=""
-                      style="max-width: 250px; display: block"
-                    />
-                  </div>
-                </div>
-
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label class="form-label">VPN Requirement</label>
-                    <div class="vpn-toggle">
-                      <label class="switch">
-                        <input type="checkbox" id="vpnToggle" />
-                        <span class="slider"></span>
-                      </label>
-                      <span id="vpnStatusText">VPN Required: ON</span>
-                    </div>
-                  </div>
-
-                  <div class="col-md-6 mb-3">
-                    <label class="form-label">Support Contact Info</label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      id="supportContact"
-                      placeholder="Email or Telegram handle"
-                    />
-                    <div class="form-text">
-                      This will be shown to banned users
-                    </div>
-                  </div>
-                </div>
-
-                <div class="text-end mt-4">
-                  <button class="btn btn-admin" onclick="saveAppSettings()">
-                    <i class="bi bi-check-circle me-1"></i>Save Settings
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Surveys Tab -->
-          <div class="tab-pane fade" id="v-pills-surveys" role="tabpanel">
-            <div class="card">
-              <div class="card-header">
-                <h5 class="mb-0">
-                  <i class="bi bi-clipboard-data me-2"></i>Manage Surveys
-                </h5>
-              </div>
-              <div class="card-body">
-                <div class="mb-4">
-                  <h5 class="text-warning mb-3">Add New Survey</h5>
-                  <div class="row">
-                    <div class="col-md-4">
-                      <div class="mb-3">
-                        <label class="form-label">Survey Name</label>
-                        <input
-                          type="text"
-                          class="form-control"
-                          id="surveyName"
-                        />
-                      </div>
-                    </div>
-                    <div class="col-md-4">
-                      <div class="mb-3">
-                        <label class="form-label">Reward (BDT)</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          class="form-control"
-                          id="surveyReward"
-                        />
-                      </div>
-                    </div>
-                    <div class="col-md-4">
-                      <div class="mb-3">
-                        <label class="form-label">Image URL</label>
-                        <input
-                          type="text"
-                          class="form-control"
-                          id="surveyImage"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div class="row">
-                    <div class="col-md-8">
-                      <div class="mb-3">
-                        <label class="form-label">Survey URL</label>
-                        <input
-                          type="text"
-                          class="form-control"
-                          id="surveyUrl"
-                          placeholder="Required for completion"
-                        />
-                      </div>
-                    </div>
-                    <div class="col-md-4">
-                      <div class="mb-3">
-                        <label class="form-label">Status</label>
-                        <select class="form-select" id="surveyStatus">
-                          <option value="active">Active</option>
-                          <option value="inactive">Inactive</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="text-end">
-                    <button class="btn btn-admin" onclick="addSurvey()">
-                      <i class="bi bi-plus-circle me-1"></i>Add Survey
-                    </button>
-                  </div>
-                </div>
-
-                <h5 class="text-warning mb-3">Current Surveys</h5>
-                <div class="table-container">
-                  <div class="table-responsive">
-                    <table class="table table-dark table-hover">
-                      <thead>
-                        <tr>
-                          <th>ID</th>
-                          <th>Name</th>
-                          <th>Reward</th>
-                          <th>URL</th>
-                          <th>Status</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody id="surveysList">
-                        <!-- Surveys will be listed here -->
-                      </tbody>
-                    </table>
-                  </div>
-                  <div class="table-scroll-indicator d-md-none">
-                    <i class="bi bi-arrow-left-right"></i>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Promo Codes Tab -->
-          <div class="tab-pane fade" id="v-pills-promo" role="tabpanel">
-            <div class="card">
-              <div class="card-header">
-                <h5 class="mb-0">
-                  <i class="bi bi-ticket-perforated me-2"></i>Manage Promo
-                  Codes
-                </h5>
-              </div>
-              <div class="card-body">
-                <div class="mb-4">
-                  <h5 class="text-warning mb-3">Create New Promo Code</h5>
-                  <div class="row">
-                    <div class="col-md-4">
-                      <div class="mb-3">
-                        <label class="form-label">Promo Code</label>
-                        <input
-                          type="text"
-                          class="form-control"
-                          id="promoCode"
-                          placeholder="e.g., WELCOME10"
-                        />
-                      </div>
-                    </div>
-                    <div class="col-md-4">
-                      <div class="mb-3">
-                        <label class="form-label">Value (BDT)</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          class="form-control"
-                          id="promoValue"
-                        />
-                      </div>
-                    </div>
-                    <div class="col-md-4">
-                      <div class="mb-3">
-                        <label class="form-label">Status</label>
-                        <select class="form-select" id="promoStatus">
-                          <option value="active">Active</option>
-                          <option value="inactive">Inactive</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div class="col-12">
-                      <div class="alert alert-info mt-3">
-                        <i class="bi bi-info-circle me-2"></i>
-                        Promo codes will be automatically applied when users enter them in the app.
-                      </div>
-                    </div>
-                  </div>
-                  <div class="text-end">
-                    <button class="btn btn-admin" onclick="addPromoCode()">
-                      <i class="bi bi-plus-circle me-1"></i>Create Promo Code
-                    </button>
-                  </div>
-                </div>
-
-                <h5 class="text-warning mb-3">Current Promo Codes</h5>
-                <div class="table-container">
-                  <div class="table-responsive">
-                    <table class="table table-dark table-hover">
-                      <thead>
-                        <tr>
-                          <th>Code</th>
-                          <th>Value</th>
-                          <th>Status</th>
-                          <th>Times Used</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody id="promoCodesList">
-                        <!-- Promo codes will be listed here -->
-                      </tbody>
-                    </table>
-                  </div>
-                  <div class="table-scroll-indicator d-md-none">
-                    <i class="bi bi-arrow-left-right"></i>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Withdrawals Tab -->
-          <div class="tab-pane fade" id="v-pills-withdrawals" role="tabpanel">
-            <div class="card">
-              <div class="card-header">
-                <h5 class="mb-0">
-                  <i class="bi bi-cash-coin me-2"></i>Withdrawal Requests
-                </h5>
-              </div>
-              <div class="card-body">
-                <div class="table-container">
-                  <div class="table-responsive">
-                    <table class="table table-dark table-hover">
-                      <thead>
-                        <tr>
-                          <th>User ID</th>
-                          <th>Amount</th>
-                          <th>Method</th>
-                          <th>Address</th>
-                          <th>Date</th>
-                          <th>Status</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody id="withdrawalsList">
-                        <!-- Withdrawals will be listed here -->
-                      </tbody>
-                    </table>
-                  </div>
-                  <div class="table-scroll-indicator d-md-none">
-                    <i class="bi bi-arrow-left-right"></i>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Users Tab -->
-          <div class="tab-pane fade" id="v-pills-users" role="tabpanel">
-            <div class="card">
-              <div class="card-header">
-                <h5 class="mb-0">
-                  <i class="bi bi-people me-2"></i>User Management
-                </h5>
-              </div>
-              <div class="card-body">
-                <div class="row mb-4">
-                  <div class="col-md-8">
-                    <input
-                      type="text"
-                      class="form-control"
-                      placeholder="Search users by ID, username, or IP"
-                      id="userSearch"
-                    />
-                  </div>
-                  <div class="col-md-4 text-end">
-                    <button
-                      class="btn btn-outline-admin"
-                      onclick="loadUsers()"
-                    >
-                      <i class="bi bi-arrow-clockwise me-1"></i>Refresh
-                    </button>
-                  </div>
-                </div>
-
-                <div class="table-container">
-                  <div class="table-responsive">
-                    <table class="table table-dark table-hover">
-                      <thead>
-                        <tr>
-                          <th>User ID</th>
-                          <th>Username</th>
-                          <th>Balance</th>
-                          <th>Status</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody id="usersList">
-                        <!-- Users will be listed here -->
-                      </tbody>
-                    </table>
-                  </div>
-                  <div class="table-scroll-indicator d-md-none">
-                    <i class="bi bi-arrow-left-right"></i>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+      <form class="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-control" id="loginEmail" required>
         </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-control" id="loginPassword" required>
+        </div>
+        <button type="submit" class="btn btn-admin login-btn">
+          <i class="bi bi-box-arrow-in-right me-2"></i> Login
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Change Password Page (Hidden by default) -->
+  <div id="changePasswordPage" class="login-container d-none">
+    <div class="card change-password-card">
+      <div class="card-header text-center">
+        <h5 class="mb-0"><i class="bi bi-key me-2"></i>Change Password</h5>
+      </div>
+      <div class="card-body">
+        <form onsubmit="handleChangePassword(event)">
+          <div class="mb-3">
+            <label class="form-label">Current Password</label>
+            <input type="password" class="form-control" id="currentPassword" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">New Password</label>
+            <input type="password" class="form-control" id="newPassword" required minlength="6">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Confirm New Password</label>
+            <input type="password" class="form-control" id="confirmPassword" required minlength="6">
+          </div>
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-admin">
+              <i class="bi bi-check-circle me-2"></i>Change Password
+            </button>
+            <button type="button" class="btn btn-outline-admin" onclick="goToAdminPanel()">
+              <i class="bi bi-arrow-left me-2"></i>Back to Admin
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
 
-  <!-- User Details Modal -->
-  <div
-    class="modal fade user-details-modal"
-    id="userDetailsModal"
-    tabindex="-1"
-    aria-hidden="true"
-  >
-    <div class="modal-dialog modal-xl">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">
-            <i class="bi bi-person-badge me-2"></i>User Details
-          </h5>
-          <button
-            type="button"
-            class="btn-close btn-close-white"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
+  <!-- Admin Panel (Hidden by default) -->
+  <div id="adminPanel" class="d-none">
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
+
+    <div class="admin-container">
+      <!-- Header -->
+      <div class="admin-header text-center mb-4">  
+        <h1><i class="bi bi-gear-fill me-2"></i>Admin Panel</h1>  
+        <!-- Buttons -->
+        <div class="mt-3">
+          <button class="btn btn-sm btn-primary me-2" onclick="showChangePasswordPage()">
+            <i class="bi bi-key-fill me-1"></i>Change Password
+          </button>
+          <button class="btn btn-sm btn-danger" onclick="handleLogout()">
+            <i class="bi bi-box-arrow-right me-1"></i>Logout
+          </button>
         </div>
-        <div class="modal-body">
-          <div class="row">
-            <div class="col-md-6">
-              <h6 class="text-warning mb-3">Account Information</h6>
-              <p>
-                <strong>User ID:</strong>
-                <span id="modalUserId" class="ip-info"></span>
-              </p>
-              <p>
-                <strong>Username:</strong> <span id="modalUsername"></span>
-              </p>
-              <p>
-                <strong>Join Date:</strong> <span id="modalJoinDate"></span>
-              </p>
-              <p>
-                <strong>IP Address:</strong>
-                <span id="modalIp" class="ip-info"></span>
-              </p>
-              <p>
-                <strong>Device Info:</strong>
-                <span id="modalDeviceInfo" class="ip-info"></span>
-              </p>
-            </div>
-            <div class="col-md-6">
-              <h6 class="text-warning mb-3">Financial Information</h6>
+      </div>
 
-              <p>
-                <strong>Balance:</strong>
-                <span id="modalBalance" class="editable-field" data-field="balance"></span> BDT
-              </p>
-
-              <p>
-                <strong>Total Earnings:</strong>
-                <span id="modalTotalEarnings" class="editable-field" data-field="totalEarnings"></span> BDT
-              </p>
-
-              <p>
-                <strong>Withdrawn:</strong>
-                <span id="modalWithdrawn" class="editable-field" data-field="withdrawn"></span> BDT
-              </p>
-
-              <p>
-                <strong>Referral Earnings:</strong>
-                <span id="modalReferralEarnings" class="editable-field" data-field="referralEarnings"></span> BDT
-              </p>
-
-              <p>
-                <strong>Referrals:</strong>
-                <span id="modalReferrals" class="editable-field" data-field="referrals"></span> users
-              </p>
-            </div>
-          </div>
-          
-          <div class="mt-4">
-            <h6 class="text-warning mb-3">Used Promo Codes</h6>
-            <ul id="modalPromoCodes" class="list-group"></ul>
-          </div>
-          
-          <div class="mt-4">
-            <h6 class="text-warning mb-3">Survey History</h6>
-            <div class="table-responsive">
-              <table class="table table-dark table-hover history-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Survey</th>
-                    <th>Reward</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody id="modalSurveyHistory">
-                  <!-- Survey history will be listed here -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-          
-          <div class="mt-4">
-            <h6 class="text-warning mb-3">Withdrawal History</h6>
-            <div class="table-responsive">
-              <table class="table table-dark table-hover history-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Amount</th>
-                    <th>Method</th>
-                    <th>Address</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody id="modalWithdrawalHistory">
-                  <!-- Withdrawal history will be listed here -->
-                </tbody>
-              </table>
+      <div class="row">
+        <!-- Navigation Sidebar -->
+        <div class="col-lg-3 col-md-4 mb-4">
+          <div class="card admin-nav">
+            <div class="card-body p-3">
+              <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                <button class="nav-link active" id="v-pills-home-tab" data-bs-toggle="pill" data-bs-target="#v-pills-home" type="button" role="tab">
+                  <i class="bi bi-speedometer2"></i> Dashboard
+                </button>
+                <button class="nav-link" id="v-pills-app-tab" data-bs-toggle="pill" data-bs-target="#v-pills-app" type="button" role="tab">
+                  <i class="bi bi-sliders"></i> App Settings
+                </button>
+                <button class="nav-link" id="v-pills-surveys-tab" data-bs-toggle="pill" data-bs-target="#v-pills-surveys" type="button" role="tab">
+                  <i class="bi bi-clipboard-data"></i> Surveys
+                </button>
+                <button class="nav-link" id="v-pills-promo-tab" data-bs-toggle="pill" data-bs-target="#v-pills-promo" type="button" role="tab">
+                  <i class="bi bi-ticket-perforated"></i> Promo Codes
+                </button>
+                <button class="nav-link" id="v-pills-withdrawals-tab" data-bs-toggle="pill" data-bs-target="#v-pills-withdrawals" type="button" role="tab">
+                  <i class="bi bi-cash-coin"></i> Withdrawals
+                </button>
+                <button class="nav-link" id="v-pills-users-tab" data-bs-toggle="pill" data-bs-target="#v-pills-users" type="button" role="tab">
+                  <i class="bi bi-people"></i> Users
+                </button>
+              </div>
             </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            data-bs-dismiss="modal"
-          >
-            Close
-          </button>
-          <button type="button" class="btn btn-admin" onclick="saveUserFinancialInfo()">
-            <i class="bi bi-check-circle me-1"></i>Save Changes
-          </button>
-          <button type="button" class="btn btn-warning" id="modalBanBtn">
-            <i class="bi bi-slash-circle me-1"></i>Ban User
-          </button>
-          <button
-            type="button"
-            class="btn btn-success d-none"
-            id="modalUnbanBtn"
-          >
-            <i class="bi bi-check-circle me-1"></i>Unban User
-          </button>
+
+        <!-- Content Area -->
+        <div class="col-lg-9 col-md-8">
+          <div class="tab-content" id="v-pills-tabContent">
+            <!-- Dashboard Tab -->
+            <div class="tab-pane fade show active" id="v-pills-home" role="tabpanel">
+              <div class="card">
+                <div class="card-header">
+                  <h5 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard Overview</h5>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-xl-3 col-md-6">
+                      <div class="stat-card card bg-dark">
+                        <i class="bi bi-people text-info"></i>
+                        <h5>Total Users</h5>
+                        <h3 class="fw-bold" id="totalUsers">0</h3>
+                      </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                      <div class="stat-card card bg-dark">
+                        <i class="bi bi-cash-coin text-success"></i>
+                        <h5>Total Earnings</h5>
+                        <h3 class="fw-bold" id="totalEarnings">0.00</h3>
+                      </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                      <div class="stat-card card bg-dark">
+                        <i class="bi bi-wallet2 text-warning"></i>
+                        <h5>Pending Withdrawals</h5>
+                        <h3 class="fw-bold" id="pendingWithdrawals">0</h3>
+                      </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                      <div class="stat-card card bg-dark">
+                        <i class="bi bi-shield-exclamation text-danger"></i>
+                        <h5>Banned Users</h5>
+                        <h3 class="fw-bold" id="bannedUsers">0</h3>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row mt-4">
+                    <div class="col-md-6">
+                      <div class="stat-card card bg-dark">
+                        <i class="bi bi-graph-up text-primary"></i>
+                        <h5>Active Surveys</h5>
+                        <h3 class="fw-bold" id="activeSurveys">0</h3>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="stat-card card bg-dark">
+                        <i class="bi bi-ticket-perforated text-info"></i>
+                        <h5>Active Promo Codes</h5>
+                        <h3 class="fw-bold" id="activePromos">0</h3>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- App Settings Tab -->
+            <div class="tab-pane fade" id="v-pills-app" role="tabpanel">
+              <div class="card">
+                <div class="card-header">
+                  <h5 class="mb-0"><i class="bi bi-sliders me-2"></i>Application Settings</h5>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Daily Tasks Limit</label>
+                      <input type="number" class="form-control" id="dailyLimit" value="60" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Ads rewards (BDT)</label>
+                      <input type="number" step="0.01" class="form-control" id="adsRewards" value="0.20" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Referral Commission (%)</label>
+                      <input type="number" class="form-control" id="referralCommission" value="10" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Minimum Withdrawal (BDT)</label>
+                      <input type="number" class="form-control" id="minWithdraw" value="50" />
+                    </div>
+                  </div>
+                  <div class="row">
+                    <!-- Logo Upload -->
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Logo</label>
+                      <input type="file" class="form-control" id="logoFile" accept="image/*" onchange="uploadImage(this, 'logoUrl','logoPreview')" />
+                      <input type="hidden" id="logoUrl" />
+                      <div class="form-text">Current Logo:</div>
+                      <img id="logoPreview" class="preview-image mt-2" src="" style="max-width: 150px; display: block" />
+                    </div>
+                    <!-- Cover Upload -->
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Cover</label>
+                      <input type="file" class="form-control" id="coverFile" accept="image/*" onchange="uploadImage(this, 'coverUrl','coverPreview')" />
+                      <input type="hidden" id="coverUrl" />
+                      <div class="form-text">Current Cover:</div>
+                      <img id="coverPreview" class="preview-image mt-2" src="" style="max-width: 250px; display: block" />
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">VPN Requirement</label>
+                      <div class="vpn-toggle">
+                        <label class="switch">
+                          <input type="checkbox" id="vpnToggle" />
+                          <span class="slider"></span>
+                        </label>
+                        <span id="vpnStatusText">VPN Required: ON</span>
+                      </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Support Contact Info</label>
+                      <input type="text" class="form-control" id="supportContact" placeholder="Email or Telegram handle" />
+                      <div class="form-text">This will be shown to banned users</div>
+                    </div>
+                  </div>
+                  <!-- Payment Methods Section -->
+                  <div class="row"> <div class="col-md-12 mb-3"> <label class="form-label">Payment Methods</label> <div id="paymentMethodsList" class="mb-2"></div> <button type="button" class="btn btn-sm btn-outline-admin mt-2" onclick="addPaymentMethod()"> <i class="bi bi-plus-circle"></i> Add Method </button> <div class="form-text">Add multiple payment methods (e.g., bKash, Nagad, PayPal)</div> </div> </div>
+                  <div class="text-end mt-4">
+                    <button class="btn btn-admin" onclick="saveAppSettings()">
+                      <i class="bi bi-check-circle me-1"></i>Save Settings
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Surveys Tab -->
+            <div class="tab-pane fade" id="v-pills-surveys" role="tabpanel">
+              <div class="card">
+                <div class="card-header">
+                  <h5 class="mb-0"><i class="bi bi-clipboard-data me-2"></i>Manage Surveys</h5>
+                </div>
+                <div class="card-body">
+                  <div class="mb-4">
+                    <h5 class="text-warning mb-3">Add New Survey</h5>
+                    <div class="row">
+                      <div class="col-md-4">
+                        <div class="mb-3">
+                          <label class="form-label">Survey Name</label>
+                          <input type="text" class="form-control" id="surveyName" />
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="mb-3">
+                          <label class="form-label">Reward (BDT)</label>
+                          <input type="number" step="0.01" class="form-control" id="surveyReward" />
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="mb-3">
+                          <label class="form-label">Image URL</label>
+                          <input type="text" class="form-control" id="surveyImage" />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col-md-8">
+                        <div class="mb-3">
+                          <label class="form-label">Survey URL</label>
+                          <input type="text" class="form-control" id="surveyUrl" placeholder="Required for completion" />
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="mb-3">
+                          <label class="form-label">Status</label>
+                          <select class="form-select" id="surveyStatus">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="text-end">
+                      <button class="btn btn-admin" onclick="addSurvey()">
+                        <i class="bi bi-plus-circle me-1"></i>Add Survey
+                      </button>
+                    </div>
+                  </div>
+                  <h5 class="text-warning mb-3">Current Surveys</h5>
+                  <div class="table-container">
+                    <div class="table-responsive">
+                      <table class="table table-dark table-hover">
+                        <thead>
+                          <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Reward</th>
+                            <th>URL</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody id="surveysList">
+                          <!-- Surveys will be listed here -->
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="table-scroll-indicator d-md-none">
+                      <i class="bi bi-arrow-left-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Promo Codes Tab -->
+            <div class="tab-pane fade" id="v-pills-promo" role="tabpanel">
+              <div class="card">
+                <div class="card-header">
+                  <h5 class="mb-0"><i class="bi bi-ticket-perforated me-2"></i>Manage Promo Codes</h5>
+                </div>
+                <div class="card-body">
+                  <div class="mb-4">
+                    <h5 class="text-warning mb-3">Create New Promo Code</h5>
+                    <div class="row">
+                      <div class="col-md-4">
+                        <div class="mb-3">
+                          <label class="form-label">Promo Code</label>
+                          <input type="text" class="form-control" id="promoCode" placeholder="e.g., WELCOME10" />
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="mb-3">
+                          <label class="form-label">Value (BDT)</label>
+                          <input type="number" step="0.01" class="form-control" id="promoValue" />
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="mb-3">
+                          <label class="form-label">Status</label>
+                          <select class="form-select" id="promoStatus">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div class="col-12">
+                        <div class="alert alert-info mt-3">
+                          <i class="bi bi-info-circle me-2"></i> Promo codes will be automatically applied when users enter them in the app.
+                        </div>
+                      </div>
+                    </div>
+                    <div class="text-end">
+                      <button class="btn btn-admin" onclick="addPromoCode()">
+                        <i class="bi bi-plus-circle me-1"></i>Create Promo Code
+                      </button>
+                    </div>
+                    </div>
+                    <h5 class="text-warning mb-3">Current Promo Codes</h5>
+                    <div class="table-container">
+                      <div class="table-responsive">
+                        <table class="table table-dark table-hover">
+                          <thead>
+                            <tr>
+                              <th>Code</th>
+                              <th>Value</th>
+                              <th>Status</th>
+                              <th>Times Used</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody id="promoCodesList">
+                            <!-- Promo codes will be listed here -->
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="table-scroll-indicator d-md-none">
+                        <i class="bi bi-arrow-left-right"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Withdrawals Tab -->
+              <div class="tab-pane fade" id="v-pills-withdrawals" role="tabpanel">
+                <div class="card">
+                  <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-cash-coin me-2"></i>Withdrawal Requests</h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="table-container">
+                      <div class="table-responsive">
+                        <table class="table table-dark table-hover">
+                          <thead>
+                            <tr>
+                              <th>User ID</th>
+                              <th>Amount</th>
+                              <th>Method</th>
+                              <th>Address</th>
+                              <th>Date</th>
+                              <th>Status</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody id="withdrawalsList">
+                            <!-- Withdrawals will be listed here -->
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="table-scroll-indicator d-md-none">
+                        <i class="bi bi-arrow-left-right"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Users Tab -->
+              <div class="tab-pane fade" id="v-pills-users" role="tabpanel">
+                <div class="card">
+                  <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-people me-2"></i>User Management</h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="row mb-4">
+                      <div class="col-md-8">
+                        <input type="text" class="form-control" placeholder="Search users by ID, username, or IP" id="userSearch" />
+                      </div>
+                      <div class="col-md-4 text-end">
+                        <button class="btn btn-outline-admin" onclick="loadUsers()">
+                          <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                        </button>
+                      </div>
+                    </div>
+                    <div class="table-container">
+                      <div class="table-responsive">
+                        <table class="table table-dark table-hover">
+                          <thead>
+                            <tr>
+                              <th>User ID</th>
+                              <th>Username</th>
+                              <th>Balance</th>
+                              <th>Status</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody id="usersList">
+                            <!-- Users will be listed here -->
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="table-scroll-indicator d-md-none">
+                        <i class="bi bi-arrow-left-right"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Details Modal -->
+    <div class="modal fade user-details-modal" id="userDetailsModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="bi bi-person-badge me-2"></i>User Details
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6">
+                <h6 class="text-warning mb-3">Account Information</h6>
+                <p>
+                  <strong>User ID:</strong>
+                  <span id="modalUserId" class="ip-info"></span>
+                </p>
+                <p>
+                  <strong>Username:</strong> <span id="modalUsername"></span>
+                </p>
+                <p>
+                  <strong>Join Date:</strong> <span id="modalJoinDate"></span>
+                </p>
+                <p>
+                  <strong>IP Address:</strong>
+                  <span id="modalIp" class="ip-info"></span>
+                </p>
+                <p>
+                  <strong>Device Info:</strong>
+                  <span id="modalDeviceInfo" class="ip-info"></span>
+                </p>
+              </div>
+              <div class="col-md-6">
+                <h6 class="text-warning mb-3">Financial Information</h6>
+
+                <p>
+                  <strong>Balance:</strong>
+                  <span id="modalBalance" class="editable-field" data-field="balance"></span> BDT
+                </p>
+
+                <p>
+                  <strong>Total Earnings:</strong>
+                  <span id="modalTotalEarnings" class="editable-field" data-field="totalEarnings"></span> BDT
+                </p>
+
+                <p>
+                  <strong>Withdrawn:</strong>
+                  <span id="modalWithdrawn" class="editable-field" data-field="withdrawn"></span> BDT
+                </p>
+
+                <p>
+                  <strong>Referral Earnings:</strong>
+                  <span id="modalReferralEarnings" class="editable-field" data-field="referralEarnings"></span> BDT
+                </p>
+
+                <p>
+                  <strong>Referrals:</strong>
+                  <span id="modalReferrals" class="editable-field" data-field="referrals"></span> users
+                </p>
+              </div>
+            </div>
+            
+            <div class="mt-4">
+              <h6 class="text-warning mb-3">Used Promo Codes</h6>
+              <ul id="modalPromoCodes" class="list-group"></ul>
+            </div>
+            
+            <div class="mt-4">
+              <h6 class="text-warning mb-3">Survey History</h6>
+              <div class="table-responsive">
+                <table class="table table-dark table-hover history-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Survey</th>
+                      <th>Reward</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="modalSurveyHistory">
+                    <!-- Survey history will be listed here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <div class="mt-4">
+              <h6 class="text-warning mb-3">Withdrawal History</h6>
+              <div class="table-responsive">
+                <table class="table table-dark table-hover history-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Amount</th>
+                      <th>Method</th>
+                      <th>Address</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="modalWithdrawalHistory">
+                    <!-- Withdrawal history will be listed here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              Close
+            </button>
+            <button type="button" class="btn btn-admin" onclick="saveUserFinancialInfo()">
+              <i class="bi bi-check-circle me-1"></i>Save Changes
+            </button>
+            <button type="button" class="btn btn-warning" id="modalBanBtn">
+              <i class="bi bi-slash-circle me-1"></i>Ban User
+            </button>
+            <button type="button" class="btn btn-success d-none" id="modalUnbanBtn">
+              <i class="bi bi-check-circle me-1"></i>Unban User
+            </button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    // Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyDuaWMh0eIJ2tdtLxYj43ij9MGSh_Yo22M",
-      authDomain: "test-6977e.firebaseapp.com",
-      projectId: "test-6977e",
-      storageBucket: "test-6977e.firebasestorage.app",
-      messagingSenderId: "544329273038",
-      appId: "1:544329273038:web:c7a31e12bec7c80741ca9f",
-    };
+   
+  <script>// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDuaWMh0eIJ2tdtLxYj43ij9MGSh_Yo22M",
+  authDomain: "test-6977e.firebaseapp.com",
+  databaseURL: "https://test-6977e-default-rtdb.firebaseio.com",
+  projectId: "test-6977e",
+  storageBucket: "test-6977e.firebasestorage.app",
+  messagingSenderId: "544329273038",
+  appId: "1:544329273038:web:c7a31e12bec7c80741ca9f"
+};
 
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+const auth = firebase.auth();
 
-    // App state
-    let appConfig = null;
-    let bannedUsers = [];
-    let selectedUserId = null;
-    let currentUserData = null;
+// App state
+let appConfig = null;
+let bannedUsers = [];
+let selectedUserId = null;
+let currentUserData = null;
+let currentAdminUser = null;
 
-    // Initialize the admin panel
-    document.addEventListener("DOMContentLoaded", function () {
-      loadAppConfig();
-      loadSurveys();
-      loadPromoCodes();
-      loadWithdrawals();
+// Check authentication state on page load
+document.addEventListener("DOMContentLoaded", function() {
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      // User is signed in
+      currentAdminUser = user;
+      showAdminPanel();
+      initializeAdminPanel();
+    } else {
+      // User is signed out
+      showLoginPage();
+    }
+  });
+});
+
+// Show login page
+function showLoginPage() {
+  document.getElementById("loginPage").classList.remove("d-none");
+  document.getElementById("changePasswordPage").classList.add("d-none");
+  document.getElementById("adminPanel").classList.add("d-none");
+}
+
+// Show admin panel
+function showAdminPanel() {
+  document.getElementById("loginPage").classList.add("d-none");
+  document.getElementById("changePasswordPage").classList.add("d-none");
+  document.getElementById("adminPanel").classList.remove("d-none");
+}
+
+// Show change password page
+function showChangePasswordPage() {
+  document.getElementById("loginPage").classList.add("d-none");
+  document.getElementById("changePasswordPage").classList.remove("d-none");
+  document.getElementById("adminPanel").classList.add("d-none");
+}
+
+// Go back to admin panel from change password page
+function goToAdminPanel() {
+  document.getElementById("loginPage").classList.add("d-none");
+  document.getElementById("changePasswordPage").classList.add("d-none");
+  document.getElementById("adminPanel").classList.remove("d-none");
+}
+
+// Handle login
+function handleLogin(event) {
+  event.preventDefault();
+  
+  const email = document.getElementById("loginEmail").value;
+  const password = document.getElementById("loginPassword").value;
+  
+  auth.signInWithEmailAndPassword(email, password)
+    .then((userCredential) => {
+      // Signed in
+      currentAdminUser = userCredential.user;
+      showAdminPanel();
+      showToast("Login successful!", "success");
+    })
+    .catch((error) => {
+      console.error("Login error:", error);
+      showToast("Login failed: " + error.message, "error");
+    });
+}
+
+// Handle logout
+function handleLogout() {
+  auth.signOut()
+    .then(() => {
+      currentAdminUser = null;
+      showLoginPage();
+      showToast("Logged out successfully", "info");
+    })
+    .catch((error) => {
+      console.error("Logout error:", error);
+      showToast("Logout failed: " + error.message, "error");
+    });
+}
+
+// Handle change password
+function handleChangePassword(event) {
+  event.preventDefault();
+  
+  const currentPassword = document.getElementById("currentPassword").value;
+  const newPassword = document.getElementById("newPassword").value;
+  const confirmPassword = document.getElementById("confirmPassword").value;
+  
+  if (newPassword !== confirmPassword) {
+    showToast("New passwords don't match", "error");
+    return;
+  }
+  
+  if (newPassword.length < 6) {
+    showToast("Password must be at least 6 characters", "error");
+    return;
+  }
+  
+  // Reauthenticate user first
+  const credential = firebase.auth.EmailAuthProvider.credential(
+    currentAdminUser.email, 
+    currentPassword
+  );
+  
+  currentAdminUser.reauthenticateWithCredential(credential)
+    .then(() => {
+      // Now change password
+      return currentAdminUser.updatePassword(newPassword);
+    })
+    .then(() => {
+      showToast("Password changed successfully!", "success");
+      // Clear form
+      document.getElementById("currentPassword").value = "";
+      document.getElementById("newPassword").value = "";
+      document.getElementById("confirmPassword").value = "";
+      // Go back to admin panel
+      goToAdminPanel();
+    })
+    .catch((error) => {
+      console.error("Password change error:", error);
+      showToast("Password change failed: " + error.message, "error");
+    });
+}
+
+// Initialize admin panel after login
+function initializeAdminPanel() {
+  loadAppConfig();
+  loadSurveys();
+  loadPromoCodes();
+  loadWithdrawals();
+  loadUsers();
+  updateDashboard();
+
+  // Add event listener for user search
+  document.getElementById("userSearch").addEventListener("input", loadUsers);
+
+  // Add event listener for VPN toggle
+  document.getElementById("vpnToggle").addEventListener("change", function() {
+    document.getElementById("vpnStatusText").textContent = `VPN Required: ${this.checked ? "ON" : "OFF"}`;
+  });
+}
+
+// =========================
+// Toast Notifications
+// =========================
+function showToast(message, type = "info") {
+  const toastContainer = document.querySelector(".toast-container");
+  const toastId = "toast-" + Date.now();
+
+  const toastHtml = `
+    <div id="${toastId}" class="admin-toast toast align-items-center show" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="toast-header">
+        <i class="bi ${
+          type === "success"
+            ? "bi-check-circle-fill text-success"
+            : type === "error"
+            ? "bi-exclamation-circle-fill text-danger"
+            : "bi-info-circle-fill text-info"
+        } me-2"></i>
+        <strong class="me-auto">${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+      <div class="toast-body">
+        ${message}
+      </div>
+    </div>
+  `;
+
+  toastContainer.insertAdjacentHTML("beforeend", toastHtml);
+
+  setTimeout(() => {
+    const toastElement = document.getElementById(toastId);
+    if (toastElement) {
+      toastElement.remove();
+    }
+  }, 5000);
+}
+
+// =========================
+// Decode Device Info - Improved Version
+// =========================
+function getDeviceName(deviceID) {
+  try {
+    if (!deviceID || typeof deviceID !== 'string') {
+      return "Unknown Device";
+    }
+    
+    // Check if it's a base64 encoded string
+    if (deviceID.match(/^[A-Za-z0-9+/=]+$/) && deviceID.length > 20) {
+      try {
+        // Try to decode base64
+        const decodedString = atob(deviceID);
+        deviceID = decodedString;
+      } catch (e) {
+        console.log("Not a valid base64 string or decoding failed");
+      }
+    }
+    
+    // Check for Android devices
+    if (deviceID.includes("Android")) {
+      let modelMatch = deviceID.match(/Android.*;\s([^;]+)\sBuild/i);
+      if (modelMatch && modelMatch[1]) {
+        return modelMatch[1].trim() + " (Android)";
+      }
+      let manufacturerMatch = deviceID.match(/Android.*;\s([^;]+)-[^;]+\sBuild/i);
+      if (manufacturerMatch && manufacturerMatch[1]) {
+        return manufacturerMatch[1].trim() + " Android Device";
+      }
+      return "Android Device";
+    }
+    
+    // Check for iOS devices
+    if (deviceID.includes("iPhone")) return "iPhone";
+    if (deviceID.includes("iPad")) return "iPad";
+    if (deviceID.includes("iPod")) return "iPod";
+    
+    // Check for Windows devices
+    if (deviceID.includes("Windows")) {
+      if (deviceID.includes("Touch")) return "Windows Tablet";
+      if (deviceID.includes("Phone")) return "Windows Phone";
+      return "Windows PC";
+    }
+    
+    // Check for Mac devices
+    if (deviceID.includes("Macintosh")) {
+      if (deviceID.includes("Intel") || deviceID.includes("PPC")) return "Mac Computer";
+      return "Apple Device";
+    }
+    
+    // Check for Linux devices
+    if (deviceID.includes("Linux")) {
+      if (deviceID.includes("X11")) return "Linux Computer";
+      if (deviceID.includes("Android")) return "Android Device"; // Some Android devices include Linux
+      return "Linux Device";
+    }
+    
+    // Check for other mobile devices
+    if (deviceID.includes("BlackBerry")) return "BlackBerry";
+    if (deviceID.includes("Mobile")) return "Mobile Device";
+    if (deviceID.includes("Tablet")) return "Tablet Device";
+    
+    // If we can't determine the specific device, return a generic description
+    if (deviceID.length > 0) {
+      if (deviceID.includes("Mozilla") || deviceID.includes("Browser")) {
+        return "Web Browser";
+      }
+      return "Connected Device";
+    }
+    
+    // Final fallback
+    return "Unknown Device";
+  } catch (e) {
+    console.error("Error decoding device info:", e);
+    return "Unknown Device";
+  }
+}
+
+// =========================
+// App Config Functions
+// =========================
+function loadAppConfig() {
+  showToast("Loading application configuration...", "info");
+
+  database
+    .ref("appConfig")
+    .once("value", (snapshot) => {
+      appConfig = snapshot.val();
+
+      if (!appConfig) {
+        appConfig = {
+          dailyLimit: 60,
+          adsRewards: 0.20,
+          referralCommission: 10,
+          minWithdraw: 50,
+          logo: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
+          cover: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
+          surveys: [],
+          vpnRequired: true,
+          supportContact: "support@moneylnd.com",
+          promoCodes: {},
+          paymentMethods: []
+        };
+
+        database.ref("appConfig").set(appConfig);
+      }
+
+      document.getElementById("dailyLimit").value = appConfig.dailyLimit;
+      document.getElementById("adsRewards").value = appConfig.adsRewards || 0.20;
+      document.getElementById("referralCommission").value = appConfig.referralCommission || 10;
+      document.getElementById("minWithdraw").value = appConfig.minWithdraw;
+      document.getElementById("logoUrl").value = appConfig.logo;
+      document.getElementById("coverUrl").value = appConfig.cover;
+      document.getElementById("logoPreview").src = appConfig.logo;
+      document.getElementById("coverPreview").src = appConfig.cover;
+      document.getElementById("supportContact").value = appConfig.supportContact || "";
+
+      document.getElementById("vpnToggle").checked = appConfig.vpnRequired !== undefined ? appConfig.vpnRequired : true;
+      document.getElementById("vpnStatusText").textContent = `VPN Required: ${document.getElementById("vpnToggle").checked ? "ON" : "OFF"}`;
+
+      // Load payment methods
+      loadPaymentMethods();
+
+      showToast("Application configuration loaded successfully!", "success");
+    })
+    .catch((error) => {
+      console.error("Error loading app config:", error);
+      showToast("Error loading application configuration", "error");
+    });
+}
+
+// =========================
+// Payment Methods Functions
+// =========================
+function loadPaymentMethods() {
+  const paymentMethodsList = document.getElementById("paymentMethodsList");
+  paymentMethodsList.innerHTML = "";
+  
+  if (appConfig && appConfig.paymentMethods && appConfig.paymentMethods.length > 0) {
+    appConfig.paymentMethods.forEach((method, index) => {
+      addPaymentMethodToUI(method, index);
+    });
+  }
+}
+
+function addPaymentMethodToUI(method, index) {
+  const paymentMethodsList = document.getElementById("paymentMethodsList");
+  const methodDiv = document.createElement("div");
+  methodDiv.className = "input-group mb-2";
+  methodDiv.id = `paymentMethod-${index}`;
+  
+  methodDiv.innerHTML = `
+    <input type="text" class="form-control" name="paymentMethods[]" 
+           placeholder="Enter payment method" value="${method}" 
+           data-index="${index}">
+    <button class="btn btn-outline-danger" type="button" 
+            onclick="removePaymentMethod(${index})">
+      <i class="bi bi-trash"></i>
+    </button>
+  `;
+  
+  paymentMethodsList.appendChild(methodDiv);
+}
+
+function addPaymentMethod() {
+  if (!appConfig.paymentMethods) {
+    appConfig.paymentMethods = [];
+  }
+  
+  // Add empty method
+  const newIndex = appConfig.paymentMethods.length;
+  appConfig.paymentMethods.push("");
+  addPaymentMethodToUI("", newIndex);
+}
+
+function removePaymentMethod(index) {
+  if (confirm("Are you sure you want to remove this payment method?")) {
+    // Remove from UI
+    const methodDiv = document.getElementById(`paymentMethod-${index}`);
+    if (methodDiv) methodDiv.remove();
+    
+    // Remove from config
+    if (appConfig.paymentMethods && appConfig.paymentMethods.length > index) {
+      appConfig.paymentMethods.splice(index, 1);
+      
+      // Re-index all methods
+      const paymentMethodsList = document.getElementById("paymentMethodsList");
+      paymentMethodsList.innerHTML = "";
+      
+      if (appConfig.paymentMethods.length > 0) {
+        appConfig.paymentMethods.forEach((method, newIndex) => {
+          addPaymentMethodToUI(method, newIndex);
+        });
+      }
+    }
+  }
+}
+
+function saveAppSettings() {
+  // Collect payment methods from inputs
+  const paymentInputs = document.querySelectorAll('input[name="paymentMethods[]"]');
+  const paymentMethods = [];
+  
+  paymentInputs.forEach(input => {
+    if (input.value.trim() !== "") {
+      paymentMethods.push(input.value.trim());
+    }
+  });
+  
+  appConfig.dailyLimit = parseInt(document.getElementById("dailyLimit").value);
+  appConfig.adsRewards = parseFloat(document.getElementById("adsRewards").value);
+  appConfig.referralCommission = parseInt(document.getElementById("referralCommission").value);
+  appConfig.minWithdraw = parseInt(document.getElementById("minWithdraw").value);
+  appConfig.logo = document.getElementById("logoUrl").value;
+  appConfig.cover = document.getElementById("coverUrl").value;
+  appConfig.vpnRequired = document.getElementById("vpnToggle").checked;
+  appConfig.supportContact = document.getElementById("supportContact").value;
+  appConfig.paymentMethods = paymentMethods; // Save payment methods
+
+  database.ref("appConfig").set(appConfig)
+    .then(() => {
+      document.getElementById("logoPreview").src = appConfig.logo;
+      document.getElementById("coverPreview").src = appConfig.cover;
+      showToast("Settings saved successfully!", "success");
+    })
+    .catch((error) => {
+      console.error("Error saving settings:", error);
+      showToast("Error saving settings. Please try again.", "error");
+    });
+}
+
+// Cloudinary config (replace with your values)
+const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/deu1ngeov/upload";
+const CLOUDINARY_UPLOAD_PRESET = "ml_default";
+
+// Upload image to Cloudinary
+async function uploadImage(input, urlFieldId, previewId) {
+  const file = input.files[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+  try {
+    const res = await fetch(CLOUDINARY_URL, {
+      method: "POST",
+      body: formData
+    });
+    const data = await res.json();
+    document.getElementById(urlFieldId).value = data.secure_url;
+    document.getElementById(previewId).src = data.secure_url;
+    console.log("Uploaded:", data.secure_url);
+  } catch (err) {
+    console.error("Upload failed", err);
+  }
+}
+
+// =========================
+// Users Functions
+// =========================
+function loadUsers() {
+  const usersList = document.getElementById("usersList");
+  usersList.innerHTML = '<tr><td colspan="6" class="text-center py-4 loading">Loading users...</td></tr>';
+
+  const searchTerm = document.getElementById("userSearch").value.toLowerCase();
+
+  database.ref("users").once("value", (snapshot) => {
+    const users = snapshot.val();
+    usersList.innerHTML = "";
+
+    if (!users) {
+      usersList.innerHTML = '<tr><td colspan="6" class="text-center py-4">No users found.</td></tr>';
+      return;
+    }
+
+    database.ref("bannedUsers").once("value", (bannedSnapshot) => {
+      const bannedData = bannedSnapshot.val();
+      // Convert to array if it's an object
+      if (bannedData && typeof bannedData === 'object' && !Array.isArray(bannedData)) {
+        bannedUsers = Object.keys(bannedData);
+      } else {
+        bannedUsers = bannedData || [];
+      }
+
+      let userCount = 0;
+      Object.keys(users).forEach((userId) => {
+        // Only show users with 10-digit IDs
+        if (!/^\d{10}$/.test(userId)) {
+          return;
+        }
+        
+        const user = users[userId];
+
+        if (
+          searchTerm &&
+          !userId.toLowerCase().includes(searchTerm) &&
+          !(user.username || "").toLowerCase().includes(searchTerm) &&
+          !(user.ip || "").toLowerCase().includes(searchTerm)
+        ) {
+          return;
+        }
+
+        userCount++;
+        const isBanned = bannedUsers.includes(userId);
+        const status = isBanned ? '<span class="badge bg-danger">Banned</span>' : '<span class="badge bg-success">Active</span>';
+
+        const actions = `
+          <button class="btn btn-sm btn-info me-1" onclick="viewUserDetails('${userId}')">
+            <i class="bi bi-info-circle"></i>
+          </button>
+          ${
+            isBanned
+              ? `<button class="btn btn-sm btn-success" onclick="unbanUser('${userId}')"><i class="bi bi-person-check"></i></button>`
+              : `<button class="btn btn-sm btn-danger" onclick="banUser('${userId}')"><i class="bi bi-person-slash"></i></button>`
+          }
+        `;
+
+        const row = `
+          <tr>
+            <td><span class="ip-info">${userId}</span></td>
+            <td>${user.username || "N/A"}</td>
+            <td>${user.balance ? user.balance.toFixed(2) : "0.00"} BDT</td>
+            <td>${status}</td>
+            <td>${actions}</td>
+          </tr>
+        `;
+        usersList.innerHTML += row;
+      });
+
+      if (userCount === 0) {
+        usersList.innerHTML = '<tr><td colspan="6" class="text-center py-4">No users match your search.</td></tr>';
+      }
+    });
+  });
+}
+
+function viewUserDetails(userId) {
+  selectedUserId = userId;
+
+  // Get user data
+  database.ref("users/" + userId).once("value", (snapshot) => {
+    const user = snapshot.val();
+    currentUserData = user;
+
+    if (user) {
+      // Populate modal with user data
+      document.getElementById("modalUserId").textContent = userId;
+      document.getElementById("modalUsername").textContent = user.username || "N/A";
+      document.getElementById("modalJoinDate").textContent = user.joinDate || "N/A";
+      document.getElementById("modalIp").textContent = user.ip || "N/A";
+      
+      // Decode device ID to show user agent info
+      let deviceInfo = "Unknown device";
+      if (user.deviceID) {
+        try {
+          deviceInfo = getDeviceName(user.deviceID);
+        } catch (e) {
+          deviceInfo = "Unknown device";
+        }
+      }
+      document.getElementById("modalDeviceInfo").textContent = deviceInfo;
+      
+      document.getElementById("modalBalance").textContent = user.balance ? user.balance.toFixed(2) : "0.00";
+      document.getElementById("modalTotalEarnings").textContent = user.totalEarnings ? user.totalEarnings.toFixed(2) : "0.00";
+      document.getElementById("modalWithdrawn").textContent = user.withdrawn ? user.withdrawn.toFixed(2) : "0.00";
+      document.getElementById("modalReferralEarnings").textContent = user.referralEarnings ? user.referralEarnings.toFixed(2) : "0.00";
+      document.getElementById("modalReferrals").textContent = user.referrals || 0;
+
+      // Populate used promo codes
+      const promoCodesList = document.getElementById("modalPromoCodes");
+      promoCodesList.innerHTML = "";
+
+      if (user.usedPromoCodes && user.usedPromoCodes.length > 0) {
+        user.usedPromoCodes.forEach((code) => {
+          const li = document.createElement("li");
+          li.className = "list-group-item bg-dark text-light";
+          li.textContent = code;
+          promoCodesList.appendChild(li);
+        });
+      } else {
+        const li = document.createElement("li");
+        li.className = "list-group-item bg-dark text-light";
+        li.textContent = "No promo codes used";
+        promoCodesList.appendChild(li);
+      }
+
+      // Load survey history
+      const surveyHistory = document.getElementById("modalSurveyHistory");
+      surveyHistory.innerHTML = "";
+      
+      if (user.history) {
+        const surveyCompletions = user.history.filter(item => item.type === "survey");
+        
+        if (surveyCompletions.length > 0) {
+          surveyCompletions.forEach(survey => {
+            const row = `
+              <tr>
+                <td>${survey.date || "N/A"}</td>
+                <td>${survey.name || "Unknown Survey"}</td>
+                <td>${survey.amount || 0} BDT</td>
+                <td>Completed</td>
+              </tr>
+            `;
+            surveyHistory.innerHTML += row;
+          });
+        } else {
+          surveyHistory.innerHTML = `
+            <tr>
+              <td colspan="4" class="text-center py-3">No survey history found</td>
+            </tr>
+          `;
+        }
+      } else {
+        surveyHistory.innerHTML = `
+          <tr>
+            <td colspan="4" class="text-center py-3">No survey history found</td>
+          </tr>
+        `;
+      }
+      
+      // Load withdrawal history
+      const withdrawalHistory = document.getElementById("modalWithdrawalHistory");
+      withdrawalHistory.innerHTML = "";
+      
+      if (user.history) {
+        const withdrawals = user.history.filter(item => item.type === "withdrawal");
+        
+        if (withdrawals.length > 0) {
+          withdrawals.forEach(withdrawal => {
+            const statusClass = 
+              withdrawal.status === "Completed" ? "text-success" :
+              withdrawal.status === "Pending" ? "text-warning" : "text-danger";
+            
+            const row = `
+              <tr>
+                <td>${withdrawal.date || "N/A"}</td>
+                <td>${withdrawal.amount || 0} BDT</td>
+                <td>${withdrawal.method || "N/A"}</td>
+                <td><small class="ip-info">${withdrawal.address || "N/A"}</small></td>
+                <td class="${statusClass}">${withdrawal.status || "Unknown"}</td>
+              </tr>
+            `;
+            withdrawalHistory.innerHTML += row;
+          });
+        } else {
+          withdrawalHistory.innerHTML = `
+            <tr>
+              <td colspan="5" class="text-center py-3">No withdrawal history found</td>
+            </tr>
+          `;
+        }
+      } else {
+        withdrawalHistory.innerHTML = `
+          <tr>
+            <td colspan="5" class="text-center py-3">No withdrawal history found</td>
+          </tr>
+        `;
+      }
+
+      // Show appropriate ban/unban button
+      const isBanned = bannedUsers.includes(userId);
+      document.getElementById("modalBanBtn").classList.toggle("d-none", isBanned);
+      document.getElementById("modalUnbanBtn").classList.toggle("d-none", !isBanned);
+
+      // Add click handlers to editable fields
+      document.querySelectorAll('.editable-field').forEach(field => {
+        field.addEventListener('click', function() {
+          makeFieldEditable(this);
+        });
+      });
+
+      // Show modal
+      const modal = new bootstrap.Modal(document.getElementById("userDetailsModal"));
+      modal.show();
+    }
+  });
+}
+
+// Make a field editable
+function makeFieldEditable(field) {
+  const originalValue = field.textContent;
+  const fieldName = field.getAttribute('data-field');
+
+  // Create input element
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.step = '0.01';
+  input.value = originalValue;
+  input.className = 'form-control form-control-sm';
+  input.style.display = 'inline-block';
+  input.style.width = '100px';
+  
+  // Replace field with input
+  field.innerHTML = '';
+  field.appendChild(input);
+  input.focus();
+  
+  // Handle input blur (save)
+  input.addEventListener('blur', function() {
+    saveFieldValue(field, input.value, fieldName);
+  });
+  
+  // Handle Enter key
+  input.addEventListener('keyup', function(e) {
+    if (e.key === "Enter") {
+      input.blur();
+    }
+  });
+}
+
+// Save the edited field value
+function saveFieldValue(field, value, fieldName) {
+  const numValue = parseFloat(value);
+  
+  if (isNaN(numValue)) {
+    field.textContent = currentUserData[fieldName] || '0.00';
+    showToast('Please enter a valid number', 'error');
+    return;
+  }
+  
+  // Update the field display
+  field.textContent = numValue.toFixed(2);
+  
+  // Update the user data object
+  currentUserData[fieldName] = numValue;
+  
+  showToast(`Updated ${fieldName} to ${numValue.toFixed(2)}`, 'success');
+}
+
+// Save all financial info changes
+function saveUserFinancialInfo() {
+  if (!selectedUserId || !currentUserData) {
+    showToast('No user selected', 'error');
+    return;
+  }
+  
+  // Update user data in Firebase
+  database.ref("users/" + selectedUserId)
+    .set(currentUserData)
+    .then(() => {
+      showToast('User financial information updated successfully!', 'success');
+      loadUsers(); // Refresh the users list
+    })
+    .catch((error) => {
+      console.error('Error updating user:', error);
+      showToast('Error updating user information', 'error');
+    });
+}
+
+function banUser(userId) {
+  if (!confirm("Are you sure you want to ban this user?")) return;
+
+  if (!bannedUsers.includes(userId)) {
+    bannedUsers.push(userId);
+    
+    // Convert array to object for Firebase
+    const bannedUsersObj = {};
+    bannedUsers.forEach((id, index) => {
+      bannedUsersObj[index] = id;
+    });
+    
+    database
+      .ref("bannedUsers")
+      .set(bannedUsersObj)
+      .then(() => {
+        loadUsers();
+        updateDashboard();
+
+        if (selectedUserId === userId) {
+          document.getElementById("modalBanBtn").classList.add("d-none");
+          document.getElementById("modalUnbanBtn").classList.remove("d-none");
+        }
+
+        showToast("User banned successfully!", "success");
+      })
+      .catch((error) => {
+        console.error("Error banning user:", error);
+        showToast("Error banning user. Please try again.", "error");
+      });
+  }
+}
+
+function unbanUser(userId) {
+  if (!confirm("Are you sure you want to unban this user?")) return;
+
+  bannedUsers = bannedUsers.filter((id) => id !== userId);
+  
+  // Convert array to object for Firebase
+  const bannedUsersObj = {};
+  bannedUsers.forEach((id, index) => {
+    bannedUsersObj[index] = id;
+  });
+  
+  database
+    .ref("bannedUsers")
+    .set(bannedUsersObj)
+    .then(() => {
       loadUsers();
       updateDashboard();
 
-      // Add event listener for user search
-      document
-        .getElementById("userSearch")
-        .addEventListener("input", loadUsers);
+      if (selectedUserId === userId) {
+        document.getElementById("modalBanBtn").classList.remove("d-none");
+        document.getElementById("modalUnbanBtn").classList.add("d-none");
+      }
 
-      // Add event listener for VPN toggle
-      document
-        .getElementById("vpnToggle")
-        .addEventListener("change", function () {
-          document.getElementById(
-            "vpnStatusText"
-          ).textContent = `VPN Required: ${this.checked ? "ON" : "OFF"}`;
-        });
+      showToast("User unbanned successfully!", "success");
+    })
+    .catch((error) => {
+      console.error("Error unbanning user:", error);
+      showToast("Error unbanning user. Please try again.", "error");
     });
+}
 
-    // Show toast notification
-    function showToast(message, type = "info") {
-      const toastContainer = document.querySelector(".toast-container");
-      const toastId = "toast-" + Date.now();
+// =========================
+// Survey Functions
+// =========================
+function loadSurveys() {
+  const surveysList = document.getElementById("surveysList");
+  surveysList.innerHTML = "";
 
-      const toastHtml = `
-      <div id="${toastId}" class="admin-toast toast align-items-center show" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="toast-header">
-          <i class="bi ${
-            type === "success"
-              ? "bi-check-circle-fill text-success"
-              : type === "error"
-              ? "bi-exclamation-circle-fill text-danger"
-              : "bi-info-circle-fill text-info"
-          } me-2"></i>
-          <strong class="me-auto">${
-            type.charAt(0).toUpperCase() + type.slice(1)
-          }</strong>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-        <div class="toast-body">
-          ${message}
-        </div>
-      </div>
+  if (!appConfig || !appConfig.surveys) {
+    surveysList.innerHTML = '<tr><td colspan="6" class="text-center py-4">No surveys found.</td></tr>';
+    return;
+  }
+
+  if (appConfig.surveys.length === 0) {
+    surveysList.innerHTML = '<tr><td colspan="6" class="text-center py-4">No surveys found.</td></tr>';
+    return;
+  }
+
+  appConfig.surveys.forEach((survey) => {
+    const statusBadge = survey.status === "active" ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>';
+
+    const row = `
+      <tr>
+        <td>${survey.id}</td>
+        <td>${survey.name}</td>
+        <td>${survey.reward} BDT</td>
+        <td><small class="ip-info">${survey.url.substring(0, 30)}${survey.url.length > 30 ? "..." : ""}</small></td>
+        <td>${statusBadge}</td>
+        <td>
+          <button class="btn btn-sm btn-warning me-1" onclick="editSurvey(${survey.id})">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button class="btn btn-sm btn-danger" onclick="deleteSurvey(${survey.id})">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>
+        </tr>
     `;
+    surveysList.innerHTML += row;
+  });
+}
 
-      toastContainer.insertAdjacentHTML("beforeend", toastHtml);
+function addSurvey() {
+  const name = document.getElementById("surveyName").value;
+  const reward = parseFloat(document.getElementById("surveyReward").value);
+  const image = document.getElementById("surveyImage").value;
+  const url = document.getElementById("surveyUrl").value;
+  const status = document.getElementById("surveyStatus").value;
 
-      // Auto remove after 5 seconds
-      setTimeout(() => {
-        const toastElement = document.getElementById(toastId);
-        if (toastElement) {
-          toastElement.remove();
+  if (!name || !reward || !image || !url) {
+    showToast("Please fill all fields!", "error");
+    return;
+  }
+
+  // Ensure surveys array exists
+  if (!appConfig.surveys) {
+    appConfig.surveys = [];
+  }
+
+  const newId = appConfig.surveys.length > 0 ? Math.max(...appConfig.surveys.map((s) => s.id)) + 1 : 1;
+
+  appConfig.surveys.push({
+    id: newId,
+    name,
+    reward,
+    image,
+    url,
+    status,
+    completedBy: {}
+  });
+
+  database.ref("appConfig").set(appConfig)
+    .then(() => {
+      loadSurveys();
+
+      // Clear form
+      document.getElementById("surveyName").value = "";
+      document.getElementById("surveyReward").value = "";
+      document.getElementById("surveyImage").value = "";
+      document.getElementById("surveyUrl").value = "";
+
+      showToast("Survey added successfully!", "success");
+    })
+    .catch((error) => {
+      console.error("Error adding survey:", error);
+      showToast("Error adding survey. Please try again.", "error");
+    });
+}
+
+function editSurvey(id) {
+  // Ensure surveys array exists
+  if (!appConfig.surveys) {
+    showToast("No surveys found to edit", "error");
+    return;
+  }
+  
+  const survey = appConfig.surveys.find((s) => s.id === id);
+  if (!survey) return;
+
+  const newName = prompt("Enter new name:", survey.name);
+  if (newName === null) return;
+
+  const newReward = parseFloat(prompt("Enter new reward:", survey.reward));
+  if (isNaN(newReward)) return;
+
+  const newImage = prompt("Enter new image URL:", survey.image);
+  if (newImage === null) return;
+
+  const newUrl = prompt("Enter new survey URL:", survey.url);
+  if (newUrl === null) return;
+
+  const newStatus = prompt("Enter status (active/inactive):", survey.status);
+  if (newStatus === null) return;
+
+  if (!["active", "inactive"].includes(newStatus)) {
+    showToast("Status must be either 'active' or 'inactive'", "error");
+    return;
+  }
+
+  survey.name = newName;
+  survey.reward = newReward;
+  survey.image = newImage;
+  survey.url = newUrl;
+  survey.status = newStatus;
+
+  database.ref("appConfig").set(appConfig)
+    .then(() => {
+      loadSurveys();
+      showToast("Survey updated successfully!", "success");
+    })
+    .catch((error) => {
+      console.error("Error updating survey:", error);
+      showToast("Error updating survey. Please try again.", "error");
+    });
+}
+
+function deleteSurvey(id) {
+  if (!confirm("Are you sure you want to delete this survey?")) return;
+
+  // Ensure surveys array exists
+  if (!appConfig.surveys) {
+    showToast("No surveys found to delete", "error");
+    return;
+  }
+  
+  appConfig.surveys = appConfig.surveys.filter((s) => s.id !== id);
+
+  database.ref("appConfig").set(appConfig)
+    .then(() => {
+      loadSurveys();
+      showToast("Survey deleted successfully!", "success");
+    })
+    .catch((error) => {
+      console.error("Error deleting survey:", error);
+      showToast("Error deleting survey. Please try again.", "error");
+    });
+}
+
+// =========================
+// Promo Code Functions
+// =========================
+function loadPromoCodes() {
+  const promoCodesList = document.getElementById("promoCodesList");
+  promoCodesList.innerHTML = "";
+
+  if (!appConfig || !appConfig.promoCodes) {
+    promoCodesList.innerHTML = '<tr><td colspan="5" class="text-center py-4">No promo codes found.</td></tr>';
+    return;
+  }
+
+  if (Object.keys(appConfig.promoCodes).length === 0) {
+    promoCodesList.innerHTML = '<tr><td colspan="5" class="text-center py-4">No promo codes found.</td></tr>';
+    return;
+  }
+
+  Object.keys(appConfig.promoCodes).forEach((code) => {
+    const promo = appConfig.promoCodes[code];
+    const statusBadge = promo.status === "active" ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>';
+
+    const row = `
+      <tr>
+        <td>${code}</td>
+        <td>${promo.value} BDT</td>
+        <td>${statusBadge}</td>
+        <td>${promo.used || 0}</td>
+        <td>
+          <button class="btn btn-sm btn-warning me-1" onclick="editPromoCode('${code}')">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button class="btn btn-sm btn-danger" onclick="deletePromoCode('${code}')">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+    promoCodesList.innerHTML += row;
+  });
+}
+
+function addPromoCode() {
+  const code = document.getElementById("promoCode").value.trim().toUpperCase();
+  const value = parseFloat(document.getElementById("promoValue").value);
+  const status = document.getElementById("promoStatus").value;
+
+  if (!code || isNaN(value)) {
+    showToast("Please fill all fields!", "error");
+    return;
+  }
+
+  if (!appConfig.promoCodes) {
+    appConfig.promoCodes = {};
+  }
+
+  if (appConfig.promoCodes[code]) {
+    showToast("This promo code already exists!", "error");
+    return;
+  }
+
+  appConfig.promoCodes[code] = {
+    value: value,
+    status: status,
+    used: 0,
+  };
+
+  database.ref("appConfig").set(appConfig)
+    .then(() => {
+      loadPromoCodes();
+
+      // Clear form
+      document.getElementById("promoCode").value = "";
+      document.getElementById("promoValue").value = "";
+
+      showToast("Promo code added successfully!", "success");
+    })
+    .catch((error) => {
+      console.error("Error adding promo code:", error);
+      showToast("Error adding promo code. Please try again.", "error");
+    });
+}
+
+function editPromoCode(code) {
+  const promo = appConfig.promoCodes[code];
+  if (!promo) return;
+
+  const newValue = parseFloat(prompt("Enter new value:", promo.value));
+  if (isNaN(newValue)) return;
+
+  const newStatus = prompt("Enter status (active/inactive):", promo.status);
+  if (newStatus === null) return;
+
+  if (!["active", "inactive"].includes(newStatus)) {
+    showToast("Status must be either 'active' or 'inactive'", "error");
+    return;
+  }
+
+  promo.value = newValue;
+  promo.status = newStatus;
+
+  database.ref("appConfig").set(appConfig)
+    .then(() => {
+      loadPromoCodes();
+      showToast("Promo code updated successfully!", "success");
+    })
+    .catch((error) => {
+      console.error("Error updating promo code:", error);
+      showToast("Error updating promo code. Please try again.", "error");
+    });
+}
+
+function deletePromoCode(code) {
+  if (!confirm("Are you sure you want to delete this promo code?")) return;
+
+  delete appConfig.promoCodes[code];
+
+  database.ref("appConfig").set(appConfig)
+    .then(() => {
+      loadPromoCodes();
+      showToast("Promo code deleted successfully!", "success");
+    })
+    .catch((error) => {
+      console.error("Error deleting promo code:", error);
+      showToast("Error deleting promo code. Please try again.", "error");
+    });
+}
+
+// =========================
+// Withdrawal Functions
+// =========================
+function loadWithdrawals() {
+  const withdrawalsList = document.getElementById("withdrawalsList");
+  withdrawalsList.innerHTML = '<tr><td colspan="7" class="text-center py-4 loading">Loading withdrawal requests...</td></tr>';
+
+  // Get all users' withdrawal history
+  database.ref("users").once("value", (snapshot) => {
+    const users = snapshot.val();
+    let allWithdrawals = [];
+
+    if (users) {
+      Object.keys(users).forEach((userId) => {
+        // Only process users with 10-digit IDs
+        if (!/^\d{10}$/.test(userId)) {
+          return;
         }
-      }, 5000);
-    }
-
-    // Load app configuration from Firebase
-    function loadAppConfig() {
-      showToast("Loading application configuration...", "info");
-
-      database
-        .ref("appConfig")
-        .once("value", (snapshot) => {
-          appConfig = snapshot.val();
-
-          if (!appConfig) {
-            // Default configuration if none exists
-            appConfig = {
-              dailyLimit: 60,
-              adsRewards: 0.20,
-              referralCommission: 10,
-              minWithdraw: 50,
-              logo: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
-              cover: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
-              surveys: [],
-              vpnRequired: true,
-              supportContact: "support@moneylnd.com",
-              promoCodes: {}
-            };
-
-            // Save default config to Firebase
-            database
-              .ref("appConfig")
-              .set(appConfig)
-              .then(() => {
-                showToast(
-                  "Default configuration created successfully!",
-                  "success"
-                );
-              })
-              .catch((error) => {
-                console.error("Error creating default config:", error);
-                showToast("Error creating default configuration", "error");
-              });
-          }
-
-          // Apply app configuration to form
-          document.getElementById("dailyLimit").value = appConfig.dailyLimit;
-          document.getElementById("adsRewards").value = appConfig.adsRewards || 0.20;
-          document.getElementById("referralCommission").value = appConfig.referralCommission || 10;
-          document.getElementById("minWithdraw").value =
-            appConfig.minWithdraw;
-          document.getElementById("logoUrl").value = appConfig.logo;
-          document.getElementById("coverUrl").value = appConfig.cover;
-          document.getElementById("logoPreview").src = appConfig.logo;
-          document.getElementById("coverPreview").src = appConfig.cover;
-          document.getElementById("supportContact").value =
-            appConfig.supportContact || "";
-
-          // Set VPN toggle
-          document.getElementById("vpnToggle").checked =
-            appConfig.vpnRequired !== undefined
-              ? appConfig.vpnRequired
-              : true;
-          document.getElementById(
-            "vpnStatusText"
-          ).textContent = `VPN Required: ${
-            document.getElementById("vpnToggle").checked ? "ON" : "OFF"
-          }`;
-
-          showToast(
-            "Application configuration loaded successfully!",
-            "success"
-          );
-        })
-        .catch((error) => {
-          console.error("Error loading app config:", error);
-          showToast("Error loading application configuration", "error");
-        });
-    }
-
-    function saveAppSettings() {
-      appConfig.dailyLimit = parseInt(
-        document.getElementById("dailyLimit").value
-      );
-      appConfig.adsRewards = parseFloat(
-        document.getElementById("adsRewards").value
-      );
-      appConfig.referralCommission = parseInt(
-        document.getElementById("referralCommission").value
-      );
-      appConfig.minWithdraw = parseInt(
-        document.getElementById("minWithdraw").value
-      );
-      appConfig.logo = document.getElementById("logoUrl").value;
-      appConfig.cover = document.getElementById("coverUrl").value;
-      appConfig.vpnRequired = document.getElementById("vpnToggle").checked;
-      appConfig.supportContact =
-        document.getElementById("supportContact").value;
-
-      database
-        .ref("appConfig")
-        .set(appConfig)
-        .then(() => {
-          // Update previews
-          document.getElementById("logoPreview").src = appConfig.logo;
-          document.getElementById("coverPreview").src = appConfig.cover;
-
-          showToast("Settings saved successfully!", "success");
-        })
-        .catch((error) => {
-          console.error("Error saving settings:", error);
-          showToast("Error saving settings. Please try again.", "error");
-        });
-    }
-
-    function loadSurveys() {
-      const surveysList = document.getElementById("surveysList");
-      surveysList.innerHTML = "";
-
-      if (!appConfig || !appConfig.surveys) {
-        surveysList.innerHTML = '<tr><td colspan="6" class="text-center py-4">No surveys found.</td></tr>';
-        return;
-      }
-
-      if (appConfig.surveys.length === 0) {
-        surveysList.innerHTML = '<tr><td colspan="6" class="text-center py-4">No surveys found.</td></tr>';
-        return;
-      }
-
-      appConfig.surveys.forEach((survey) => {
-        const statusBadge =
-          survey.status === "active"
-            ? '<span class="badge bg-success">Active</span>'
-            : '<span class="badge bg-secondary">Inactive</span>';
-
-        const row = `
-        <tr>
-          <td>${survey.id}</td>
-          <td>${survey.name}</td>
-          <td>${survey.reward} BDT</td>
-          <td><small class="ip-info">${survey.url.substring(0, 30)}${
-          survey.url.length > 30 ? "..." : ""
-        }</small></td>
-          <td>${statusBadge}</td>
-          <td>
-            <button class="btn btn-sm btn-warning me-1" onclick="editSurvey(${
-              survey.id
-            })">
-              <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn btn-sm btn-danger" onclick="deleteSurvey(${
-              survey.id
-            })">
-              <i class="bi bi-trash"></i>
-            </button>
-          </td>
-        </tr>
-      `;
-        surveysList.innerHTML += row;
-      });
-    }
-
-    function addSurvey() {
-      const name = document.getElementById("surveyName").value;
-      const reward = parseFloat(
-        document.getElementById("surveyReward").value
-      );
-      const image = document.getElementById("surveyImage").value;
-      const url = document.getElementById("surveyUrl").value;
-      const status = document.getElementById("surveyStatus").value;
-
-      if (!name || !reward || !image || !url) {
-        showToast("Please fill all fields!", "error");
-        return;
-      }
-
-      // Ensure surveys array exists
-      if (!appConfig.surveys) {
-        appConfig.surveys = [];
-      }
-
-      const newId =
-        appConfig.surveys.length > 0
-          ? Math.max(...appConfig.surveys.map((s) => s.id)) + 1
-          : 1;
-
-      appConfig.surveys.push({
-        id: newId,
-        name,
-        reward,
-        image,
-        url,
-        status,
-        completedBy: {}
-      });
-
-      database
-        .ref("appConfig")
-        .set(appConfig)
-        .then(() => {
-          loadSurveys();
-
-          // Clear form
-          document.getElementById("surveyName").value = "";
-          document.getElementById("surveyReward").value = "";
-          document.getElementById("surveyImage").value = "";
-          document.getElementById("surveyUrl").value = "";
-
-          showToast("Survey added successfully!", "success");
-        })
-        .catch((error) => {
-          console.error("Error adding survey:", error);
-          showToast("Error adding survey. Please try again.", "error");
-        });
-    }
-
-    function editSurvey(id) {
-      // Ensure surveys array exists
-      if (!appConfig.surveys) {
-        showToast("No surveys found to edit", "error");
-        return;
-      }
-      
-      const survey = appConfig.surveys.find((s) => s.id === id);
-      if (!survey) return;
-
-      const newName = prompt("Enter new name:", survey.name);
-      if (newName === null) return;
-
-      const newReward = parseFloat(
-        prompt("Enter new reward:", survey.reward)
-      );
-      if (isNaN(newReward)) return;
-
-      const newImage = prompt("Enter new image URL:", survey.image);
-      if (newImage === null) return;
-
-      const newUrl = prompt("Enter new survey URL:", survey.url);
-      if (newUrl === null) return;
-
-      const newStatus = prompt(
-        "Enter status (active/inactive):",
-        survey.status
-      );
-      if (newStatus === null) return;
-
-      if (!["active", "inactive"].includes(newStatus)) {
-        showToast("Status must be either 'active' or 'inactive'", "error");
-        return;
-      }
-
-      survey.name = newName;
-      survey.reward = newReward;
-      survey.image = newImage;
-      survey.url = newUrl;
-      survey.status = newStatus;
-
-      database
-        .ref("appConfig")
-        .set(appConfig)
-        .then(() => {
-          loadSurveys();
-          showToast("Survey updated successfully!", "success");
-        })
-        .catch((error) => {
-          console.error("Error updating survey:", error);
-          showToast("Error updating survey. Please try again.", "error");
-        });
-    }
-
-    function deleteSurvey(id) {
-      if (!confirm("Are you sure you want to delete this survey?")) return;
-
-      // Ensure surveys array exists
-      if (!appConfig.surveys) {
-        showToast("No surveys found to delete", "error");
-        return;
-      }
-      
-      appConfig.surveys = appConfig.surveys.filter((s) => s.id !== id);
-
-      database
-        .ref("appConfig")
-        .set(appConfig)
-        .then(() => {
-          loadSurveys();
-          showToast("Survey deleted successfully!", "success");
-        })
-        .catch((error) => {
-          console.error("Error deleting survey:", error);
-          showToast("Error deleting survey. Please try again.", "error");
-        });
-    }
-
-    function loadPromoCodes() {
-      const promoCodesList = document.getElementById("promoCodesList");
-      promoCodesList.innerHTML = "";
-
-      if (!appConfig || !appConfig.promoCodes) {
-        promoCodesList.innerHTML = '<tr><td colspan="5" class="text-center py-4">No promo codes found.</td></tr>';
-        return;
-      }
-
-      if (Object.keys(appConfig.promoCodes).length === 0) {
-        promoCodesList.innerHTML = '<tr><td colspan="5" class="text-center py-4">No promo codes found.</td></tr>';
-        return;
-      }
-
-      Object.keys(appConfig.promoCodes).forEach((code) => {
-        const promo = appConfig.promoCodes[code];
-        const statusBadge =
-          promo.status === "active"
-            ? '<span class="badge bg-success">Active</span>'
-            : '<span class="badge bg-secondary">Inactive</span>';
-
-        const row = `
-        <tr>
-          <td>${code}</td>
-          <td>${promo.value} BDT</td>
-          <td>${statusBadge}</td>
-          <td>${promo.used || 0}</td>
-          <td>
-            <button class="btn btn-sm btn-warning me-1" onclick="editPromoCode('${code}')">
-              <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn btn-sm btn-danger" onclick="deletePromoCode('${code}')">
-              <i class="bi bi-trash"></i>
-            </button>
-          </td>
-        </tr>
-      `;
-        promoCodesList.innerHTML += row;
-      });
-    }
-
-    function addPromoCode() {
-      const code = document
-        .getElementById("promoCode")
-        .value.trim()
-        .toUpperCase();
-      const value = parseFloat(document.getElementById("promoValue").value);
-      const status = document.getElementById("promoStatus").value;
-
-      if (!code || isNaN(value)) {
-        showToast("Please fill all fields!", "error");
-        return;
-      }
-
-      if (!appConfig.promoCodes) {
-        appConfig.promoCodes = {};
-      }
-
-      if (appConfig.promoCodes[code]) {
-        showToast("This promo code already exists!", "error");
-        return;
-      }
-
-      appConfig.promoCodes[code] = {
-        value: value,
-        status: status,
-        used: 0,
-      };
-
-      database
-        .ref("appConfig")
-        .set(appConfig)
-        .then(() => {
-          loadPromoCodes();
-
-          // Clear form
-          document.getElementById("promoCode").value = "";
-          document.getElementById("promoValue").value = "";
-
-          showToast("Promo code added successfully!", "success");
-        })
-        .catch((error) => {
-          console.error("Error adding promo code:", error);
-          showToast("Error adding promo code. Please try again.", "error");
-        });
-    }
-
-    function editPromoCode(code) {
-      const promo = appConfig.promoCodes[code];
-      if (!promo) return;
-
-      const newValue = parseFloat(prompt("Enter new value:", promo.value));
-      if (isNaN(newValue)) return;
-
-      const newStatus = prompt(
-        "Enter status (active/inactive):",
-        promo.status
-      );
-      if (newStatus === null) return;
-
-      if (!["active", "inactive"].includes(newStatus)) {
-        showToast("Status must be either 'active' or 'inactive'", "error");
-        return;
-      }
-
-      promo.value = newValue;
-      promo.status = newStatus;
-
-      database
-        .ref("appConfig")
-        .set(appConfig)
-        .then(() => {
-          loadPromoCodes();
-          showToast("Promo code updated successfully!", "success");
-        })
-        .catch((error) => {
-          console.error("Error updating promo code:", error);
-          showToast("Error updating promo code. Please try again.", "error");
-        });
-    }
-
-    function deletePromoCode(code) {
-      if (!confirm("Are you sure you want to delete this promo code?"))
-        return;
-
-      delete appConfig.promoCodes[code];
-
-      database
-        .ref("appConfig")
-        .set(appConfig)
-        .then(() => {
-          loadPromoCodes();
-          showToast("Promo code deleted successfully!", "success");
-        })
-        .catch((error) => {
-          console.error("Error deleting promo code:", error);
-          showToast("Error deleting promo code. Please try again.", "error");
-        });
-    }
-
-    function loadWithdrawals() {
-      const withdrawalsList = document.getElementById("withdrawalsList");
-      withdrawalsList.innerHTML =
-        '<tr><td colspan="7" class="text-center py-4 loading">Loading withdrawal requests...</td></tr>';
-
-      // Get all users' withdrawal history
-      database
-        .ref("users")
-        .once("value", (snapshot) => {
-          const users = snapshot.val();
-          let allWithdrawals = [];
-
-          if (users) {
-            Object.keys(users).forEach((userId) => {
-              const user = users[userId];
-              if (user.history) {
-                const userWithdrawals = user.history.filter(
-                  (item) => item.type === "withdrawal"
-                );
-
-                userWithdrawals.forEach((withdrawal) => {
-                  withdrawal.userId = userId;
-                  allWithdrawals.push(withdrawal);
-                });
-              }
-            });
-          }
-
-          // Sort by date (newest first)
-          allWithdrawals.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-          withdrawalsList.innerHTML = "";
-
-          if (allWithdrawals.length === 0) {
-            withdrawalsList.innerHTML =
-              '<tr><td colspan="7" class="text-center py-4">No withdrawal requests found.</td></tr>';
-            return;
-          }
-
-          allWithdrawals.forEach((withdrawal) => {
-            const statusClass =
-              withdrawal.status === "Pending"
-                ? "text-warning"
-                : withdrawal.status === "Completed"
-                ? "text-success"
-                : "text-danger";
-
-            const row = `
-          <tr>
-            <td><span class="ip-info">${withdrawal.userId}</span></td>
-            <td>${withdrawal.amount} BDT</td>
-            <td>${withdrawal.method}</td>
-            <td><small class="ip-info">${withdrawal.address}</small></td>
-            <td>${withdrawal.date}</td>
-            <td class="${statusClass}">${withdrawal.status}</td>
-            <td>
-              ${
-                withdrawal.status === "Pending"
-                  ? `
-                <button class="btn btn-sm btn-success me-1" onclick="approveWithdrawal('${withdrawal.userId}', '${withdrawal.date}', '${withdrawal.amount}')">
-                  <i class="bi bi-check-lg"></i>
-                </button>
-                <button class="btn btn-sm btn-danger" onclick="rejectWithdrawal('${withdrawal.userId}', '${withdrawal.date}')">
-                  <i class="bi bi-x-lg"></i>
-                </button>
-              `
-                  : ""
-              }
-            </td>
-          </tr>
-        `;
-            withdrawalsList.innerHTML += row;
-          });
-        })
-        .catch((error) => {
-          console.error("Error loading withdrawals:", error);
-          withdrawalsList.innerHTML =
-            '<tr><td colspan="7" class="text-center py-4 text-danger">Error loading withdrawal requests.</td></tr>';
-        });
-    }
-
-    function approveWithdrawal(userId, date, amount) {
-      // Get the user's data
-      database.ref("users/" + userId).once("value", (snapshot) => {
-        const user = snapshot.val();
-
-        if (user && user.history) {
-          // Find the specific withdrawal
-          const withdrawalIndex = user.history.findIndex(
-            (item) =>
-              item.type === "withdrawal" &&
-              item.date === date &&
-              parseFloat(item.amount) === parseFloat(amount)
-          );
-
-          if (withdrawalIndex !== -1) {
-            // Update the status
-            user.history[withdrawalIndex].status = "Completed";
-
-            // Update in Firebase
-            database
-              .ref("users/" + userId)
-              .set(user)
-              .then(() => {
-                loadWithdrawals();
-                showToast("Withdrawal approved successfully!", "success");
-              })
-              .catch((error) => {
-                console.error("Error approving withdrawal:", error);
-                showToast(
-                  "Error approving withdrawal. Please try again.",
-                  "error"
-                );
-              });
-          }
-        }
-      });
-    }
-
-    function rejectWithdrawal(userId, date) {
-      // Get the user's data
-      database.ref("users/" + userId).once("value", (snapshot) => {
-        const user = snapshot.val();
-
-        if (user && user.history) {
-          // Find the specific withdrawal
-          const withdrawalIndex = user.history.findIndex(
-            (item) => item.type === "withdrawal" && item.date === date
-          );
-
-          if (withdrawalIndex !== -1) {
-            // Return the amount to user's balance
-            const withdrawalAmount = parseFloat(
-              user.history[withdrawalIndex].amount
-            );
-            user.balance = (user.balance || 0) + withdrawalAmount;
-
-            // Update status to Rejected
-            user.history[withdrawalIndex].status = "Rejected";
-
-            // Update in Firebase
-            database
-              .ref("users/" + userId)
-              .set(user)
-              .then(() => {
-                loadWithdrawals();
-                showToast(
-                  "Withdrawal rejected and amount returned to user!",
-                  "success"
-                );
-              })
-              .catch((error) => {
-                console.error("Error rejecting withdrawal:", error);
-                showToast(
-                  "Error rejecting withdrawal. Please try again.",
-                  "error"
-                );
-              });
-          }
-        }
-      });
-    }
-
-    function loadUsers() {
-      const usersList = document.getElementById("usersList");
-      usersList.innerHTML =
-        '<tr><td colspan="6" class="text-center py-4 loading">Loading users...</td></tr>';
-
-      const searchTerm = document
-        .getElementById("userSearch")
-        .value.toLowerCase();
-
-      // Get all users
-      database
-        .ref("users")
-        .once("value", (snapshot) => {
-          const users = snapshot.val();
-
-          usersList.innerHTML = "";
-
-          if (!users) {
-            usersList.innerHTML =
-              '<tr><td colspan="6" class="text-center py-4">No users found.</td></tr>';
-            return;
-          }
-
-          // Get banned users list
-          database.ref("bannedUsers").once("value", (bannedSnapshot) => {
-            bannedUsers = bannedSnapshot.val() || [];
-
-            let userCount = 0;
-
-            Object.keys(users).forEach((userId) => {
-              const user = users[userId];
-
-              // Filter by search term if provided
-              if (
-                searchTerm &&
-                !userId.toLowerCase().includes(searchTerm) &&
-                !(user.username || "").toLowerCase().includes(searchTerm) &&
-                !(user.ip || "").toLowerCase().includes(searchTerm)
-              ) {
-                return;
-              }
-
-              userCount++;
-
-              // Check if user is banned
-              const isBanned = bannedUsers.includes(userId);
-
-              const status = isBanned
-                ? '<span class="badge bg-danger">Banned</span>'
-                : '<span class="badge bg-success">Active</span>';
-
-              const actions = `
-            <button class="btn btn-sm btn-info me-1" onclick="viewUserDetails('${userId}')">
-              <i class="bi bi-info-circle"></i>
-            </button>
-            ${
-              isBanned
-                ? `<button class="btn btn-sm btn-success" onclick="unbanUser('${userId}')">
-                <i class="bi bi-person-check"></i>
-              </button>`
-                : `<button class="btn btn-sm btn-danger" onclick="banUser('${userId}')">
-                <i class="bi bi-person-slash"></i>
-              </button>`
-            }
-          `;
-
-              const row = `
-            <tr>
-              <td><span class="ip-info">${userId}</span></td>
-              <td>${user.username || "N/A"}</td>
-              <td>${user.balance ? user.balance.toFixed(2) : "0.00"} BDT</td>
-              <td>${status}</td>
-              <td>${actions}</td>
-            </tr>
-          `;
-              usersList.innerHTML += row;
-            });
-
-            if (userCount === 0) {
-              usersList.innerHTML =
-                '<tr><td colspan="6" class="text-center py-4">No users match your search.</td></tr>';
-            }
-          });
-        })
-        .catch((error) => {
-          console.error("Error loading users:", error);
-          usersList.innerHTML =
-            '<tr><td colspan="6" class="text-center py-4 text-danger">Error loading users.</td></tr>';
-        });
-    }
-
-    function viewUserDetails(userId) {
-      selectedUserId = userId;
-
-      // Get user data
-      database.ref("users/" + userId).once("value", (snapshot) => {
-        const user = snapshot.val();
-        currentUserData = user;
-
-        if (user) {
-          // Populate modal with user data
-          document.getElementById("modalUserId").textContent = userId;
-          document.getElementById("modalUsername").textContent =
-            user.username || "N/A";
-          document.getElementById("modalJoinDate").textContent =
-            user.joinDate || "N/A";
-          document.getElementById("modalIp").textContent = user.ip || "N/A";
-          
-          // Decode device ID to show user agent info
-          let deviceInfo = "Unknown device";
-          if (user.deviceID) {
-            try {
-              // Try to parse deviceID as it might be encoded user agent
-              deviceInfo = decodeDeviceInfo(user.deviceID);
-            } catch (e) {
-              deviceInfo = user.deviceID;
-            }
-          }
-          document.getElementById("modalDeviceInfo").textContent = deviceInfo;
-          
-          document.getElementById("modalBalance").textContent = user.balance
-            ? user.balance.toFixed(2)
-            : "0.00";
-          document.getElementById("modalTotalEarnings").textContent =
-            user.totalEarnings ? user.totalEarnings.toFixed(2) : "0.00";
-          document.getElementById("modalWithdrawn").textContent =
-            user.withdrawn ? user.withdrawn.toFixed(2) : "0.00";
-          document.getElementById("modalReferralEarnings").textContent =
-            user.referralEarnings ? user.referralEarnings.toFixed(2) : "0.00";
-          document.getElementById("modalReferrals").textContent =
-            user.referrals || 0;
-
-          // Populate used promo codes
-          const promoCodesList = document.getElementById("modalPromoCodes");
-          promoCodesList.innerHTML = "";
-
-          if (user.usedPromoCodes && user.usedPromoCodes.length > 0) {
-            user.usedPromoCodes.forEach((code) => {
-              const li = document.createElement("li");
-              li.className = "list-group-item bg-dark text-light";
-              li.textContent = code;
-              promoCodesList.appendChild(li);
-            });
-          } else {
-            const li = document.createElement("li");
-            li.className = "list-group-item bg-dark text-light";
-            li.textContent = "No promo codes used";
-            promoCodesList.appendChild(li);
-          }
-
-          // Load survey history
-          const surveyHistory = document.getElementById("modalSurveyHistory");
-          surveyHistory.innerHTML = "";
-          
-          if (user.history) {
-            const surveyCompletions = user.history.filter(
-              item => item.type === "survey"
-            );
-            
-            if (surveyCompletions.length > 0) {
-              surveyCompletions.forEach(survey => {
-                const row = `
-                  <tr>
-                    <td>${survey.date || "N/A"}</td>
-                    <td>${survey.name || "Unknown Survey"}</td>
-                    <td>${survey.amount || 0} BDT</td>
-                    <td>Completed</td>
-                  </tr>
-                `;
-                surveyHistory.innerHTML += row;
-              });
-            } else {
-              surveyHistory.innerHTML = `
-                <tr>
-                  <td colspan="4" class="text-center py-3">No survey history found</td>
-                </tr>
-              `;
-            }
-          } else {
-            surveyHistory.innerHTML = `
-              <tr>
-                <td colspan="4" class="text-center py-3">No survey history found</td>
-              </tr>
-            `;
-          }
-          
-          // Load withdrawal history
-          const withdrawalHistory = document.getElementById("modalWithdrawalHistory");
-          withdrawalHistory.innerHTML = "";
-          
-          if (user.history) {
-            const withdrawals = user.history.filter(
-              item => item.type === "withdrawal"
-            );
-            
-            if (withdrawals.length > 0) {
-              withdrawals.forEach(withdrawal => {
-                const statusClass = 
-                  withdrawal.status === "Completed" ? "text-success" :
-                  withdrawal.status === "Pending" ? "text-warning" : "text-danger";
-                
-                const row = `
-                  <tr>
-                    <td>${withdrawal.date || "N/A"}</td>
-                    <td>${withdrawal.amount || 0} BDT</td>
-                    <td>${withdrawal.method || "N/A"}</td>
-                    <td><small class="ip-info">${withdrawal.address || "N/A"}</small></td>
-                    <td class="${statusClass}">${withdrawal.status || "Unknown"}</td>
-                  </tr>
-                `;
-                withdrawalHistory.innerHTML += row;
-              });
-            } else {
-              withdrawalHistory.innerHTML = `
-                <tr>
-                  <td colspan="5" class="text-center py-3">No withdrawal history found</td>
-                </tr>
-              `;
-            }
-          } else {
-            withdrawalHistory.innerHTML = `
-              <tr>
-                <td colspan="5" class="text-center py-3">No withdrawal history found</td>
-              </tr>
-            `;
-          }
-
-          // Show appropriate ban/unban button
-          const isBanned = bannedUsers.includes(userId);
-          document
-            .getElementById("modalBanBtn")
-            .classList.toggle("d-none", isBanned);
-          document
-            .getElementById("modalUnbanBtn")
-            .classList.toggle("d-none", !isBanned);
-
-          // Add click handlers to editable fields
-          document.querySelectorAll('.editable-field').forEach(field => {
-            field.addEventListener('click', function() {
-              makeFieldEditable(this);
-            });
-          });
-
-          // Show modal
-          const modal = new bootstrap.Modal(
-            document.getElementById("userDetailsModal")
-          );
-          modal.show();
-        }
-      });
-    }
-
-    // Function to decode device ID (assuming it's a user agent string)
-    function decodeDeviceInfo(deviceID) {
-      // If it's a simple string, just return it
-      if (typeof deviceID === 'string' && !deviceID.includes(';')) {
-        return deviceID;
-      }
-      
-      try {
-        // Try to parse as user agent string
-        const ua = deviceID;
         
-        // Simple user agent parsing
-        if (ua.includes('Android')) {
-          return 'Android Device';
-        } else if (ua.includes('iPhone') || ua.includes('iPad') || ua.includes('iPod')) {
-          return 'iOS Device';
-        } else if (ua.includes('Windows')) {
-          return 'Windows PC';
-        } else if (ua.includes('Macintosh')) {
-          return 'Mac Computer';
-        } else if (ua.includes('Linux')) {
-          return 'Linux Device';
-        } else {
-          return ua.substring(0, 50) + (ua.length > 50 ? '...' : '');
-        }
-      } catch (e) {
-        return deviceID;
-      }
-    }
-
-    // Make a field editable
-    function makeFieldEditable(field) {
-      const originalValue = field.textContent;
-      const fieldName = field.getAttribute('data-field');
-      
-      // Create input element
-      const input = document.createElement('input');
-      input.type = 'number';
-      input.step = '0.01';
-      input.value = originalValue;
-      input.className = 'form-control form-control-sm';
-      input.style.display = 'inline-block';
-      input.style.width = '100px';
-      
-      // Replace field with input
-      field.innerHTML = '';
-      field.appendChild(input);
-      input.focus();
-      
-      // Handle input blur (save)
-      input.addEventListener('blur', function() {
-        saveFieldValue(field, input.value, fieldName);
-      });
-      
-      // Handle Enter key
-      input.addEventListener('keyup', function(e) {
-        if (e.key === 'Enter') {
-          input.blur();
+        const user = users[userId];
+        if (user.history) {
+          const userWithdrawals = user.history.filter((item) => item.type === "withdrawal");
+          userWithdrawals.forEach((withdrawal) => {
+            withdrawal.userId = userId;
+            allWithdrawals.push(withdrawal);
+          });
         }
       });
     }
 
-    // Save the edited field value
-    function saveFieldValue(field, value, fieldName) {
-      const numValue = parseFloat(value);
-      
-      if (isNaN(numValue)) {
-        field.textContent = currentUserData[fieldName] || '0.00';
-        showToast('Please enter a valid number', 'error');
-        return;
-      }
-      
-      // Update the field display
-      field.textContent = numValue.toFixed(2);
-      
-      // Update the user data object
-      currentUserData[fieldName] = numValue;
-      
-      showToast(`Updated ${fieldName} to ${numValue.toFixed(2)}`, 'success');
+    // Sort by date (newest first)
+    allWithdrawals.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    withdrawalsList.innerHTML = "";
+
+    if (allWithdrawals.length === 0) {
+      withdrawalsList.innerHTML = '<tr><td colspan="7" class="text-center py-4">No withdrawal requests found.</td></tr>';
+      return;
     }
 
-    // Save all financial info changes
-    function saveUserFinancialInfo() {
-      if (!selectedUserId || !currentUserData) {
-        showToast('No user selected', 'error');
-        return;
-      }
-      
-      // Update user data in Firebase
-      database.ref("users/" + selectedUserId)
-        .set(currentUserData)
-        .then(() => {
-          showToast('User financial information updated successfully!', 'success');
-          loadUsers(); // Refresh the users list
-        })
-        .catch((error) => {
-          console.error('Error updating user:', error);
-          showToast('Error updating user information', 'error');
-        });
-    }
+    allWithdrawals.forEach((withdrawal) => {
+      const statusClass = withdrawal.status === "Pending" ? "text-warning" : withdrawal.status === "Completed" ? "text-success" : "text-danger";
 
-    function banUser(userId) {
-      if (!confirm("Are you sure you want to ban this user?")) return;
+      const row = `
+        <tr>
+          <td><span class="ip-info">${withdrawal.userId}</span></td>
+          <td>${withdrawal.amount} BDT</td>
+          <td>${withdrawal.method}</td>
+          <td><small class="ip-info">${withdrawal.address}</small></td>
+          <td>${withdrawal.date}</td>
+          <td class="${statusClass}">${withdrawal.status}</td>
+          <td>
+            ${withdrawal.status === "Pending" ? `
+              <button class="btn btn-sm btn-success me-1" onclick="approveWithdrawal('${withdrawal.userId}', '${withdrawal.date}', '${withdrawal.amount}')">
+                <i class="bi bi-check-lg"></i>
+              </button>
+              <button class="btn btn-sm btn-danger" onclick="rejectWithdrawal('${withdrawal.userId}', '${withdrawal.date}')">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            ` : ""}
+          </td>
+        </tr>
+      `;
+      withdrawalsList.innerHTML += row;
+    });
+  }).catch((error) => {
+    console.error("Error loading withdrawals:", error);
+    withdrawalsList.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Error loading withdrawal requests.</td></tr>';
+  });
+}
 
-      if (!bannedUsers.includes(userId)) {
-        bannedUsers.push(userId);
-        database
-          .ref("bannedUsers")
-          .set(bannedUsers)
+function approveWithdrawal(userId, date, amount) {
+  // Get the user's data
+  database.ref("users/" + userId).once("value", (snapshot) => {
+    const user = snapshot.val();
+
+    if (user && user.history) {
+      // Find the specific withdrawal
+      const withdrawalIndex = user.history.findIndex(
+        (item) => item.type === "withdrawal" && item.date === date && parseFloat(item.amount) === parseFloat(amount)
+      );
+
+      if (withdrawalIndex !== -1) {
+        // Update the status
+        user.history[withdrawalIndex].status = "Completed";
+
+        // Update in Firebase
+        database.ref("users/" + userId).set(user)
           .then(() => {
-            loadUsers();
-            updateDashboard();
-
-            if (selectedUserId === userId) {
-              document.getElementById("modalBanBtn").classList.add("d-none");
-              document
-                .getElementById("modalUnbanBtn")
-                .classList.remove("d-none");
-            }
-
-            showToast("User banned successfully!", "success");
+            loadWithdrawals();
+            showToast("Withdrawal approved successfully!", "success");
           })
           .catch((error) => {
-            console.error("Error banning user:", error);
-            showToast("Error banning user. Please try again.", "error");
+            console.error("Error approving withdrawal:", error);
+            showToast("Error approving withdrawal. Please try again.", "error");
           });
       }
     }
+  });
+}
 
-    function unbanUser(userId) {
-      if (!confirm("Are you sure you want to unban this user?")) return;
+function rejectWithdrawal(userId, date) {
+  // Get the user's data
+  database.ref("users/" + userId).once("value", (snapshot) => {
+    const user = snapshot.val();
 
-      bannedUsers = bannedUsers.filter((id) => id !== userId);
-      database
-        .ref("bannedUsers")
-        .set(bannedUsers)
-        .then(() => {
-          loadUsers();
-          updateDashboard();
+    if (user && user.history) {
+      // Find the specific withdrawal
+      const withdrawalIndex = user.history.findIndex(
+        (item) => item.type === "withdrawal" && item.date === date
+      );
 
-          if (selectedUserId === userId) {
-            document.getElementById("modalBanBtn").classList.remove("d-none");
-            document.getElementById("modalUnbanBtn").classList.add("d-none");
+      if (withdrawalIndex !== -1) {
+        // Return the amount to user's balance
+        const withdrawalAmount = parseFloat(user.history[withdrawalIndex].amount);
+        user.balance = (user.balance || 0) + withdrawalAmount;
+
+        // Update status to Rejected
+        user.history[withdrawalIndex].status = "Rejected";
+
+        // Update in Firebase
+        database.ref("users/" + userId).set(user)
+          .then(() => {
+            loadWithdrawals();
+            showToast("Withdrawal rejected and amount returned to user!", "success");
+          })
+          .catch((error) => {
+            console.error("Error rejecting withdrawal:", error);
+            showToast("Error rejecting withdrawal. Please try again.", "error");
+          });
+      }
+    }
+  });
+}
+
+// =========================
+// Dashboard Functions
+// =========================
+function updateDashboard() {
+  // Calculate total users, earnings, and pending withdrawals
+  database.ref("users").once("value", (snapshot) => {
+    const users = snapshot.val();
+    let totalUsers = 0;
+    let totalEarnings = 0;
+    let pendingWithdrawals = 0;
+    let activeSurveys = 0;
+
+    if (users) {
+      // Only count users with 10-digit IDs
+      Object.keys(users).forEach((userId) => {
+        if (/^\d{10}$/.test(userId)) {
+          totalUsers++;
+          const user = users[userId];
+
+          if (user.totalEarnings) {
+            totalEarnings += user.totalEarnings;
           }
 
-          showToast("User unbanned successfully!", "success");
-        })
-        .catch((error) => {
-          console.error("Error unbanning user:", error);
-          showToast("Error unbanning user. Please try again.", "error");
-        });
-    }
-
-    function updateDashboard() {
-      // Calculate total users, earnings, and pending withdrawals
-      database.ref("users").once("value", (snapshot) => {
-        const users = snapshot.val();
-        let totalUsers = 0;
-        let totalEarnings = 0;
-        let pendingWithdrawals = 0;
-        let activeSurveys = 0;
-
-        if (users) {
-          totalUsers = Object.keys(users).length;
-
-          Object.keys(users).forEach((userId) => {
-            const user = users[userId];
-
-            if (user.totalEarnings) {
-              totalEarnings += user.totalEarnings;
-            }
-
-            if (user.history) {
-              user.history.forEach((item) => {
-                if (item.type === "withdrawal" && item.status === "Pending") {
-                  pendingWithdrawals++;
-                }
-              });
-            }
-          });
-        }
-
-        // Count active surveys
-        if (appConfig && appConfig.surveys) {
-          activeSurveys = appConfig.surveys.filter(
-            (s) => s.status === "active"
-          ).length;
-        }
-
-        // Get banned users count
-        database.ref("bannedUsers").once("value", (bannedSnapshot) => {
-          const bannedUsers = bannedSnapshot.val() || [];
-
-          // Get active promo codes count
-          let activePromos = 0;
-          if (appConfig && appConfig.promoCodes) {
-            Object.keys(appConfig.promoCodes).forEach((code) => {
-              if (appConfig.promoCodes[code].status === "active") {
-                activePromos++;
+          if (user.history) {
+            user.history.forEach((item) => {
+              if (item.type === "withdrawal" && item.status === "Pending") {
+                pendingWithdrawals++;
               }
             });
           }
-
-          document.getElementById("totalUsers").textContent = totalUsers;
-          document.getElementById("totalEarnings").textContent =
-            totalEarnings.toFixed(2);
-          document.getElementById("pendingWithdrawals").textContent =
-            pendingWithdrawals;
-          document.getElementById("bannedUsers").textContent =
-            bannedUsers.length;
-          document.getElementById("activePromos").textContent = activePromos;
-          document.getElementById("activeSurveys").textContent =
-            activeSurveys;
-        });
+        }
       });
     }
-  </script>
+
+    // Count active surveys
+    if (appConfig && appConfig.surveys) {
+      activeSurveys = appConfig.surveys.filter((s) => s.status === "active").length;
+    }
+
+    // Get banned users count
+    database.ref("bannedUsers").once("value", (bannedSnapshot) => {
+      const bannedData = bannedSnapshot.val();
+      let bannedUsersCount = 0;
+      
+      if (bannedData) {
+        if (Array.isArray(bannedData)) {
+          bannedUsersCount = bannedData.length;
+        } else if (typeof bannedData === 'object') {
+          // Only count banned users with 10-digit IDs
+          Object.keys(bannedData).forEach(key => {
+            if (/^\d{10}$/.test(bannedData[key])) {
+              bannedUsersCount++;
+            }
+          });
+        }
+      }
+
+      // Get active promo codes count
+      let activePromos = 0;
+      if (appConfig && appConfig.promoCodes) {
+        Object.keys(appConfig.promoCodes).forEach((code) => {
+          if (appConfig.promoCodes[code].status === "active") {
+            activePromos++;
+          }
+        });
+      }
+
+      document.getElementById("totalUsers").textContent = totalUsers;
+      document.getElementById("totalEarnings").textContent = totalEarnings.toFixed(2);
+      document.getElementById("pendingWithdrawals").textContent = pendingWithdrawals;
+      document.getElementById("bannedUsers").textContent = bannedUsersCount;
+      document.getElementById("activePromos").textContent = activePromos;
+      document.getElementById("activeSurveys").textContent = activeSurveys;
+    });
+  });
+}</script>
 </body>
 </html>
