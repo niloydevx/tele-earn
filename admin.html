@@ -1797,7 +1797,7 @@ function loadUsers() {
       const bannedData = bannedSnapshot.val();
       // Convert to array if it's an object
       if (bannedData && typeof bannedData === 'object' && !Array.isArray(bannedData)) {
-        bannedUsers = Object.values(bannedData);
+        bannedUsers = Object.keys(bannedData);
       } else {
         bannedUsers = bannedData || [];
       }
@@ -2589,18 +2589,21 @@ function updateDashboard() {
       activeSurveys = appConfig.surveys.filter((s) => s.status === "active").length;
     }
 
-    // Get banned users count - FIXED THIS SECTION
+    // Get banned users count
     database.ref("bannedUsers").once("value", (bannedSnapshot) => {
       const bannedData = bannedSnapshot.val();
       let bannedUsersCount = 0;
       
       if (bannedData) {
         if (Array.isArray(bannedData)) {
-          // If it's already an array, just count the elements
           bannedUsersCount = bannedData.length;
         } else if (typeof bannedData === 'object') {
-          // If it's an object, extract the values and count them
-          bannedUsersCount = Object.values(bannedData).length;
+          // Only count banned users with 10-digit IDs
+          if (Array.isArray(bannedData)) {
+  bannedUsersCount = bannedData.length;
+} else if (typeof bannedData === 'object') {
+  bannedUsersCount = Object.values(bannedData).length;
+}
         }
       }
 
