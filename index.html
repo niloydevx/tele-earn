@@ -1270,8 +1270,7 @@
     <!-- End of appContent -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script> 
-// Firebase configuration
+<script>// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDuaWMh0eIJ2tdtLxYj43ij9MGSh_Yo22M",
   authDomain: "test-6977e.firebaseapp.com",
@@ -1578,6 +1577,7 @@ async function loadUserData() {
             usedPromoCodes: [],
             completedSurveys: {},
             lastAdAttempt: 0,
+            referredBy: getReferralFromURL(), // Check if user was referred
           };
 
           // Save new user to Firebase
@@ -1587,6 +1587,11 @@ async function loadUserData() {
             .catch((error) => {
               console.error("Error saving new user:", error);
             });
+            
+          // If user was referred, update referrer's data
+          if (userData.referredBy) {
+            processReferral(userData.referredBy);
+          }
         }
 
         // Update username in UI
@@ -1655,9 +1660,43 @@ async function loadUserData() {
           usedPromoCodes: [],
           completedSurveys: {},
           lastAdAttempt: 0,
+          referredBy: getReferralFromURL(),
         };
+        
+        // If user was referred, update referrer's data
+        if (userData.referredBy) {
+          processReferral(userData.referredBy);
+        }
+        
         resolve();
       });
+  });
+}
+
+// Get referral code from URL
+function getReferralFromURL() {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get('ref') || null;
+}
+
+// Process referral when a new user signs up
+function processReferral(referralCode) {
+  // Find user with this referral code
+  database.ref("users").orderByChild("referralCode").equalTo(referralCode).once("value", (snapshot) => {
+    if (snapshot.exists()) {
+      const referrerData = snapshot.val();
+      const referrerId = Object.keys(referrerData)[0];
+      const referrer = referrerData[referrerId];
+      
+      // Update referrer's data
+      database.ref("users/" + referrerId).update({
+        referrals: (referrer.referrals || 0) + 1
+      }).catch((error) => {
+        console.error("Error updating referrer data:", error);
+      });
+    }
+  }).catch((error) => {
+    console.error("Error finding referrer:", error);
   });
 }
 
@@ -2635,7 +2674,6 @@ function showNotification(title, message, type) {
 function calculateReferralEarnings(amount) {
   const commissionPercentage = appConfig.referralCommission || 10;
   return (amount * commissionPercentage) / 100;
-}
-</script>
+}</script>
   </body>
 </html>
