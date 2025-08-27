@@ -1286,18 +1286,26 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// Initialize Telegram Web App
-const tg = window.Telegram.WebApp;
-if (tg && tg.initDataUnsafe) {
-  tg.expand(); // full height
-}
-
-// Telegram Web App initialization (only once)
+// Initialize Telegram Web App (FIXED)
 const tg = window.Telegram?.WebApp;
 const user = tg?.initDataUnsafe?.user ?? null;
-const userId = user?.id ?? Math.floor(Math.random() * 1000000);
-const username = user?.username || user?.first_name || "User" + userId;
-const userPhotoUrl = user?.photo_url || "https://via.placeholder.com/120";
+
+// Use only Telegram user ID; if not available, block or handle differently
+if (!user || !user.id) {
+  alert("Telegram user not detected. Cannot proceed.");
+  // Optionally, hide the app or redirect
+  document.getElementById("appContent").classList.add("hidden");
+  throw new Error("Telegram user ID missing");
+}
+
+const userId = user.id;
+const username = user.username || user.first_name || "User" + userId;
+const userPhotoUrl = user.photo_url || "https://via.placeholder.com/120";
+
+// Expand Telegram Web App if available
+if (tg) {
+  tg.expand(); // full height
+}
 
 // App state
 let userData = null;
@@ -1309,7 +1317,7 @@ let currentSurvey = null;
 let surveyWindow = null;
 let surveyCheckInterval = null;
 
-// Video rewards state (using the new logic)
+// Video rewards state
 const MIN_WAIT_SEC = 15;
 let sessionActive = false;
 let adStartTime = 0;
@@ -1447,15 +1455,13 @@ async function loadAppConfig() {
             referralCommission: 10,
             minWithdraw: 50,
             logo: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
-            cover:
-              "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
+            cover: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
             surveys: [
               {
                 id: 1,
                 name: "Consumer Survey",
                 reward: 1.5,
-                image:
-                  "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                image: "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
                 url: "https://www.surveys.com/consumer",
                 completedBy: {},
                 status: "active",
@@ -1464,8 +1470,7 @@ async function loadAppConfig() {
                 id: 2,
                 name: "Product Feedback",
                 reward: 2.0,
-                image:
-                  "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                image: "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
                 url: "https://www.surveys.com/product",
                 completedBy: {},
                 status: "active",
@@ -1474,8 +1479,7 @@ async function loadAppConfig() {
                 id: 3,
                 name: "Market Research",
                 reward: 3.5,
-                image:
-                  "https://images.unsplash.com/photo-1556761175-b413da4baf72?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
                 url: "https://www.surveys.com/market",
                 completedBy: {},
                 status: "active",
@@ -1514,26 +1518,19 @@ async function loadAppConfig() {
           document.getElementById("coverImg").src = appConfig.cover;
         }
         if (document.getElementById("dailyLimit")) {
-          document.getElementById("dailyLimit").textContent =
-            appConfig.dailyLimit;
+          document.getElementById("dailyLimit").textContent = appConfig.dailyLimit;
         }
         if (document.getElementById("dailyLimitText")) {
-          document.getElementById("dailyLimitText").textContent =
-            appConfig.dailyLimit;
+          document.getElementById("dailyLimitText").textContent = appConfig.dailyLimit;
         }
         if (document.getElementById("minWithdraw")) {
-          document.getElementById("minWithdraw").textContent =
-            appConfig.minWithdraw;
+          document.getElementById("minWithdraw").textContent = appConfig.minWithdraw;
         }
         if (document.getElementById("minWithdrawInfo")) {
-          document.getElementById("minWithdrawInfo").textContent =
-            appConfig.minWithdraw;
+          document.getElementById("minWithdrawInfo").textContent = appConfig.minWithdraw;
         }
 
-        vpnRequired =
-          appConfig.vpnRequired !== undefined
-            ? appConfig.vpnRequired
-            : true;
+        vpnRequired = appConfig.vpnRequired !== undefined ? appConfig.vpnRequired : true;
 
         resolve();
       })
@@ -1580,10 +1577,7 @@ async function loadUserData() {
               .catch((error) => {
                 console.error("Error updating user IP/device:", error);
               });
-          } else if (
-            userData.ip !== userIP ||
-            userData.deviceID !== deviceID
-          ) {
+          } else if (userData.ip !== userIP || userData.deviceID !== deviceID) {
             // Check for duplicate accounts
             checkForDuplicateAccounts();
           }
@@ -1615,9 +1609,7 @@ async function loadUserData() {
 
           // Create new user with default values
           const joinDate = new Date().toISOString().split("T")[0];
-          const promoCode =
-            "ML" +
-            Math.random().toString(36).substring(2, 8).toUpperCase();
+          const promoCode = "ML" + Math.random().toString(36).substring(2, 8).toUpperCase();
 
           userData = {
             username: username,
@@ -1630,9 +1622,7 @@ async function loadUserData() {
             referralEarnings: 0.0,
             completedTasks: 0,
             referrals: 0,
-            referralCode:
-              "REF" +
-              Math.random().toString(36).substring(2, 8).toUpperCase(),
+            referralCode: "REF" + Math.random().toString(36).substring(2, 8).toUpperCase(),
             history: [],
             ip: userIP,
             deviceID: deviceID,
@@ -1653,40 +1643,31 @@ async function loadUserData() {
 
         // Update username in UI
         if (document.getElementById("username")) {
-          document.getElementById("username").textContent =
-            userData.username;
+          document.getElementById("username").textContent = userData.username;
         }
         if (document.getElementById("profileName")) {
-          document.getElementById("profileName").textContent =
-            userData.username;
+          document.getElementById("profileName").textContent = userData.username;
         }
         if (document.getElementById("profileUsername")) {
-          document.getElementById("profileUsername").textContent =
-            userData.username;
+          document.getElementById("profileUsername").textContent = userData.username;
         }
         if (document.getElementById("profileImg")) {
           document.getElementById("profileImg").src = userData.photoUrl;
         }
         if (document.getElementById("memberSince")) {
-          document.getElementById("memberSince").textContent =
-            userData.joinDate;
+          document.getElementById("memberSince").textContent = userData.joinDate;
         }
         if (document.getElementById("promoCode")) {
-          document.getElementById("promoCode").textContent =
-            userData.promoCode;
+          document.getElementById("promoCode").textContent = userData.promoCode;
         }
         if (document.getElementById("referralsCount")) {
-          document.getElementById("referralsCount").textContent =
-            userData.referrals;
+          document.getElementById("referralsCount").textContent = userData.referrals;
         }
         if (document.getElementById("referralsCountHome")) {
-          document.getElementById("referralsCountHome").textContent =
-            userData.referrals;
+          document.getElementById("referralsCountHome").textContent = userData.referrals;
         }
         if (document.getElementById("inviteLink")) {
-          document.getElementById(
-            "inviteLink"
-          ).value = `http://t.me/adflare_bot/bot?startbot=${userData.referralCode}`;
+          document.getElementById("inviteLink").value = `http://t.me/adflare_bot/bot?startbot=${userData.referralCode}`;
         }
 
         resolve();
@@ -1699,18 +1680,14 @@ async function loadUserData() {
           username: username,
           photoUrl: userPhotoUrl,
           joinDate: joinDate,
-          promoCode:
-            "ML" +
-            Math.random().toString(36).substring(2, 8).toUpperCase(),
+          promoCode: "ML" + Math.random().toString(36).substring(2, 8).toUpperCase(),
           balance: 0.0,
           totalEarnings: 0.0,
           withdrawn: 0.0,
           referralEarnings: 0.0,
           completedTasks: 0,
           referrals: 0,
-          referralCode:
-            "REF" +
-            Math.random().toString(36).substring(2, 8).toUpperCase(),
+          referralCode: "REF" + Math.random().toString(36).substring(2, 8).toUpperCase(),
           history: [],
           ip: userIP,
           deviceID: deviceID,
@@ -1746,12 +1723,8 @@ async function checkForDuplicateAccounts(isNewUser = false) {
                   "You already have an account with this device/IP",
                   "danger"
                 );
-                document
-                  .getElementById("bannedScreen")
-                  .classList.remove("hidden");
-                document
-                  .getElementById("appContent")
-                  .classList.add("hidden");
+                document.getElementById("bannedScreen").classList.remove("hidden");
+                document.getElementById("appContent").classList.add("hidden");
 
                 // Add to banned users
                 database
@@ -1763,10 +1736,7 @@ async function checkForDuplicateAccounts(isNewUser = false) {
                       .ref("bannedUsers")
                       .set(bannedUsers)
                       .catch((error) => {
-                        console.error(
-                          "Error adding to banned users:",
-                          error
-                        );
+                        console.error("Error adding to banned users:", error);
                       });
                   })
                   .catch((error) => {
@@ -1781,11 +1751,7 @@ async function checkForDuplicateAccounts(isNewUser = false) {
       }
 
       if (duplicateFound && !isNewUser) {
-        showNotification(
-          "Warning",
-          "Multiple accounts detected",
-          "warning"
-        );
+        showNotification("Warning", "Multiple accounts detected", "warning");
       }
     })
     .catch((error) => {
@@ -1796,8 +1762,7 @@ async function checkForDuplicateAccounts(isNewUser = false) {
 // Check VPN status
 async function checkVPN() {
   try {
-    document.getElementById("vpnStatus").textContent =
-      "Checking your connection...";
+    document.getElementById("vpnStatus").textContent = "Checking your connection...";
     document.getElementById("retryVpnCheck").classList.add("d-none");
 
     // Get public IP
@@ -1808,9 +1773,7 @@ async function checkVPN() {
     let geoRes = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
     let geoData = await geoRes.json();
 
-    document.getElementById(
-      "vpnStatus"
-    ).textContent = `Your country: ${geoData.country_name}`;
+    document.getElementById("vpnStatus").textContent = `Your country: ${geoData.country_name}`;
 
     if (vpnRequired) {
       // VPN required mode
@@ -1818,9 +1781,7 @@ async function checkVPN() {
         document.getElementById("vpnAlert").classList.remove("d-none");
         document.getElementById("vpnSuccess").classList.add("d-none");
         document.getElementById("vpnOffAlert").classList.add("d-none");
-        document
-          .getElementById("retryVpnCheck")
-          .classList.remove("d-none");
+        document.getElementById("retryVpnCheck").classList.remove("d-none");
       } else {
         document.getElementById("vpnAlert").classList.add("d-none");
         document.getElementById("vpnSuccess").classList.remove("d-none");
@@ -1838,9 +1799,7 @@ async function checkVPN() {
         document.getElementById("vpnOffAlert").classList.remove("d-none");
         document.getElementById("vpnAlert").classList.add("d-none");
         document.getElementById("vpnSuccess").classList.add("d-none");
-        document
-          .getElementById("retryVpnCheck")
-          .classList.remove("d-none");
+        document.getElementById("retryVpnCheck").classList.remove("d-none");
       } else {
         document.getElementById("vpnOffAlert").classList.add("d-none");
         document.getElementById("vpnAlert").classList.add("d-none");
@@ -1854,8 +1813,7 @@ async function checkVPN() {
       }
     }
   } catch (e) {
-    document.getElementById("vpnStatus").textContent =
-      "Failed to check IP (API error)";
+    document.getElementById("vpnStatus").textContent = "Failed to check IP (API error)";
     document.getElementById("retryVpnCheck").classList.remove("d-none");
     console.error("VPN check error:", e);
   }
@@ -1866,58 +1824,40 @@ function updateUI() {
   if (!userData) return;
 
   // Format balance with commas
-  const formattedBalance = userData.balance
-    .toFixed(2)
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  const formattedTotalEarnings = userData.totalEarnings
-    .toFixed(2)
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  const formattedWithdrawn = userData.withdrawn
-    .toFixed(2)
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  const formattedReferralEarnings = userData.referralEarnings
-    .toFixed(2)
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const formattedBalance = userData.balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const formattedTotalEarnings = userData.totalEarnings.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const formattedWithdrawn = userData.withdrawn.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const formattedReferralEarnings = userData.referralEarnings.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
   if (document.getElementById("balance")) {
     document.getElementById("balance").innerText = formattedBalance;
   }
   if (document.getElementById("availableBalance")) {
-    document.getElementById("availableBalance").innerText =
-      formattedBalance;
+    document.getElementById("availableBalance").innerText = formattedBalance;
   }
   if (document.getElementById("availableBalanceProfile")) {
-    document.getElementById("availableBalanceProfile").innerText =
-      formattedBalance;
+    document.getElementById("availableBalanceProfile").innerText = formattedBalance;
   }
   if (document.getElementById("totalEarningsHome")) {
-    document.getElementById("totalEarningsHome").innerText =
-      formattedTotalEarnings;
+    document.getElementById("totalEarningsHome").innerText = formattedTotalEarnings;
   }
   if (document.getElementById("totalEarnings")) {
-    document.getElementById("totalEarnings").innerText =
-      formattedTotalEarnings;
+    document.getElementById("totalEarnings").innerText = formattedTotalEarnings;
   }
   if (document.getElementById("withdrawnAmount")) {
-    document.getElementById("withdrawnAmount").innerText =
-      formattedWithdrawn;
+    document.getElementById("withdrawnAmount").innerText = formattedWithdrawn;
   }
   if (document.getElementById("referralEarnings")) {
-    document.getElementById("referralEarnings").innerText =
-      formattedReferralEarnings;
+    document.getElementById("referralEarnings").innerText = formattedReferralEarnings;
   }
   if (document.getElementById("completed")) {
-    document.getElementById("completed").innerText =
-      userData.completedTasks;
+    document.getElementById("completed").innerText = userData.completedTasks;
   }
   if (document.getElementById("remaining")) {
-    document.getElementById("remaining").innerText =
-      appConfig.dailyLimit - userData.completedTasks;
+    document.getElementById("remaining").innerText = appConfig.dailyLimit - userData.completedTasks;
   }
 
-  let percent = Math.round(
-    (userData.completedTasks / appConfig.dailyLimit) * 100
-  );
+  let percent = Math.round((userData.completedTasks / appConfig.dailyLimit) * 100);
   if (document.getElementById("videoProgressBar")) {
     document.getElementById("videoProgressBar").style.width = percent + "%";
   }
@@ -1925,19 +1865,13 @@ function updateUI() {
   // Update ad button with correct reward amount
   const adReward = appConfig.adsRewards || 0.2;
   if (document.getElementById("watchAdBtn")) {
-    document.getElementById(
-      "watchAdBtn"
-    ).innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(
-      2
-    )} BDT)`;
+    document.getElementById("watchAdBtn").innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
   }
 
   // Update referral text with correct percentage
   const referralCommission = appConfig.referralCommission || 10;
   if (document.getElementById("referralText")) {
-    document.getElementById(
-      "referralText"
-    ).textContent = `Earn ${referralCommission}% of your referrals' earnings`;
+    document.getElementById("referralText").textContent = `Earn ${referralCommission}% of your referrals' earnings`;
   }
 
   // Update history table
@@ -1968,17 +1902,13 @@ function showTab(tab, el) {
       currentTab.classList.add("hidden");
 
       // Show new tab
-      document
-        .querySelectorAll("div.container")
-        .forEach((div) => div.classList.add("hidden"));
+      document.querySelectorAll("div.container").forEach((div) => div.classList.add("hidden"));
       const newTab = document.getElementById(tab);
       newTab.classList.remove("hidden");
       newTab.style.opacity = 1;
 
       // Update active nav item
-      document
-        .querySelectorAll(".bottom-nav a")
-        .forEach((a) => a.classList.remove("active"));
+      document.querySelectorAll(".bottom-nav a").forEach((a) => a.classList.remove("active"));
       el.classList.add("active");
     }, 300);
   }
@@ -1988,16 +1918,12 @@ function showTab(tab, el) {
 function initVideoRewards() {
   // Add event listener to watch ad button
   if (document.getElementById("watchAdBtn")) {
-    document
-      .getElementById("watchAdBtn")
-      .addEventListener("click", watchAd);
+    document.getElementById("watchAdBtn").addEventListener("click", watchAd);
   }
 
   // Add event listener to claim button
   if (document.getElementById("claimRewardBtn")) {
-    document
-      .getElementById("claimRewardBtn")
-      .addEventListener("click", claimReward);
+    document.getElementById("claimRewardBtn").addEventListener("click", claimReward);
   }
 }
 
@@ -2064,20 +1990,12 @@ function startCooldown(seconds) {
 // Watch ad function for video rewards
 async function watchAd() {
   if (userData.completedTasks >= appConfig.dailyLimit) {
-    showNotification(
-      "Completed!",
-      "All tasks completed for today!",
-      "info"
-    );
+    showNotification("Completed!", "All tasks completed for today!", "info");
     return;
   }
 
   if (sessionActive) {
-    showNotification(
-      "Info",
-      "Please complete the current video first",
-      "info"
-    );
+    showNotification("Info", "Please complete the current video first", "info");
     return;
   }
 
@@ -2088,8 +2006,7 @@ async function watchAd() {
     const statusEl = document.getElementById("adStatus");
     
     adButton.disabled = true;
-    adButton.innerHTML =
-      '<i class="bi bi-hourglass-split me-2"></i> Loading...';
+    adButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Loading...';
 
     // Update status
     statusEl.textContent = "Loading ad…";
@@ -2116,11 +2033,7 @@ async function watchAd() {
     claimButton.disabled = false;
   } catch (e) {
     console.error("Ad failed or closed before completion", e);
-    showNotification(
-      "Error",
-      "Video not loaded. Please try again.",
-      "danger"
-    );
+    showNotification("Error", "Video not loaded. Please try again.", "danger");
     
     // Reset button state
     const adButton = document.getElementById("watchAdBtn");
@@ -2146,20 +2059,12 @@ function setProgress(p) {
 // Claim reward after watching ad
 function claimReward() {
   if (!sessionActive) {
-    showNotification(
-      "Error",
-      "No active ad session",
-      "danger"
-    );
+    showNotification("Error", "No active ad session", "danger");
     return;
   }
 
   if (sessionClaimed) {
-    showNotification(
-      "Info",
-      "Reward already claimed for this session",
-      "info"
-    );
+    showNotification("Info", "Reward already claimed for this session", "info");
     return;
   }
 
@@ -2168,20 +2073,12 @@ function claimReward() {
     // Start cooldown period
     startCooldown(MIN_WAIT_SEC - elapsed);
     
-    showNotification(
-      "Error",
-      `You must wait at least ${MIN_WAIT_SEC}s. Please wait and try again.`,
-      "danger"
-    );
+    showNotification("Error", `You must wait at least ${MIN_WAIT_SEC}s. Please wait and try again.`, "danger");
     return;
   }
 
   if (userData.completedTasks >= appConfig.dailyLimit) {
-    showNotification(
-      "Completed!",
-      "All tasks completed for today!",
-      "info"
-    );
+    showNotification("Completed!", "All tasks completed for today!", "info");
     return;
   }
 
@@ -2229,33 +2126,21 @@ function claimReward() {
   adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
   adButton.disabled = false;
   
-  showNotification(
-    "Success!",
-    `You earned ${rewardAmount.toFixed(2)} BDT!`,
-    "success"
-  );
+  showNotification("Success!", `You earned ${rewardAmount.toFixed(2)} BDT!`, "success");
 }
 
 // Show survey page
 function showSurveyPage() {
-  document
-    .querySelectorAll("div.container")
-    .forEach((div) => div.classList.add("hidden"));
+  document.querySelectorAll("div.container").forEach((div) => div.classList.add("hidden"));
   document.getElementById("surveyPage").classList.remove("hidden");
-  document
-    .querySelectorAll(".bottom-nav a")
-    .forEach((a) => a.classList.remove("active"));
+  document.querySelectorAll(".bottom-nav a").forEach((a) => a.classList.remove("active"));
 }
 
 // Hide survey page
 function hideSurveyPage() {
   // If a survey was started but not completed, don't award anything
   if (currentSurvey) {
-    showNotification(
-      "Info",
-      "Survey was not completed. No reward awarded.",
-      "info"
-    );
+    showNotification("Info", "Survey was not completed. No reward awarded.", "info");
   }
 
   // Reset survey state
@@ -2267,9 +2152,7 @@ function hideSurveyPage() {
 
   document.getElementById("surveyPage").classList.add("hidden");
   document.getElementById("rewards").classList.remove("hidden");
-  document
-    .querySelector('.bottom-nav a[onclick*="rewards"]')
-    .classList.add("active");
+  document.querySelector('.bottom-nav a[onclick*="rewards"]').classList.add("active");
 }
 
 // Load surveys - UPDATED FUNCTION
@@ -2343,11 +2226,7 @@ function startSurvey(surveyId) {
 
   // Check if user has already completed this survey
   if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
-    showNotification(
-      "Info",
-      "You have already completed this survey.",
-      "info"
-    );
+    showNotification("Info", "You have already completed this survey.", "info");
     return;
   }
 
@@ -2362,24 +2241,12 @@ function startSurvey(surveyId) {
     }
 
     // Open the survey URL in a new tab
-    surveyWindow = window.open(
-      survey.url,
-      "_blank",
-      "noopener,noreferrer"
-    );
+    surveyWindow = window.open(survey.url, "_blank", "noopener,noreferrer");
 
     // Show instructions
-    showNotification(
-      "Info",
-      "Survey opened in new tab. Complete it and click Verify to claim your reward.",
-      "info"
-    );
+    showNotification("Info", "Survey opened in new tab. Complete it and click Verify to claim your reward.", "info");
   } else {
-    showNotification(
-      "Completed!",
-      "All tasks completed for today!",
-      "info"
-    );
+    showNotification("Completed!", "All tasks completed for today!", "info");
   }
 }
 
