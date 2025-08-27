@@ -392,7 +392,6 @@
         color: rgba(255, 215, 0, 0.8);
         font-size: 0.9rem;
         margin-bottom: 15px;
-        line-height: 1.4;
       }
 
       .survey-card .btn-group {
@@ -679,29 +678,6 @@
         gap: 4px;
       }
 
-      /* Referral Commission Styles */
-      .commission-table {
-        width: 100%;
-        margin: 20px 0;
-        border-collapse: collapse;
-      }
-      
-      .commission-table th, 
-      .commission-table td {
-        border: 1px solid rgba(255, 215, 0, 0.2);
-        padding: 10px;
-        text-align: center;
-      }
-      
-      .commission-table th {
-        background-color: rgba(255, 215, 0, 0.1);
-        color: var(--primary-color);
-      }
-      
-      .commission-table tr:nth-child(even) {
-        background-color: rgba(255, 255, 255, 0.05);
-      }
-
       /* Responsive adjustments */
       @media (max-width: 576px) {
         .cover-img {
@@ -735,10 +711,6 @@
         
         .survey-actions {
           flex-direction: column;
-        }
-        
-        .commission-table {
-          font-size: 0.8rem;
         }
       }
     </style>
@@ -1118,14 +1090,6 @@
                   >Earnings</a
                 >
               </li>
-              <li>
-                <a
-                  class="dropdown-item"
-                  href="#"
-                  onclick="filterHistory('commission')"
-                  >Commissions</a
-                >
-              </li>
             </ul>
           </div>
         </div>
@@ -1261,31 +1225,6 @@
             </div>
           </div>
         </div>
-        
-        <!-- Referral Commission Table -->
-        <div class="card p-4 rounded-4 shadow-sm border-0">
-          <h5 class="mb-3 fw-bold d-flex align-items-center">
-            <i class="bi bi-people-fill me-2"></i> Referral Commissions
-          </h5>
-          
-          <div class="table-responsive">
-            <table class="commission-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Commission (10%)</th>
-                </tr>
-              </thead>
-              <tbody id="commissionTableBody">
-                <!-- Commission data will be inserted here -->
-              </tbody>
-            </table>
-          </div>
-          
-          <div class="mt-3 text-center">
-            <p class="text-muted">You earn 10% commission from your referrals' earnings</p>
-          </div>
-        </div>
       </div>
 
       <!-- SURVEY PAGE (hidden by default) - UPDATED DESIGN -->
@@ -1396,7 +1335,6 @@
 
       // Referral tracking
       let referralCode = null;
-      const commissionRate = 0.10; // 10% commission
 
       // Initialize the application with concurrency safety
       document.addEventListener("DOMContentLoaded", async function () {
@@ -1435,9 +1373,6 @@
         
         // Check for active cooldown
         checkCooldownStatus();
-        
-        // Load referral commissions
-        loadReferralCommissions();
       });
 
       // OPERATION QUEUE SYSTEM FOR CONCURRENCY SAFETY
@@ -2048,62 +1983,6 @@
         filterHistory("all");
       }
 
-      // Load referral commissions
-      async function loadReferralCommissions() {
-        try {
-          // Get all users to find referrals
-          const usersSnapshot = await database.ref("users").once("value");
-          const allUsers = usersSnapshot.val() || {};
-          
-          const commissionTableBody = document.getElementById("commissionTableBody");
-          commissionTableBody.innerHTML = "";
-          
-          // Find users who were referred by this user
-          let totalCommission = 0;
-          const names = ["Alice", "Bob", "Charlie", "David", "Emma", "Frank", "Grace", "Hannah"];
-          
-          for (const [id, user] of Object.entries(allUsers)) {
-            if (user.referredBy === userId.toString()) {
-              // Calculate commission from this user's earnings
-              const commission = (user.totalEarnings || 0) * commissionRate;
-              totalCommission += commission;
-              
-              // Generate a random name for display
-              const randomName = names[Math.floor(Math.random() * names.length)];
-              
-              // Add to commission table
-              const row = `
-                <tr>
-                  <td>${randomName}</td>
-                  <td>${commission.toFixed(2)} BDT</td>
-                </tr>
-              `;
-              commissionTableBody.innerHTML += row;
-            }
-          }
-          
-          // Add total row
-          if (totalCommission > 0) {
-            commissionTableBody.innerHTML += `
-              <tr>
-                <td><strong>Total</strong></td>
-                <td><strong>${totalCommission.toFixed(2)} BDT</strong></td>
-              </tr>
-            `;
-          } else {
-            commissionTableBody.innerHTML = `
-              <tr>
-                <td colspan="2" class="text-center text-muted py-3">
-                  No commission earnings yet. Refer more users to earn commissions!
-                </td>
-              </tr>
-            `;
-          }
-        } catch (error) {
-          console.error("Error loading referral commissions:", error);
-        }
-      }
-
       // Initialize video rewards system
       function initVideoRewards() {
         // Add event listener to watch ad button
@@ -2306,11 +2185,6 @@
             };
           });
 
-          // Award commission to referrer if applicable
-          if (userData.referredBy) {
-            await awardCommissionToReferrer(userData.referredBy, rewardAmount);
-          }
-
           // Update UI
           updateUI();
           
@@ -2354,43 +2228,6 @@
           claimButton.style.display = "none";
           sessionActive = false;
         }
-      }
-
-      // Award commission to referrer
-      async function awardCommissionToReferrer(referrerId, amount) {
-        return addToOperationQueue(async () => {
-          try {
-            const commission = amount * commissionRate;
-            
-            // Update referrer's data with atomic operation
-            await database.ref("users/" + referrerId).transaction((currentData) => {
-              if (currentData === null) return currentData;
-              
-              return {
-                ...currentData,
-                referralEarnings: (currentData.referralEarnings || 0) + commission,
-                balance: (currentData.balance || 0) + commission,
-                history: [
-                  {
-                    type: "commission",
-                    method: "Referral Commission",
-                    amount: commission.toFixed(2),
-                    address: `From ${username}`,
-                    status: "Completed",
-                    date: new Date().toLocaleDateString(),
-                    timestamp: Date.now()
-                  },
-                  ...(currentData.history || [])
-                ].slice(0, 50),
-                version: Date.now()
-              };
-            });
-            
-            console.log(`Awarded ${commission} BDT commission to referrer ${referrerId}`);
-          } catch (error) {
-            console.error("Error awarding commission:", error);
-          }
-        });
       }
 
       // Show survey page
@@ -2585,11 +2422,6 @@
               version: Date.now()
             };
           });
-
-          // Award commission to referrer if applicable
-          if (userData.referredBy) {
-            await awardCommissionToReferrer(userData.referredBy, survey.reward);
-          }
 
           // Update survey completion in app config with transaction
           await database.ref(`appConfig/surveys`).transaction((surveys) => {
