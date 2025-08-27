@@ -385,7 +385,6 @@
         color: var(--primary-color);
         font-weight: 600;
         margin-bottom: 8px;
-        font-size: 1.1rem;
       }
 
       .survey-card .card-text {
@@ -1272,7 +1271,7 @@
     <!-- End of appContent -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>// Firebase configuration
+<script>// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyD9RdK77SckQQXtYobeBJBdaF4XOQvDbKU",
   authDomain: "ads-flare.firebaseapp.com",
@@ -1335,9 +1334,6 @@ let cooldownEndTime = 0;
 // Referral tracking
 let referralCode = null;
 
-// Referral click counter
-let referralClickCount = 0;
-
 // Initialize the application with concurrency safety
 document.addEventListener("DOMContentLoaded", async function () {
   // Check for referral code in URL
@@ -1375,47 +1371,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   
   // Check for active cooldown
   checkCooldownStatus();
-  
-  // Initialize referral click tracking
-  initReferralClickTracking();
 });
-
-// Initialize referral click tracking
-function initReferralClickTracking() {
-  // Load saved count from localStorage
-  referralClickCount = parseInt(localStorage.getItem('referralClickCount')) || 0;
-  
-  // Update the referral link with click tracking
-  const inviteLink = document.getElementById("inviteLink");
-  if (inviteLink) {
-    inviteLink.value = `https://t.me/adflare_bot?startbot=${userId}`;
-    
-    // Add click event listener to track clicks
-    const copyButton = inviteLink.nextElementSibling;
-    if (copyButton) {
-      copyButton.addEventListener('click', function() {
-        trackReferralClick();
-      });
-    }
-  }
-}
-
-// Track referral click
-function trackReferralClick() {
-  referralClickCount++;
-  localStorage.setItem('referralClickCount', referralClickCount);
-  
-  // Update Firebase with the click count
-  database.ref(`referralClicks/${userId}`).set(referralClickCount)
-    .then(() => {
-      console.log("Referral click count updated:", referralClickCount);
-      // Show notification
-      showNotification("Success", `Referral link copied! Total clicks: ${referralClickCount}`, "success");
-    })
-    .catch((error) => {
-      console.error("Error updating referral click count:", error);
-    });
-}
 
 // OPERATION QUEUE SYSTEM FOR CONCURRENCY SAFETY
 function processOperationQueue() {
@@ -1483,7 +1439,7 @@ async function atomicUserUpdate(updateFunction, retries = 3) {
               usedPromoCodes: [],
               completedSurveys: {},
               lastAdAttempt: 0,
-              referredBy: referralCode, // Store the referrer's Telegram ID
+              referredBy: null,
               version: Date.now() // Add version for optimistic concurrency
             };
           }
@@ -1513,18 +1469,18 @@ async function atomicUserUpdate(updateFunction, retries = 3) {
 // Check for referral code in URL
 function checkReferralCode() {
   const urlParams = new URLSearchParams(window.location.search);
-  referralCode = urlParams.get('startbot') || urlParams.get('ref');
+  referralCode = urlParams.get('ref');
   
   if (referralCode) {
     console.log("Referral code detected:", referralCode);
     
     // Track this referral click
-    trackReferralClickIncoming(referralCode);
+    trackReferralClick(referralCode);
   }
 }
 
-// Track incoming referral click in Firebase with concurrency safety
-function trackReferralClickIncoming(refCode) {
+// Track referral click in Firebase with concurrency safety
+function trackReferralClick(refCode) {
   return addToOperationQueue(async () => {
     // Check if this referral has already been tracked for this user
     const trackedReferrals = JSON.parse(localStorage.getItem('trackedReferrals') || '{}');
@@ -1724,6 +1680,24 @@ async function loadUserData() {
           // Check if this IP or device already has an account
           checkForDuplicateAccounts(true);
 
+          // Check if user was referred by someone
+          let referredBy = null;
+          if (referralCode) {
+            // Find user with this referral code
+            database.ref("users")
+              .orderByChild("referralCode")
+              .equalTo(referralCode)
+              .once("value", (refSnapshot) => {
+                if (refSnapshot.exists()) {
+                  const referrerData = refSnapshot.val();
+                  referredBy = Object.keys(referrerData)[0];
+                  
+                  // Update referrer's referral count with atomic operation
+                  atomicUserUpdateForReferrer(referredBy);
+                }
+              });
+          }
+
           // Create new user with atomic operation
           await atomicUserUpdate((currentData) => {
             // This will only run if the user doesn't exist
@@ -1748,15 +1722,10 @@ async function loadUserData() {
               usedPromoCodes: [],
               completedSurveys: {},
               lastAdAttempt: 0,
-              referredBy: referralCode, // Store the referrer's Telegram ID
+              referredBy: referredBy,
               version: Date.now()
             };
           });
-
-          // If user was referred, update referrer's data
-          if (referralCode) {
-            await updateReferrerData(referralCode);
-          }
         }
 
         // Update username in UI
@@ -1785,7 +1754,7 @@ async function loadUserData() {
           document.getElementById("referralsCountHome").textContent = userData.referrals;
         }
         if (document.getElementById("inviteLink")) {
-          document.getElementById("inviteLink").value = `https://t.me/adflare_bot?startbot=${userId}`;
+          document.getElementById("inviteLink").value = `http://t.me/adflare_bot/bot?startbot=${userData.referralCode}`;
         }
 
         resolve();
@@ -1812,39 +1781,22 @@ async function loadUserData() {
           usedPromoCodes: [],
           completedSurveys: {},
           lastAdAttempt: 0,
-          referredBy: referralCode,
+          referredBy: null,
         };
         resolve();
       });
   });
 }
 
-// Update referrer's data when a new user signs up with their referral
-async function updateReferrerData(referrerId) {
-  return addToOperationQueue(async () => {
-    try {
-      // Get referrer's data
-      const referrerSnapshot = await database.ref("users/" + referrerId).once("value");
-      
-      if (referrerSnapshot.exists()) {
-        const referrerData = referrerSnapshot.val();
-        
-        // Update referrer's referral count and earnings
-        await database.ref("users/" + referrerId).transaction((currentData) => {
-          if (currentData === null) return currentData;
-          
-          return {
-            ...currentData,
-            referrals: (currentData.referrals || 0) + 1,
-            version: Date.now()
-          };
-        });
-        
-        console.log(`Updated referrer ${referrerId} with new referral`);
-      }
-    } catch (error) {
-      console.error("Error updating referrer data:", error);
-    }
+// Atomic update for referrer's referral count
+async function atomicUserUpdateForReferrer(referrerId) {
+  return database.ref("users/" + referrerId).transaction((currentData) => {
+    if (currentData === null) return currentData;
+    return {
+      ...currentData,
+      referrals: (currentData.referrals || 0) + 1,
+      version: Date.now()
+    };
   });
 }
 
@@ -2320,7 +2272,7 @@ function loadSurveys() {
   
   if (activeSurveys.length === 0) {
     surveysContainer.innerHTML = `
-      <div class="text-center text-matured py-4">
+      <div class="text-center text-muted py-4">
         <i class="bi bi-inbox display-4 d-block mb-3"></i>
         <p>No surveys available at the moment. Check back later!</p>
       </div>
