@@ -995,7 +995,6 @@
               <option value="">Select a method</option>
               <option>Bkash</option>
               <option>Nagad</option>
-              <option>Mobile Recharge</option>
               <option>Binance Id</option>
             </select>
           </div>
@@ -1163,7 +1162,7 @@
               <div
                 class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow"
               >
-                <label class="small text-muted d-block mb-1">Token</label>
+                <label class="small text-muted d-block mb-1">Promo Code</label>
                 <span id="promoCode">-</span>
               </div>
             </div>
@@ -1271,8 +1270,7 @@
     <!-- End of appContent -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script> 
-// Firebase configuration
+<script>// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDuaWMh0eIJ2tdtLxYj43ij9MGSh_Yo22M",
   authDomain: "test-6977e.firebaseapp.com",
@@ -1319,8 +1317,14 @@ let sessionClaimed = false;
 let cooldownInterval = null;
 let cooldownEndTime = 0;
 
+// Referral tracking
+let referralCode = null;
+
 // Initialize the application
 document.addEventListener("DOMContentLoaded", async function () {
+  // Check for referral code in URL
+  checkReferralCode();
+
   // Get user IP and device info
   await getUserIP();
   getDeviceFingerprint();
@@ -1354,6 +1358,40 @@ document.addEventListener("DOMContentLoaded", async function () {
   // Check for active cooldown
   checkCooldownStatus();
 });
+
+// Check for referral code in URL
+function checkReferralCode() {
+  const urlParams = new URLSearchParams(window.location.search);
+  referralCode = urlParams.get('ref');
+  
+  if (referralCode) {
+    console.log("Referral code detected:", referralCode);
+    
+    // Track this referral click
+    trackReferralClick(referralCode);
+  }
+}
+
+// Track referral click in Firebase
+function trackReferralClick(refCode) {
+  // Check if this referral has already been tracked for this user
+  const trackedReferrals = JSON.parse(localStorage.getItem('trackedReferrals') || '{}');
+  
+  if (!trackedReferrals[refCode]) {
+    // Track this referral click in Firebase
+    database.ref(`referralClicks/${refCode}`).transaction((currentCount) => {
+      return (currentCount || 0) + 1;
+    }).then(() => {
+      // Mark this referral as tracked for this user
+      trackedReferrals[refCode] = true;
+      localStorage.setItem('trackedReferrals', JSON.stringify(trackedReferrals));
+      
+      console.log(`Tracked referral click for code: ${refCode}`);
+    }).catch((error) => {
+      console.error("Error tracking referral:", error);
+    });
+  }
+}
 
 // Get user IP address
 async function getUserIP() {
@@ -1553,6 +1591,28 @@ async function loadUserData() {
           // Check if this IP or device already has an account
           checkForDuplicateAccounts(true);
 
+          // Check if user was referred by someone
+          let referredBy = null;
+          if (referralCode) {
+            // Find user with this referral code
+            database.ref("users")
+              .orderByChild("referralCode")
+              .equalTo(referralCode)
+              .once("value", (refSnapshot) => {
+                if (refSnapshot.exists()) {
+                  const referrerData = refSnapshot.val();
+                  referredBy = Object.keys(referrerData)[0];
+                  
+                  // Update referrer's referral count
+                  database.ref(`users/${referredBy}/referrals`).transaction((currentCount) => {
+                    return (currentCount || 0) + 1;
+                  });
+                  
+                  console.log(`New user referred by: ${referredBy}`);
+                }
+              });
+          }
+
           // Create new user with default values
           const joinDate = new Date().toISOString().split("T")[0];
           const promoCode =
@@ -1579,6 +1639,7 @@ async function loadUserData() {
             usedPromoCodes: [],
             completedSurveys: {},
             lastAdAttempt: 0,
+            referredBy: referredBy, // Track who referred this user
           };
 
           // Save new user to Firebase
@@ -1656,6 +1717,7 @@ async function loadUserData() {
           usedPromoCodes: [],
           completedSurveys: {},
           lastAdAttempt: 0,
+          referredBy: null,
         };
         resolve();
       });
@@ -2636,7 +2698,6 @@ function showNotification(title, message, type) {
 function calculateReferralEarnings(amount) {
   const commissionPercentage = appConfig.referralCommission || 10;
   return (amount * commissionPercentage) / 100;
-}
-</script>
+}</script>
   </body>
 </html>
