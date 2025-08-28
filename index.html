@@ -34,7 +34,7 @@
         load();
       }();
     </script>
-    <style>
+   <style>
       :root {
         --primary-color: #ffd700;
         --accent-color: #ffdb4d;
@@ -722,19 +722,6 @@
         color: rgba(255, 215, 0, 0.7);
       }
 
-      /* Referral Success Modal */
-      .referral-success-modal .modal-content {
-        background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
-        border: 2px solid var(--primary-color);
-        border-radius: 20px;
-      }
-      
-      .referral-success-icon {
-        font-size: 4rem;
-        color: #00ff88;
-        margin-bottom: 1rem;
-      }
-
       /* Responsive adjustments */
       @media (max-width: 576px) {
         .cover-img {
@@ -774,6 +761,19 @@
           font-size: 1rem;
         }
       }
+      
+      /* New styles for mandatory referral */
+      .referral-required {
+        border: 2px solid #ffcc00;
+        background: rgba(255, 204, 0, 0.1);
+      }
+      
+      .referral-error {
+        color: #ff6b6b;
+        font-size: 0.9rem;
+        margin-top: 5px;
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -796,35 +796,34 @@
       </div>
     </div>
 
-    <!-- REFERRAL SIGNUP MODAL (hidden by default) -->
-    <div class="modal fade" id="referralModal" tabindex="-1" aria-hidden="true">
+    <!-- REFERRAL SIGNUP MODAL (hidden by default) - UPDATED FOR MANDATORY REFERRAL -->
+    <div class="modal fade" id="referralModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-dark text-light">
           <div class="modal-header border-secondary">
-            <h5 class="modal-title text-warning">Referral Signup</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <h5 class="modal-title text-warning">Referral Required</h5>
           </div>
           <div class="modal-body">
             <div class="referral-info">
-              <i class="bi bi-gift-fill"></i>
+              <i class="bi bi-exclamation-triangle-fill text-warning"></i>
               <div>
-                <h6 class="mb-1">You're signing up with a referral!</h6>
-                <p class="mb-0 small" id="referralMessage">Your referrer will receive bonus when you complete tasks.</p>
+                <h6 class="mb-1">Referral Code Required</h6>
+                <p class="mb-0 small">You must have a referral code to sign up for Ad Flare.</p>
               </div>
             </div>
             
             <div class="referral-form-group">
-              <label for="referralCodeInput">Referral Code</label>
-              <input type="text" id="referralCodeInput" readonly>
+              <label for="referralCodeInput">Enter Referral Code</label>
+              <input type="text" id="referralCodeInput" placeholder="Enter valid referral code">
+              <div class="referral-error" id="referralError">Please enter a valid referral code</div>
             </div>
             
-            <div class="form-text text-warning">
-              This code is automatically applied to your account. You cannot change it.
+            <div class="form-text text-warning mt-2">
+              Ask a friend for their referral code or contact support if you don't have one.
             </div>
           </div>
           <div class="modal-footer border-secondary">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            <button type="button" class="btn btn-custom" onclick="continueWithReferral()">Continue</button>
+            <button type="button" class="btn btn-custom" onclick="validateAndContinue()">Continue</button>
           </div>
         </div>
       </div>
@@ -844,7 +843,7 @@
       </div>
     </div>
 
-    <!-- MAIN APP CONTENT (hidden if banned) -->
+    <!-- MAIN APP CONTENT (hidden if banned or if referral not validated) -->
     <div id="appContent">
       <!-- TOP HEADER -->
       <div class="top-header">
@@ -1378,7 +1377,6 @@
         </a>
       </div>
     </div>
-    <!-- End of appContent -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -1446,12 +1444,99 @@
       let referralCode = null;
       let referralModalShown = false;
       let referrerId = null;
+      let referralValidated = false;
 
       // Initialize the application with concurrency safety
       document.addEventListener("DOMContentLoaded", async function () {
-        // Check for referral code in URL
+        // Check for referral code in URL first
         checkReferralCode();
+        
+        // Show referral modal immediately for new users
+        if (!localStorage.getItem('userCreated') && !referralCode) {
+          showReferralModal();
+        } else if (referralCode) {
+          // Validate the referral code before proceeding
+          await validateReferralCode(referralCode);
+        } else {
+          // If user already exists, proceed with normal initialization
+          continueAppInitialization();
+        }
+      });
 
+      // Check for referral code in URL
+      function checkReferralCode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        referralCode = urlParams.get('ref');
+        
+        if (referralCode) {
+          console.log("Referral code detected:", referralCode);
+          // Track this referral click
+          trackReferralClick(referralCode);
+        }
+      }
+
+      // Show referral modal (mandatory for new users)
+      function showReferralModal() {
+        const referralModal = new bootstrap.Modal(document.getElementById('referralModal'));
+        referralModal.show();
+        referralModalShown = true;
+        
+        // Make the input field required style
+        document.getElementById('referralCodeInput').classList.add('referral-required');
+      }
+
+      // Validate referral code and continue
+      async function validateAndContinue() {
+        const inputCode = document.getElementById('referralCodeInput').value.trim();
+        
+        if (!inputCode) {
+          document.getElementById('referralError').style.display = 'block';
+          document.getElementById('referralCodeInput').classList.add('referral-required');
+          return;
+        }
+        
+        const isValid = await validateReferralCode(inputCode);
+        
+        if (isValid) {
+          referralCode = inputCode;
+          document.getElementById('referralError').style.display = 'none';
+          document.getElementById('referralCodeInput').classList.remove('referral-required');
+          
+          // Close the modal and continue with app initialization
+          const referralModal = bootstrap.Modal.getInstance(document.getElementById('referralModal'));
+          if (referralModal) {
+            referralModal.hide();
+          }
+          
+          continueAppInitialization();
+        } else {
+          document.getElementById('referralError').style.display = 'block';
+          document.getElementById('referralCodeInput').classList.add('referral-required');
+        }
+      }
+
+      // Validate referral code
+      async function validateReferralCode(code) {
+        try {
+          // Check if code exists in users collection
+          const usersRef = database.ref("users");
+          const snapshot = await usersRef.orderByChild("referralCode").equalTo(code).once("value");
+          
+          if (snapshot.exists()) {
+            const userData = snapshot.val();
+            referrerId = Object.keys(userData)[0];
+            return true;
+          }
+          
+          return false;
+        } catch (error) {
+          console.error("Error validating referral code:", error);
+          return false;
+        }
+      }
+
+      // Continue with app initialization after referral validation
+      async function continueAppInitialization() {
         // Get user IP and device info
         await getUserIP();
         getDeviceFingerprint();
@@ -1484,7 +1569,10 @@
         
         // Check for active cooldown
         checkCooldownStatus();
-      });
+        
+        // Show app content
+        document.getElementById("appContent").classList.remove("hidden");
+      }
 
       // OPERATION QUEUE SYSTEM FOR CONCURRENCY SAFETY
       function processOperationQueue() {
@@ -1577,48 +1665,6 @@
             }
           }
         });
-      }
-
-      // Check for referral code in URL
-      function checkReferralCode() {
-        const urlParams = new URLSearchParams(window.location.search);
-        referralCode = urlParams.get('ref');
-        
-        if (referralCode) {
-          console.log("Referral code detected:", referralCode);
-          
-          // Show referral modal if this is a new user
-          if (!localStorage.getItem('userCreated')) {
-            showReferralModal();
-          }
-          
-          // Track this referral click
-          trackReferralClick(referralCode);
-        }
-      }
-
-      // Show referral modal
-      function showReferralModal() {
-        if (referralCode && !referralModalShown) {
-          document.getElementById('referralCodeInput').value = referralCode;
-          document.getElementById('referralMessage').textContent = 
-            `You're signing up with referral code: ${referralCode}. Your referrer will receive bonus when you complete tasks.`;
-          
-          const referralModal = new bootstrap.Modal(document.getElementById('referralModal'));
-          referralModal.show();
-          referralModalShown = true;
-        }
-      }
-
-      // Continue with referral signup
-      function continueWithReferral() {
-        const referralModal = bootstrap.Modal.getInstance(document.getElementById('referralModal'));
-        if (referralModal) {
-          referralModal.hide();
-        }
-        
-        // Continue with normal app initialization
-        document.getElementById("vpnCheck").classList.remove("hidden");
       }
 
       // Track referral click in Firebase with concurrency safety
@@ -1822,28 +1868,18 @@
                 // Check if this IP or device already has an account
                 checkForDuplicateAccounts(true);
 
-                // Check if user was referred by someone
-                if (referralCode) {
-                  // Find user with this referral code
-                  const refSnapshot = await database.ref("users")
-                    .orderByChild("referralCode")
-                    .equalTo(referralCode)
-                    .once("value");
-                  
-                  if (refSnapshot.exists()) {
-                    const referrerData = refSnapshot.val();
-                    referrerId = Object.keys(referrerData)[0];
-                    
-                    // Update referrer's referral count with atomic operation
-                    await updateReferrerCount(referrerId);
-                    
-                    // Show success message
-                    showReferralSuccess();
-                  } else {
-                    // Invalid referral code
-                    referralCode = null;
-                  }
+                // For new users, require a referral code
+                if (!referrerId) {
+                  showNotification("Error", "A valid referral code is required to sign up.", "danger");
+                  showReferralModal();
+                  return resolve();
                 }
+                
+                // Update referrer's referral count with atomic operation
+                await updateReferrerCount(referrerId);
+                
+                // Show success message
+                showReferralSuccess();
 
                 // Create new user with atomic operation
                 await atomicUserUpdate((currentData) => {
@@ -2132,6 +2168,7 @@
         // Update history table
         filterHistory("all");
       }
+
        // Initialize video rewards system
 function initVideoRewards() {
   // Add event listener to watch ad button
