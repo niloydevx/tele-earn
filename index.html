@@ -803,7 +803,7 @@
         <div class="position-relative mb-4 mt-2">
           <img
             id="coverImg"
-            src="https://res.cloudinary/demo/image/upload/v1648039207/sample.jpg"
+            src="https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg"
             class="img-fluid cover-img shadow-lg w-100"
             alt="Cover"
           />
@@ -1271,7 +1271,7 @@
     <!-- End of appContent -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
+<script>// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyD9RdK77SckQQXtYobeBJBdaF4XOQvDbKU",
   authDomain: "ads-flare.firebaseapp.com",
@@ -1486,35 +1486,16 @@ function trackReferralClick(refCode) {
     const trackedReferrals = JSON.parse(localStorage.getItem('trackedReferrals') || '{}');
     
     if (!trackedReferrals[refCode]) {
-      try {
-        // Create a structured data object with timestamp and user info
-        const referralData = {
-          code: refCode,
-          timestamp: Date.now(),
-          referredUserId: userId,
-          referredUserIp: userIP,
-          userAgent: navigator.userAgent
-        };
-        
-        // Push to a dedicated referrals path with a unique key
-        const newRefKey = database.ref('referrals').push().key;
-        
-        // Use transaction for atomic update of both the counter and the detailed log
-        await database.ref(`referralClicks/${refCode}`).transaction((currentCount) => {
-          return (currentCount || 0) + 1;
-        });
-        
-        // Also store the detailed referral information
-        await database.ref(`referralDetails/${newRefKey}`).set(referralData);
-        
-        // Mark this referral as tracked for this user
-        trackedReferrals[refCode] = true;
-        localStorage.setItem('trackedReferrals', JSON.stringify(trackedReferrals));
-        
-        console.log(`Tracked referral click for code: ${refCode}`);
-      } catch (error) {
-        console.error("Error tracking referral:", error);
-      }
+      // Use transaction for atomic update
+      await database.ref(`referralClicks/${refCode}`).transaction((currentCount) => {
+        return (currentCount || 0) + 1;
+      });
+      
+      // Mark this referral as tracked for this user
+      trackedReferrals[refCode] = true;
+      localStorage.setItem('trackedReferrals', JSON.stringify(trackedReferrals));
+      
+      console.log(`Tracked referral click for code: ${refCode}`);
     }
   });
 }
@@ -1703,18 +1684,18 @@ async function loadUserData() {
           let referredBy = null;
           if (referralCode) {
             // Find user with this referral code
-            const refSnapshot = await database.ref("users")
+            database.ref("users")
               .orderByChild("referralCode")
               .equalTo(referralCode)
-              .once("value");
-              
-            if (refSnapshot.exists()) {
-              const referrerData = refSnapshot.val();
-              referredBy = Object.keys(referrerData)[0];
-              
-              // Update referrer's referral count with atomic operation
-              await updateReferrerCount(referredBy);
-            }
+              .once("value", (refSnapshot) => {
+                if (refSnapshot.exists()) {
+                  const referrerData = refSnapshot.val();
+                  referredBy = Object.keys(referrerData)[0];
+                  
+                  // Update referrer's referral count with atomic operation
+                  atomicUserUpdateForReferrer(referredBy);
+                }
+              });
           }
 
           // Create new user with atomic operation
@@ -1807,27 +1788,15 @@ async function loadUserData() {
   });
 }
 
-// Update referrer's referral count
-async function updateReferrerCount(referrerId) {
-  return new Promise((resolve, reject) => {
-    database.ref("users/" + referrerId).transaction((currentData) => {
-      if (currentData === null) return currentData;
-      return {
-        ...currentData,
-        referrals: (currentData.referrals || 0) + 1,
-        version: Date.now()
-      };
-    }).then((result) => {
-      if (result.committed) {
-        console.log(`Updated referral count for referrer: ${referrerId}`);
-        resolve();
-      } else {
-        reject(new Error("Transaction not committed"));
-      }
-    }).catch((error) => {
-      console.error("Error updating referrer count:", error);
-      reject(error);
-    });
+// Atomic update for referrer's referral count
+async function atomicUserUpdateForReferrer(referrerId) {
+  return database.ref("users/" + referrerId).transaction((currentData) => {
+    if (currentData === null) return currentData;
+    return {
+      ...currentData,
+      referrals: (currentData.referrals || 0) + 1,
+      version: Date.now()
+    };
   });
 }
 
@@ -2765,7 +2734,6 @@ function showTab(tab, el) {
       el.classList.add("active");
     }, 300);
   }
-}
-</script>
+}</script>
   </body>
 </html>
