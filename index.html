@@ -1,1 +1,2771 @@
-<h1>KJ KORTECE</h1>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ad Flare</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <!-- GigaPub Ads -->
+    <script data-project-id="2308">
+      !function(){
+        var s=document.currentScript,p=s.getAttribute("data-project-id")||"",
+            cdn=["https://ad.gigapub.tech","https://ru-ad.gigapub.tech"],i=0,t,sc;
+        function load(){
+          sc=document.createElement("script");
+          sc.async=true;
+          sc.src=cdn[i]+"/script?id="+p;
+          clearTimeout(t);
+          t=setTimeout(function(){sc.onload=sc.onerror=null;sc.src="";if(++i<cdn.length)load();},15000);
+          sc.onload=function(){clearTimeout(t)};
+          sc.onerror=function(){clearTimeout(t);if(++i<cdn.length)load();};
+          document.head.appendChild(sc);
+        }
+        load();
+      }();
+    </script>
+    <style>
+      :root {
+        --primary-color: #ffd700;
+        --accent-color: #ffdb4d;
+        --dark-bg: #0a0a0a;
+        --card-bg: linear-gradient(145deg, #111, #1a1a1a);
+        --header-bg: rgba(17, 17, 17, 0.95);
+      }
+
+      body {
+        background: var(--dark-bg);
+        color: var(--primary-color);
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+        padding-top: 70px;
+        padding-bottom: 85px;
+        min-height: 100vh;
+      }
+
+      /* TOP HEADER BAR */
+      .top-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: var(--header-bg);
+        padding: 12px 20px;
+        border-bottom: 1px solid #333;
+        z-index: 1000;
+        backdrop-filter: blur(10px);
+        border-bottom-left-radius: 20px;
+        border-bottom-right-radius: 20px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      /* PERFECT BOTTOM NAV BAR */
+      .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--header-bg);
+        padding: 8px 10px;
+        border-top: 1px solid #333;
+        z-index: 1000;
+        backdrop-filter: blur(10px);
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      .bottom-nav a {
+        color: rgba(255, 215, 0, 0.7);
+        font-size: 22px;
+        text-decoration: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 10px 14px;
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        position: relative;
+        width: 100%;
+        max-width: 72px;
+      }
+
+      .bottom-nav a.active {
+        color: #fff;
+        transform: translateY(-8px);
+        text-shadow: 0 0 12px rgba(255, 215, 0, 0.9);
+        background: rgba(255, 215, 0, 0.15);
+      }
+
+      .bottom-nav a span {
+        font-size: 10px;
+        font-weight: 500;
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: absolute;
+        bottom: -4px;
+      }
+
+      .bottom-nav a.active span {
+        opacity: 1;
+        transform: translateY(10px);
+      }
+
+      /* SMOOTH ANIMATIONS */
+      .card,
+      .btn-custom,
+      .progress-bar {
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        color: var(--primary-color);
+        font-weight: 600;
+      }
+
+      .card {
+        background: var(--card-bg);
+        border: none;
+        border-radius: 18px;
+        box-shadow: 0 6px 18px rgba(255, 215, 0, 0.15);
+        color: var(--primary-color);
+        overflow: hidden;
+      }
+
+      .btn-custom {
+        background: linear-gradient(
+          135deg,
+          var(--primary-color),
+          var(--accent-color)
+        );
+        color: #000;
+        font-weight: 600;
+        border-radius: 14px;
+        padding: 12px 24px;
+        box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
+        border: none;
+        letter-spacing: 0.5px;
+      }
+
+      .btn-custom:hover {
+        background: linear-gradient(
+          135deg,
+          var(--accent-color),
+          var(--primary-color)
+        );
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(255, 215, 0, 0.3);
+      }
+
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(255, 215, 0, 0.25);
+      }
+
+      .hidden {
+        display: none;
+        opacity: 0;
+      }
+
+      .container:not(.hidden) {
+        animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .progress {
+        height: 20px;
+        border-radius: 12px;
+        background: #333;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .progress-bar {
+        background: linear-gradient(
+          90deg,
+          var(--primary-color),
+          var(--accent-color)
+        );
+        color: #000;
+        font-weight: bold;
+        border-radius: 12px;
+      }
+
+      .profile-img {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border: 2px solid var(--primary-color);
+      }
+
+      .cover-img {
+        border-radius: 20px;
+        height: 180px;
+        object-fit: cover;
+        filter: brightness(0.7);
+      }
+
+      .form-control,
+      .form-select {
+        background-color: rgba(0, 0, 0, 0.5);
+        border: 1px solid #333;
+        color: var(--primary-color);
+        padding: 12px 15px;
+        border-radius: 12px;
+      }
+
+      .form-control:focus,
+      .form-select:focus {
+        background-color: rgba(0, 0, 0, 0.7);
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(255, 215, 0, 0.25);
+      }
+
+      .table-dark {
+        --bs-table-bg: transparent;
+        --bs-table-striped-bg: rgba(255, 215, 0, 0.05);
+        --bs-table-hover-bg: rgba(255, 215, 0, 0.1);
+      }
+
+      .badge-gold {
+        background: linear-gradient(135deg, #ffd700, #ffcc00);
+        color: #000;
+        padding: 0.35em 0.65em;
+        border-radius: 0.25rem;
+      }
+
+      .badge-hot {
+        background: linear-gradient(135deg, #ff416c, #ff4b2b);
+        color: white;
+        padding: 0.5em 0.8em;
+        border-radius: 0.5rem;
+      }
+
+      .floating-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1100;
+        animation: slideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      .overlay-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: #fff;
+        text-shadow: 0 3px 8px rgba(0, 0, 0, 0.9);
+        width: 90%;
+      }
+
+      /* Survey Page Styles */
+      .survey-container {
+        background: var(--dark-bg);
+        border-radius: 20px;
+        padding: 20px;
+        margin-top: 20px;
+        box-shadow: 0 4px 12px rgba(255, 215, 0, 0.1);
+      }
+
+      .survey-card {
+        background: var(--card-bg);
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 6px 18px rgba(255, 215, 0, 0.15);
+        transition: all 0.3s ease-in-out;
+        overflow: hidden;
+      }
+
+      .survey-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(255, 215, 0, 0.25);
+      }
+
+      .survey-img {
+        height: 160px;
+        object-fit: cover;
+        width: 100%;
+        filter: brightness(0.8);
+      }
+
+      .survey-btn-warning {
+        background: linear-gradient(
+          135deg,
+          var(--primary-color),
+          var(--accent-color)
+        );
+        color: #000;
+        font-weight: 500;
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 3px 8px rgba(255, 215, 0, 0.4);
+        transition: all 0.3s ease;
+      }
+
+      .survey-btn-warning:hover {
+        background: linear-gradient(
+          135deg,
+          var(--accent-color),
+          var(--primary-color)
+        );
+        transform: translateY(-2px);
+        box-shadow: 0 5px 12px rgba(255, 215, 0, 0.6);
+      }
+
+      .survey-btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--primary-color);
+        font-weight: 500;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 215, 0, 0.3);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+      }
+
+      .survey-btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: var(--primary-color);
+        box-shadow: 0 5px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      .survey-card .card-body {
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        height: calc(100% - 160px);
+      }
+
+      .survey-card .card-title {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .survey-card .card-text {
+        color: rgba(255, 215, 0, 0.8);
+        font-size: 0.9rem;
+        margin-bottom: 15px;
+      }
+
+      .survey-card .btn-group {
+        margin-top: auto;
+      }
+
+      /* VPN Check Styles */
+      .vpn-check-container {
+        background: var(--card-bg);
+        border-radius: 18px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 6px 18px rgba(255, 215, 0, 0.15);
+      }
+
+      .vpn-status {
+        padding: 10px;
+        border-radius: 12px;
+        margin-bottom: 15px;
+        text-align: center;
+      }
+
+      /* Banned user styles */
+      .banned-container {
+        text-align: center;
+        padding: 40px 20px;
+      }
+
+      .banned-icon {
+        font-size: 64px;
+        color: #dc3545;
+        margin-bottom: 20px;
+      }
+
+      /* VPN Check Styles */
+      #vpnCheck {
+        background: var(--dark-bg);
+        padding: 2rem;
+        border-radius: 1rem;
+        color: #fff;
+        max-width: 500px;
+        margin: 3rem auto;
+        font-family: "Segoe UI", sans-serif;
+      }
+
+      #vpnCheck .vpn-check-container {
+        background: var(--card-bg);
+        padding: 2.5rem 2rem;
+        border-radius: 1rem;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      #vpnCheck h4 {
+        color: var(--primary-color);
+        margin-bottom: 1.5rem;
+        font-size: 1.5rem;
+        font-weight: 700;
+      }
+
+      .alert {
+        border-radius: 0.75rem;
+        font-weight: 500;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+        text-align: left;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid transparent;
+      }
+
+      .alert-primary {
+        background-color: #1a1a2e;
+        color: var(--accent-color);
+        border: 1px solid var(--primary-color);
+      }
+
+      .alert-warning {
+        background-color: #331a00;
+        width: 90%;
+        color: #ffcc66;
+        border: 1px solid #ff9900;
+      }
+
+      .alert-danger {
+        background-color: #330000;
+        color: #ff6666;
+        border: 1px solid #ff0000;
+      }
+
+      .alert-success {
+        background-color: #003300;
+        color: #99ff66;
+        border: 1px solid #00ff00;
+      }
+
+      .spinner-border {
+        margin-right: 0.5rem;
+      }
+
+      .d-flex i {
+        font-size: 1.2rem;
+      }
+
+      /* Video Rewards Section Styles */
+      .video-rewards-container {
+        background: var(--card-bg);
+        border-radius: 18px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 6px 18px rgba(255, 215, 0, 0.15);
+      }
+
+      .video-progress {
+        height: 12px;
+        border-radius: 10px;
+        background: #333;
+        margin: 15px 0;
+        overflow: hidden;
+      }
+
+      .video-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #ffd700, #ffcc00);
+        border-radius: 10px;
+        transition: width 0.5s ease;
+      }
+
+      .ad-status {
+        font-size: 0.9rem;
+        text-align: center;
+        margin: 10px 0;
+        color: rgba(255, 215, 0, 0.8);
+      }
+
+      /* Claim Reward Button Styles */
+      .claim-btn {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        font-weight: 600;
+        border-radius: 12px;
+        padding: 12px 24px;
+        border: none;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        transition: all 0.3s ease;
+        display: none;
+      }
+
+      .claim-btn:hover:not(:disabled) {
+        background: linear-gradient(135deg, #20c997, #28a745);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(40, 167, 69, 0.4);
+      }
+
+      .claim-btn:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      /* Cooldown timer styles */
+      .cooldown-timer {
+        font-size: 14px;
+        color: #ffcc00;
+        text-align: center;
+        margin-top: 10px;
+        display: none;
+      }
+
+      /* NEW SURVEY STYLES */
+      .survey-item {
+        background: var(--card-bg);
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 215, 0, 0.1);
+        transition: all 0.3s ease;
+      }
+
+      .survey-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(255, 215, 0, 0.25);
+      }
+
+      .survey-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .survey-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        margin-right: 12px;
+        object-fit: cover;
+        border: 1px solid rgba(255, 215, 0, 0.3);
+      }
+
+      .survey-title {
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 4px;
+      }
+
+      .survey-reward {
+        color: #00ff88;
+        font-weight: 700;
+        font-size: 1.1rem;
+      }
+
+      .survey-description {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+        margin-bottom: 16px;
+        line-height: 1.4;
+      }
+
+      .survey-actions {
+        display: flex;
+        gap: 10px;
+      }
+
+      .survey-btn {
+        flex: 1;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-weight: 600;
+        text-align: center;
+        transition: all 0.2s ease;
+        border: none;
+      }
+
+      .survey-btn-primary {
+        background: linear-gradient(135deg, #ffd700, #ffcc00);
+        color: #000;
+      }
+
+      .survey-btn-primary:hover:not(:disabled) {
+        background: linear-gradient(135deg, #ffcc00, #ffd700);
+        transform: translateY(-2px);
+      }
+
+      .survey-btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--primary-color);
+        border: 1px solid rgba(255, 215, 0, 0.3);
+      }
+
+      .survey-btn-secondary:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: var(--primary-color);
+      }
+
+      .survey-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      .survey-completed {
+        background: rgba(0, 255, 136, 0.1);
+        border: 1px solid rgba(0, 255, 136, 0.3);
+      }
+
+      .survey-completed-badge {
+        background: linear-gradient(135deg, #00c851, #007e33);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 576px) {
+        .cover-img {
+          height: 150px;
+        }
+
+        .bottom-nav a {
+          padding: 10px 12px;
+          max-width: 64px;
+        }
+
+        .top-header {
+          padding: 10px 15px;
+        }
+
+        .survey-img {
+          height: 120px;
+        }
+
+        .survey-card .card-body {
+          height: calc(100% - 120px);
+        }
+
+        #vpnCheck {
+          padding: 1rem;
+        }
+
+        #vpnCheck .vpn-check-container {
+          padding: 1.5rem 1rem;
+        }
+        
+        .survey-actions {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- BANNED USER SCREEN (hidden by default) -->
+    <div id="bannedScreen" class="container hidden">
+      <div class="banned-container">
+        <i class="bi bi-shield-slash-fill banned-icon"></i>
+        <h2 class="text-danger">Account Suspended</h2>
+        <p class="text-muted">
+          Your account has been suspended for violating our terms of service.
+        </p>
+        <div class="card p-4 mt-4">
+          <h5>Contact Support</h5>
+          <p>
+            If you believe this is a mistake, please contact our support team:
+          </p>
+          <p class="fw-bold">Email: support@AdFlare.com</p>
+          <p class="fw-bold">Telegram: @AdFlare_support</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN APP CONTENT (hidden if banned) -->
+    <div id="appContent">
+      <!-- TOP HEADER -->
+      <div class="top-header">
+        <div class="d-flex align-items-center gap-2">
+          <img
+            id="logoImg"
+            src="https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg"
+            class="profile-img rounded-circle shadow"
+            alt="Logo"
+          />
+          <h5 class="m-0 fw-bold">Ad Flare</h5>
+        </div>
+        <div class="text-end">
+          <div class="d-flex align-items-center justify-content-end gap-2">
+            <i class="bi bi-wallet2"></i>
+            <span id="balance" class="fw-bold">0.00</span>
+            <span class="badge badge-gold">BDT</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTIFICATION AREA -->
+      <div id="notificationArea"></div>
+
+      <!-- VPN CHECK -->
+      <div id="vpnCheck">
+        <div class="vpn-check-container">
+          <h4>🌐 Network Status</h4>
+
+          <div id="vpnStatus" class="alert alert-primary d-flex">
+            <span
+              class="spinner-border spinner-border-sm"
+              role="status"
+              aria-hidden="true"
+            ></span>
+            Checking your network...
+          </div>
+
+          <div id="vpnAlert" class="alert alert-warning d-none d-flex">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            VPN required! Please connect your VPN.
+          </div>
+
+          <div id="vpnOffAlert" class="alert alert-danger d-none d-flex">
+            <i class="bi bi-slash-circle-fill"></i>
+            VPN detected! Please disconnect it.
+          </div>
+
+          <div id="vpnSuccess" class="alert alert-success d-none d-flex">
+            <i class="bi bi-check-circle-fill"></i>
+            Connection verified! You can now use the app.
+          </div>
+
+          <button
+            id="retryVpnCheck"
+            class="btn btn-custom d-none mt-2"
+            onclick="checkVPN()"
+          >
+            <i class="bi bi-arrow-clockwise"></i> Retry Check
+          </button>
+        </div>
+      </div>
+
+      <!-- HOME -->
+      <div id="home" class="container my-4 hidden">
+        <div class="position-relative mb-4 mt-2">
+          <img
+            id="coverImg"
+            src="https://res.cloudinary/demo/image/upload/v1648039207/sample.jpg"
+            class="img-fluid cover-img shadow-lg w-100"
+            alt="Cover"
+          />
+          <div class="overlay-text">
+            <h5>
+              Welcome back, <span id="username" class="text-warning">User</span>
+            </h5>
+            <h2 class="fw-bold mb-3">Start Earning Today</h2>
+            <button
+              class="btn btn-custom px-4 py-2"
+              onclick="showTab('rewards', document.querySelector('.bottom-nav a:nth-child(2)'))"
+            >
+              Let's Earn <i class="bi bi-arrow-right ms-2"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-md-4">
+            <div class="card p-3 text-center">
+              <i class="bi bi-cash-coin fs-1 mb-2 text-warning"></i>
+              <h5>Total Earnings</h5>
+              <h3 class="fw-bold">
+                <span id="totalEarningsHome">0.00</span>
+                <small class="fs-6">BDT</small>
+              </h3>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card p-3 text-center">
+              <i class="bi bi-check-circle fs-1 mb-2 text-success"></i>
+              <h5>Tasks Done</h5>
+              <h3 class="fw-bold">
+                <span id="completed">0</span>/<span id="dailyLimit">0</span>
+              </h3>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card p-3 text-center">
+              <i class="bi bi-people fs-1 mb-2 text-info"></i>
+              <h5>Referrals</h5>
+              <h3 class="fw-bold" id="referralsCountHome">0</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROMO CODE SECTION -->
+        <div class="card p-4 mb-4">
+          <h5 class="mb-3">
+            <i class="bi bi-ticket-perforated me-2"></i> Redeem Promo Code
+          </h5>
+          <div class="input-group">
+            <input
+              type="text"
+              class="form-control"
+              id="promoCodeInput"
+              placeholder="Enter promo code"
+            />
+            <button
+              class="btn btn-custom"
+              type="button"
+              onclick="redeemPromoCode()"
+            >
+              Redeem
+            </button>
+          </div>
+          <div class="form-text text-warning mt-2">
+            Enter a valid promo code to get bonus balance
+          </div>
+        </div>
+      </div>
+
+      <!-- REWARDS -->
+      <div id="rewards" class="container my-4 hidden">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h3 class="m-0">Earning Rewards</h3>
+          <span class="badge badge-hot px-3 py-2">Hot Offers</span>
+        </div>
+
+        <!-- VIDEO REWARDS SECTION - ENHANCED -->
+        <div class="video-rewards-container mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h5 class="mb-1">Watch Videos & Earn</h5>
+              <small class="text-muted">Complete videos to earn rewards</small>
+            </div>
+            <span class="badge bg-dark px-3 py-2">
+              <span id="remaining">0</span> remaining
+            </span>
+          </div>
+
+          <div class="video-progress">
+            <div id="videoProgressBar" class="video-progress-bar" style="width: 0%"></div>
+          </div>
+
+          <button
+            class="btn btn-custom w-100 mb-2 py-3"
+            id="watchAdBtn"
+          >
+            <i class="bi bi-play-circle me-2"></i> Watch Video (+0.20 BDT)
+          </button>
+
+          <button
+            class="btn claim-btn w-100 mb-2 py-3"
+            id="claimRewardBtn"
+            disabled
+          >
+            <i class="bi bi-check-circle me-2"></i> Claim Reward (+0.20 BDT)
+          </button>
+
+          <div class="cooldown-timer" id="cooldownTimer">
+            <i class="bi bi-clock-history me-1"></i>
+            Please wait: <span id="cooldownSeconds">15</span> seconds
+          </div>
+
+          <div class="ad-status" id="adStatus">
+            Ready to watch videos
+          </div>
+
+          <div class="alert alert-dark d-flex align-items-center mt-3" role="alert">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            <small>Complete <span id="dailyLimitText">0</span> tasks to get bonus</small>
+          </div>
+        </div>
+
+        <h4 class="mb-3">Daily Offers</h4>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="card p-3 h-100">
+              <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-star-fill text-warning me-2"></i>
+                <h5 class="m-0">Survey Task</h5>
+              </div>
+              <p class="text-muted small mb-3">
+                Complete surveys and earn up to 5.00 BDT per survey
+              </p>
+              <button
+                onclick="showSurveyPage()"
+                class="btn btn-outline-warning w-100 mt-auto"
+              >
+                Start Survey
+              </button>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card p-3 h-100">
+              <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-gem text-info me-2"></i>
+                <h5 class="m-0">Refer Friends</h5>
+              </div>
+              <p class="text-muted small mb-3" id="referralText">
+                Earn 10% of your referrals' earnings
+              </p>
+
+              <!-- Invite URL with copy button -->
+              <div class="input-group mb-3">
+                <input
+                  type="text"
+                  class="form-control"
+                  id="inviteLink"
+                  value=""
+                  readonly
+                />
+                <button
+                  class="btn btn-outline-info w-20"
+                  type="button"
+                  onclick="copyInviteLink()"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WITHDRAW -->
+      <div id="withdraw" class="container my-4 hidden">
+        <h3 class="mb-4">Withdraw Funds</h3>
+
+        <div class="card p-4 mb-4">
+          <h5 class="mb-3 fw-bold">
+            <i class="bi bi-wallet2 me-2"></i> Withdrawal Options
+          </h5>
+
+          <div class="mb-3">
+            <label class="fw-bold mb-2">Withdrawal Method</label>
+            <select class="form-select mb-3" id="method">
+              <option value="">Select a method</option>
+              <option>Bkash</option>
+              <option>Nagad</option>
+              <option>Mobile Recharge</option>
+              <option>Binance Id</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="fw-bold mb-2">Amount (BDT)</label>
+            <input
+              type="number"
+              class="form-control mb-3"
+              id="amount"
+              placeholder="Enter amount"
+            />
+            <div class="d-flex justify-content-between small text-white">
+              <span>Min: <span id="minWithdraw">50</span> BDT</span>
+              <span
+                >Available: <span id="availableBalance">0.00</span> BDT</span
+              >
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="fw-bold mb-2">Wallet/Account Number</label>
+            <input
+              type="text"
+              class="form-control"
+              id="address"
+              placeholder="Enter your wallet number"
+            />
+          </div>
+
+          <button class="btn btn-custom w-100 py-3" onclick="withdraw()">
+            <i class="bi bi-send-check me-2"></i> Submit Withdrawal
+          </button>
+        </div>
+
+        <div class="card p-4">
+          <h5 class="mb-3 fw-bold">
+            <i class="bi bi-info-circle me-2"></i> Withdrawal Info
+          </h5>
+          <ul class="list-unstyled">
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success me-2"></i> Minimum
+              withdrawal: <span id="minWithdrawInfo">50</span> BDT
+            </li>
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success me-2"></i> Processing
+              time: 24-48 hours
+            </li>
+            <li>
+              <i class="bi bi-check-circle text-success me-2"></i> 5৳ fees
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- HISTORY -->
+      <div id="history" class="container my-4 hidden">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h3 class="m-0">Transaction History</h3>
+          <div class="dropdown">
+            <button
+              class="btn btn-dark dropdown-toggle"
+              type="button"
+              id="historyFilter"
+              data-bs-toggle="dropdown"
+            >
+              <i class="bi bi-funnel"></i> Filter
+            </button>
+            <ul class="dropdown-menu dropdown-menu-dark">
+              <li>
+                <a
+                  class="dropdown-item active"
+                  href="#"
+                  onclick="filterHistory('all')"
+                  >All</a
+                >
+              </li>
+              <li>
+                <a
+                  class="dropdown-item"
+                  href="#"
+                  onclick="filterHistory('withdrawal')"
+                  >Withdrawals</a
+                >
+              </li>
+              <li>
+                <a
+                  class="dropdown-item"
+                  href="#"
+                  onclick="filterHistory('earning')"
+                  >Earnings</a
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card p-0 overflow-hidden">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0">
+              <thead class="table-dark">
+                <tr>
+                  <th class="ps-4 text-nowrap">Date</th>
+                  <th>Method</th>
+                  <th class="">Amount</th>
+                  <th>Address</th>
+                  <th class="text-end pe-4 text-nowrap">Status</th>
+                </tr>
+              </thead>
+              <tbody id="historyTable">
+                <!-- Data will be inserted here -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card-footer bg-dark text-center py-3">
+            <button
+              class="btn btn-sm btn-outline-warning"
+              onclick="loadMoreHistory()"
+            >
+              <i class="bi bi-arrow-down"></i> Load More
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROFILE -->
+      <div id="profile" class="container my-4 hidden">
+        <div class="text-center mb-4">
+          <img
+            id="profileImg"
+            src="https://via.placeholder.com/120"
+            class="rounded-circle border border-warning mb-3 shadow"
+            width="120"
+            height="120"
+          />
+          <h3 id="profileName" class="fw-bold mb-1">User</h3>
+        </div>
+
+        <div class="card p-4 mb-4 rounded-4 shadow-sm border-0">
+          <h5 class="mb-3 fw-bold d-flex align-items-center">
+            <i class="bi bi-person-badge me-2 text-warning"></i> Account Info
+          </h5>
+
+          <div class="row row-cols-2 g-3">
+            <div class="col">
+              <div
+                class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow"
+              >
+                <label class="small text-muted d-block mb-1">Username</label>
+                <span id="profileUsername">user</span>
+              </div>
+            </div>
+            <div class="col">
+              <div
+                class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow"
+              >
+                <label class="small text-muted d-block mb-1"
+                  >Member Since</label
+                >
+                <span id="memberSince">-</span>
+              </div>
+            </div>
+            <div class="col">
+              <div
+                class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow"
+              >
+                <label class="small text-muted d-block mb-1">Token</label>
+                <span id="promoCode">-</span>
+              </div>
+            </div>
+            <div class="col">
+              <div
+                class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow"
+              >
+                <label class="small text-muted d-block mb-1">Referrals</label>
+                <span id="referralsCount">0</span> users
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card p-4 mb-4 rounded-4 shadow-sm border-0">
+          <h5 class="mb-3 fw-bold d-flex align-items-center">
+            <i class="bi bi-graph-up me-2"></i> Earnings Summary
+          </h5>
+
+          <div class="row row-cols-2 g-3">
+            <div class="col">
+              <div
+                class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow"
+              >
+                <label class="small text-muted d-block mb-1"
+                  >Total Earnings</label
+                >
+                <span id="totalEarnings">0.00</span> BDT
+              </div>
+            </div>
+            <div class="col">
+              <div
+                class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow"
+              >
+                <label class="small text-muted d-block mb-1">Withdrawn</label>
+                <span id="withdrawnAmount">0.00</span> BDT
+              </div>
+            </div>
+            <div class="col">
+              <div
+                class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow"
+              >
+                <label class="small text-muted d-block mb-1"
+                  >Available Balance</label
+                >
+                <span id="availableBalanceProfile">0.00</span> BDT
+              </div>
+            </div>
+            <div class="col">
+              <div
+                class="p-3 rounded-3 fw-bold text-dark shadow-sm bg-warning bg-gradient hover-shadow"
+              >
+                <label class="small text-muted d-block mb-1"
+                  >Referral Earnings</label
+                >
+                <span id="referralEarnings">0.00</span> BDT
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SURVEY PAGE (hidden by default) - UPDATED DESIGN -->
+      <div id="surveyPage" class="container survey-container hidden">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h3 class="m-0 fw-bold">✨ Available Surveys</h3>
+          <button class="btn btn-outline-warning" onclick="hideSurveyPage()">
+            <i class="bi bi-arrow-left"></i> Back to Rewards
+          </button>
+        </div>
+        
+        <div id="surveysContainer">
+          <!-- Surveys will be loaded dynamically -->
+        </div>
+        
+        <div class="text-center mt-4">
+          <p class="text-muted">Complete surveys to earn rewards!</p>
+        </div>
+      </div>
+
+      <!-- PERFECT BOTTOM NAVIGATION -->
+      <div class="bottom-nav shadow-lg">
+        <a href="#" onclick="showTab('home', this)" class="active">
+          <i class="bi bi-house"></i>
+          <span>Home</span>
+        </a>
+        <a href="#" onclick="showTab('rewards', this)">
+          <i class="bi bi-cash-coin"></i>
+          <span>Earn</span>
+        </a>
+        <a href="#" onclick="showTab('withdraw', this)">
+          <i class="bi bi-wallet2"></i>
+          <span>Withdraw</span>
+        </a>
+        <a href="#" onclick="showTab('history', this)">
+          <i class="bi bi-clock-history"></i>
+          <span>History</span>
+        </a>
+        <a href="#" onclick="showTab('profile', this)">
+          <i class="bi bi-person"></i>
+          <span>Profile</span>
+        </a>
+      </div>
+    </div>
+    <!-- End of appContent -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyD9RdK77SckQQXtYobeBJBdaF4XOQvDbKU",
+  authDomain: "ads-flare.firebaseapp.com",
+  projectId: "ads-flare",
+  storageBucket: "ads-flare.firebasestorage.app",
+  messagingSenderId: "358472214301",
+  appId: "1:358472214301:web:ebc5991dc60c52f1c4a3f4",
+  measurementId: "G-Q5T7HZ4FKF"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+// Initialize Telegram Web App
+const tg = window.Telegram?.WebApp;
+const user = tg?.initDataUnsafe?.user ?? null;
+
+// Use only Telegram user ID; if not available, block or handle differently
+if (!user || !user.id) {
+  alert("Telegram user not detected. Cannot proceed.");
+  // Optionally, hide the app or redirect
+  document.getElementById("appContent").classList.add("hidden");
+  throw new Error("Telegram user ID missing");
+}
+
+const userId = user.id;
+const username = user.username || user.first_name || "User" + userId;
+const userPhotoUrl = user.photo_url || "https://via.placeholder.com/120";
+
+// Expand Telegram Web App if available
+if (tg) {
+  tg.expand(); // full height
+}
+
+// App state with concurrency control
+let userData = null;
+let appConfig = null;
+let vpnRequired = true;
+let userIP = "";
+let deviceID = "";
+let currentSurvey = null;
+let surveyWindow = null;
+let surveyCheckInterval = null;
+
+// Concurrency control flags
+let isProcessingTransaction = false;
+let pendingOperations = [];
+let operationQueue = [];
+let isProcessingQueue = false;
+
+// Video rewards state
+const MIN_WAIT_SEC = 15;
+let sessionActive = false;
+let adStartTime = 0;
+let sessionClaimed = false;
+let cooldownInterval = null;
+let cooldownEndTime = 0;
+
+// Referral tracking
+let referralCode = null;
+
+// Initialize the application with concurrency safety
+document.addEventListener("DOMContentLoaded", async function () {
+  // Check for referral code in URL
+  checkReferralCode();
+
+  // Get user IP and device info
+  await getUserIP();
+  getDeviceFingerprint();
+
+  // Check if user is banned
+  const isBanned = await checkIfBanned();
+  if (isBanned) {
+    document.getElementById("bannedScreen").classList.remove("hidden");
+    document.getElementById("appContent").classList.add("hidden");
+    return;
+  }
+
+  // Load app configuration
+  await loadAppConfig();
+
+  // Check VPN status
+  await checkVPN();
+
+  // Load or create user data
+  await loadUserData();
+
+  // Update UI with user data
+  updateUI();
+
+  // Load surveys
+  loadSurveys();
+
+  // Initialize video rewards system
+  initVideoRewards();
+  
+  // Check for active cooldown
+  checkCooldownStatus();
+});
+
+// OPERATION QUEUE SYSTEM FOR CONCURRENCY SAFETY
+function processOperationQueue() {
+  if (isProcessingQueue || operationQueue.length === 0) return;
+  
+  isProcessingQueue = true;
+  const operation = operationQueue.shift();
+  
+  operation()
+    .then(() => {
+      isProcessingQueue = false;
+      if (operationQueue.length > 0) {
+        setTimeout(processOperationQueue, 100);
+      }
+    })
+    .catch((error) => {
+      console.error("Operation failed:", error);
+      isProcessingQueue = false;
+      if (operationQueue.length > 0) {
+        setTimeout(processOperationQueue, 100);
+      }
+    });
+}
+
+function addToOperationQueue(operation) {
+  return new Promise((resolve, reject) => {
+    operationQueue.push(() => {
+      return operation().then(resolve).catch(reject);
+    });
+    
+    if (!isProcessingQueue) {
+      processOperationQueue();
+    }
+  });
+}
+
+// ATOMIC OPERATIONS WITH TRANSACTION SUPPORT
+async function atomicUserUpdate(updateFunction, retries = 3) {
+  return addToOperationQueue(async () => {
+    const userRef = database.ref("users/" + userId);
+    
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        const result = await database.ref("users/" + userId).transaction((currentData) => {
+          if (currentData === null) {
+            // User doesn't exist yet, create initial data
+            const joinDate = new Date().toISOString().split("T")[0];
+            const promoCode = "ML" + Math.random().toString(36).substring(2, 8).toUpperCase();
+            
+            return {
+              username: username,
+              photoUrl: userPhotoUrl,
+              joinDate: joinDate,
+              promoCode: promoCode,
+              balance: 0.0,
+              totalEarnings: 0.0,
+              withdrawn: 0.0,
+              referralEarnings: 0.0,
+              completedTasks: 0,
+              referrals: 0,
+              referralCode: "REF" + Math.random().toString(36).substring(2, 8).toUpperCase(),
+              history: [],
+              ip: userIP,
+              deviceID: deviceID,
+              usedPromoCodes: [],
+              completedSurveys: {},
+              lastAdAttempt: 0,
+              referredBy: null,
+              version: Date.now() // Add version for optimistic concurrency
+            };
+          }
+          
+          // Apply the update function to the current data
+          return updateFunction(currentData);
+        });
+        
+        if (result.committed) {
+          userData = result.snapshot.val();
+          return result.snapshot.val();
+        } else {
+          throw new Error("Transaction not committed");
+        }
+      } catch (error) {
+        if (attempt === retries - 1) {
+          console.error("Atomic update failed after retries:", error);
+          throw error;
+        }
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 100 * (attempt + 1)));
+      }
+    }
+  });
+}
+
+// Check for referral code in URL
+function checkReferralCode() {
+  const urlParams = new URLSearchParams(window.location.search);
+  referralCode = urlParams.get('ref');
+  
+  if (referralCode) {
+    console.log("Referral code detected:", referralCode);
+    
+    // Track this referral click
+    trackReferralClick(referralCode);
+  }
+}
+
+// Track referral click in Firebase with concurrency safety
+function trackReferralClick(refCode) {
+  return addToOperationQueue(async () => {
+    // Check if this referral has already been tracked for this user
+    const trackedReferrals = JSON.parse(localStorage.getItem('trackedReferrals') || '{}');
+    
+    if (!trackedReferrals[refCode]) {
+      try {
+        // Create a structured data object with timestamp and user info
+        const referralData = {
+          code: refCode,
+          timestamp: Date.now(),
+          referredUserId: userId,
+          referredUserIp: userIP,
+          userAgent: navigator.userAgent
+        };
+        
+        // Push to a dedicated referrals path with a unique key
+        const newRefKey = database.ref('referrals').push().key;
+        
+        // Use transaction for atomic update of both the counter and the detailed log
+        await database.ref(`referralClicks/${refCode}`).transaction((currentCount) => {
+          return (currentCount || 0) + 1;
+        });
+        
+        // Also store the detailed referral information
+        await database.ref(`referralDetails/${newRefKey}`).set(referralData);
+        
+        // Mark this referral as tracked for this user
+        trackedReferrals[refCode] = true;
+        localStorage.setItem('trackedReferrals', JSON.stringify(trackedReferrals));
+        
+        console.log(`Tracked referral click for code: ${refCode}`);
+      } catch (error) {
+        console.error("Error tracking referral:", error);
+      }
+    }
+  });
+}
+
+// Get user IP address
+async function getUserIP() {
+  try {
+    let res = await fetch("https://api.ipify.org?format=json");
+    let data = await res.json();
+    userIP = data.ip;
+  } catch (e) {
+    console.error("Failed to get IP:", e);
+    userIP = "unknown";
+  }
+}
+
+// Get device fingerprint
+function getDeviceFingerprint() {
+  let ua = navigator.userAgent;
+  let screenRes = window.screen.width + "x" + window.screen.height;
+  let lang = navigator.language;
+
+  // Device ID (encoded)
+  deviceID = btoa(ua + screenRes + lang);
+}
+
+// Check if user is banned
+async function checkIfBanned() {
+  return new Promise((resolve) => {
+    database
+      .ref("bannedUsers")
+      .once("value", (snapshot) => {
+        const bannedUsers = snapshot.val() || {};
+        resolve(bannedUsers[userId.toString()] || false);
+      })
+      .catch((error) => {
+        console.error("Error checking banned status:", error);
+        resolve(false);
+      });
+  });
+}
+
+// Load app configuration from Firebase
+async function loadAppConfig() {
+  return new Promise((resolve) => {
+    database
+      .ref("appConfig")
+      .once("value", (snapshot) => {
+        appConfig = snapshot.val();
+
+        if (!appConfig) {
+          // Default configuration if none exists
+          appConfig = {
+            dailyLimit: 60,
+            adsRewards: 0.2,
+            referralCommission: 10,
+            minWithdraw: 50,
+            logo: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
+            cover: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
+            surveys: [
+              {
+                id: 1,
+                name: "Consumer Survey",
+                reward: 1.5,
+                image: "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                url: "https://www.surveys.com/consumer",
+                completedBy: {},
+                status: "active",
+              },
+              {
+                id: 2,
+                name: "Product Feedback",
+                reward: 2.0,
+                image: "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                url: "https://www.surveys.com/product",
+                completedBy: {},
+                status: "active",
+              },
+              {
+                id: 3,
+                name: "Market Research",
+                reward: 3.5,
+                image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                url: "https://www.surveys.com/market",
+                completedBy: {},
+                status: "active",
+              }
+            ],
+            vpnRequired: true,
+            promoCodes: {
+              WELCOME10: { value: 10, status: "active", used: 0 },
+              BONUS5: { value: 5, status: "active", used: 0 },
+            },
+            supportContact: "support@AdFlare.com",
+          };
+
+          // Save default config to Firebase
+          database
+            .ref("appConfig")
+            .set(appConfig)
+            .catch((error) => {
+              console.error("Error saving default config:", error);
+            });
+        }
+
+        // Ensure adsRewards and referralCommission exist with defaults
+        if (appConfig.adsRewards === undefined) {
+          appConfig.adsRewards = 0.2;
+        }
+        if (appConfig.referralCommission === undefined) {
+          appConfig.referralCommission = 10;
+        }
+
+        // Apply app configuration
+        if (document.getElementById("logoImg")) {
+          document.getElementById("logoImg").src = appConfig.logo;
+        }
+        if (document.getElementById("coverImg")) {
+          document.getElementById("coverImg").src = appConfig.cover;
+        }
+        if (document.getElementById("dailyLimit")) {
+          document.getElementById("dailyLimit").textContent = appConfig.dailyLimit;
+        }
+        if (document.getElementById("dailyLimitText")) {
+          document.getElementById("dailyLimitText").textContent = appConfig.dailyLimit;
+        }
+        if (document.getElementById("minWithdraw")) {
+          document.getElementById("minWithdraw").textContent = appConfig.minWithdraw;
+        }
+        if (document.getElementById("minWithdrawInfo")) {
+          document.getElementById("minWithdrawInfo").textContent = appConfig.minWithdraw;
+        }
+
+        vpnRequired = appConfig.vpnRequired !== undefined ? appConfig.vpnRequired : true;
+
+        resolve();
+      })
+      .catch((error) => {
+        console.error("Error loading app config:", error);
+        // Set default values even if Firebase fails
+        if (document.getElementById("dailyLimit")) {
+          document.getElementById("dailyLimit").textContent = "60";
+        }
+        if (document.getElementById("dailyLimitText")) {
+          document.getElementById("dailyLimitText").textContent = "60";
+        }
+        if (document.getElementById("minWithdraw")) {
+          document.getElementById("minWaitSec").textContent = "50";
+        }
+        if (document.getElementById("minWithdrawInfo")) {
+          document.getElementById("minWithdrawInfo").textContent = "50";
+        }
+        resolve();
+      });
+  });
+}
+
+// Load user data from Firebase or create new user with concurrency safety
+async function loadUserData() {
+  return new Promise((resolve) => {
+    database
+      .ref("users/" + userId)
+      .once("value", async (snapshot) => {
+        if (snapshot.exists()) {
+          userData = snapshot.val();
+
+          // Check if user already exists with same IP or device
+          if (!userData.ip || !userData.deviceID) {
+            // Update with IP and device info for existing users
+            await atomicUserUpdate((currentData) => {
+              return {
+                ...currentData,
+                ip: userIP,
+                deviceID: deviceID
+              };
+            });
+          } else if (userData.ip !== userIP || userData.deviceID !== deviceID) {
+            // Check for duplicate accounts
+            checkForDuplicateAccounts();
+          }
+        } else {
+          // Check if this IP or device already has an account
+          checkForDuplicateAccounts(true);
+
+          // Check if user was referred by someone
+          let referredBy = null;
+          if (referralCode) {
+            // Find user with this referral code
+            const refSnapshot = await database.ref("users")
+              .orderByChild("referralCode")
+              .equalTo(referralCode)
+              .once("value");
+              
+            if (refSnapshot.exists()) {
+              const referrerData = refSnapshot.val();
+              referredBy = Object.keys(referrerData)[0];
+              
+              // Update referrer's referral count with atomic operation
+              await updateReferrerCount(referredBy);
+            }
+          }
+
+          // Create new user with atomic operation
+          await atomicUserUpdate((currentData) => {
+            // This will only run if the user doesn't exist
+            const joinDate = new Date().toISOString().split("T")[0];
+            const promoCode = "ML" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+            return {
+              username: username,
+              photoUrl: userPhotoUrl,
+              joinDate: joinDate,
+              promoCode: promoCode,
+              balance: 0.0,
+              totalEarnings: 0.0,
+              withdrawn: 0.0,
+              referralEarnings: 0.0,
+              completedTasks: 0,
+              referrals: 0,
+              referralCode: "REF" + Math.random().toString(36).substring(2, 8).toUpperCase(),
+              history: [],
+              ip: userIP,
+              deviceID: deviceID,
+              usedPromoCodes: [],
+              completedSurveys: {},
+              lastAdAttempt: 0,
+              referredBy: referredBy,
+              version: Date.now()
+            };
+          });
+        }
+
+        // Update username in UI
+        if (document.getElementById("username")) {
+          document.getElementById("username").textContent = userData.username;
+        }
+        if (document.getElementById("profileName")) {
+          document.getElementById("profileName").textContent = userData.username;
+        }
+        if (document.getElementById("profileUsername")) {
+          document.getElementById("profileUsername").textContent = userData.username;
+        }
+        if (document.getElementById("profileImg")) {
+          document.getElementById("profileImg").src = userData.photoUrl;
+        }
+        if (document.getElementById("memberSince")) {
+          document.getElementById("memberSince").textContent = userData.joinDate;
+        }
+        if (document.getElementById("promoCode")) {
+          document.getElementById("promoCode").textContent = userData.promoCode;
+        }
+        if (document.getElementById("referralsCount")) {
+          document.getElementById("referralsCount").textContent = userData.referrals;
+        }
+        if (document.getElementById("referralsCountHome")) {
+          document.getElementById("referralsCountHome").textContent = userData.referrals;
+        }
+        if (document.getElementById("inviteLink")) {
+          document.getElementById("inviteLink").value = `http://t.me/adflare_bot/bot?startbot=${userData.referralCode}`;
+        }
+
+        resolve();
+      })
+      .catch((error) => {
+        console.error("Error loading user data:", error);
+        // Create a minimal user data object if Firebase fails
+        const joinDate = new Date().toISOString().split("T")[0];
+        userData = {
+          username: username,
+          photoUrl: userPhotoUrl,
+          joinDate: joinDate,
+          promoCode: "ML" + Math.random().toString(36).substring(2, 8).toUpperCase(),
+          balance: 0.0,
+          totalEarnings: 0.0,
+          withdrawn: 0.0,
+          referralEarnings: 0.0,
+          completedTasks: 0,
+          referrals: 0,
+          referralCode: "REF" + Math.random().toString(36).substring(2, 8).toUpperCase(),
+          history: [],
+          ip: userIP,
+          deviceID: deviceID,
+          usedPromoCodes: [],
+          completedSurveys: {},
+          lastAdAttempt: 0,
+          referredBy: null,
+        };
+        resolve();
+      });
+  });
+}
+
+// Update referrer's referral count
+async function updateReferrerCount(referrerId) {
+  return new Promise((resolve, reject) => {
+    database.ref("users/" + referrerId).transaction((currentData) => {
+      if (currentData === null) return currentData;
+      return {
+        ...currentData,
+        referrals: (currentData.referrals || 0) + 1,
+        version: Date.now()
+      };
+    }).then((result) => {
+      if (result.committed) {
+        console.log(`Updated referral count for referrer: ${referrerId}`);
+        resolve();
+      } else {
+        reject(new Error("Transaction not committed"));
+      }
+    }).catch((error) => {
+      console.error("Error updating referrer count:", error);
+      reject(error);
+    });
+  });
+}
+
+// Check for duplicate accounts
+async function checkForDuplicateAccounts(isNewUser = false) {
+  database
+    .ref("users")
+    .once("value", (snapshot) => {
+      const users = snapshot.val();
+      let duplicateFound = false;
+
+      if (users) {
+        Object.keys(users).forEach((key) => {
+          if (key !== userId.toString()) {
+            const user = users[key];
+            if (user.ip === userIP || user.deviceID === deviceID) {
+              duplicateFound = true;
+
+              if (isNewUser) {
+                // Prevent creating new account
+                showNotification(
+                  "Error",
+                  "You already have an account with this device/IP",
+                  "danger"
+                );
+                document.getElementById("bannedScreen").classList.remove("hidden");
+                document.getElementById("appContent").classList.add("hidden");
+
+                // Add to banned users
+                database
+                  .ref("bannedUsers")
+                  .once("value", (bannedSnapshot) => {
+                    const bannedUsers = bannedSnapshot.val() || {};
+                    bannedUsers[userId.toString()] = true;
+                    database
+                      .ref("bannedUsers")
+                      .set(bannedUsers)
+                      .catch((error) => {
+                        console.error("Error adding to banned users:", error);
+                      });
+                  })
+                  .catch((error) => {
+                    console.error("Error checking banned users:", error);
+                  });
+
+                return;
+              }
+            }
+          }
+        });
+      }
+
+      if (duplicateFound && !isNewUser) {
+        showNotification("Warning", "Multiple accounts detected", "warning");
+      }
+    })
+    .catch((error) => {
+      console.error("Error checking for duplicates:", error);
+    });
+}
+
+// Check VPN status
+async function checkVPN() {
+  try {
+    document.getElementById("vpnStatus").textContent = "Checking your connection...";
+    document.getElementById("retryVpnCheck").classList.add("d-none");
+
+    // Get public IP
+    let ipRes = await fetch("https://api64.ipify.org?format=json");
+    let ipData = await ipRes.json();
+
+    // Get IP details
+    let geoRes = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
+    let geoData = await geoRes.json();
+
+    document.getElementById("vpnStatus").textContent = `Your country: ${geoData.country_name}`;
+
+    if (vpnRequired) {
+      // VPN required mode
+      if (geoData.country === "BD") {
+        document.getElementById("vpnAlert").classList.remove("d-none");
+        document.getElementById("vpnSuccess").classList.add("d-none");
+        document.getElementById("vpnOffAlert").classList.add("d-none");
+        document.getElementById("retryVpnCheck").classList.remove("d-none");
+      } else {
+        document.getElementById("vpnAlert").classList.add("d-none");
+        document.getElementById("vpnSuccess").classList.remove("d-none");
+        document.getElementById("vpnOffAlert").classList.add("d-none");
+
+        // Hide VPN check and show home page after successful verification
+        setTimeout(() => {
+          document.getElementById("vpnCheck").classList.add("hidden");
+          document.getElementById("home").classList.remove("hidden");
+        }, 2000);
+      }
+    } else {
+      // VPN not required mode
+      if (geoData.country !== "BD") {
+        document.getElementById("vpnOffAlert").classList.remove("d-none");
+        document.getElementById("vpnAlert").classList.add("d-none");
+        document.getElementById("vpnSuccess").classList.add("d-none");
+        document.getElementById("retryVpnCheck").classList.remove("d-none");
+      } else {
+        document.getElementById("vpnOffAlert").classList.add("d-none");
+        document.getElementById("vpnAlert").classList.add("d-none");
+        document.getElementById("vpnSuccess").classList.remove("d-none");
+
+        // Hide VPN check and show home page
+        setTimeout(() => {
+          document.getElementById("vpnCheck").classList.add("hidden");
+          document.getElementById("home").classList.remove("hidden");
+        }, 2000);
+      }
+    }
+  } catch (e) {
+    document.getElementById("vpnStatus").textContent = "Failed to check IP (API error)";
+    document.getElementById("retryVpnCheck").classList.remove("d-none");
+    console.error("VPN check error:", e);
+  }
+}
+
+// Update UI with user data
+function updateUI() {
+  if (!userData) return;
+
+  // Format balance with commas
+  const formattedBalance = userData.balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const formattedTotalEarnings = userData.totalEarnings.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const formattedWithdrawn = userData.withdrawn.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const formattedReferralEarnings = userData.referralEarnings.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+  if (document.getElementById("balance")) {
+    document.getElementById("balance").innerText = formattedBalance;
+  }
+  if (document.getElementById("availableBalance")) {
+    document.getElementById("availableBalance").innerText = formattedBalance;
+  }
+  if (document.getElementById("availableBalanceProfile")) {
+    document.getElementById("availableBalanceProfile").innerText = formattedBalance;
+  }
+  if (document.getElementById("totalEarningsHome")) {
+    document.getElementById("totalEarningsHome").innerText = formattedTotalEarnings;
+  }
+  if (document.getElementById("totalEarnings")) {
+    document.getElementById("totalEarnings").innerText = formattedTotalEarnings;
+  }
+  if (document.getElementById("withdrawnAmount")) {
+    document.getElementById("withdrawnAmount").innerText = formattedWithdrawn;
+  }
+  if (document.getElementById("referralEarnings")) {
+    document.getElementById("referralEarnings").innerText = formattedReferralEarnings;
+  }
+  if (document.getElementById("completed")) {
+    document.getElementById("completed").innerText = userData.completedTasks;
+  }
+  if (document.getElementById("remaining")) {
+    document.getElementById("remaining").innerText = appConfig.dailyLimit - userData.completedTasks;
+  }
+
+  let percent = Math.round((userData.completedTasks / appConfig.dailyLimit) * 100);
+  if (document.getElementById("videoProgressBar")) {
+    document.getElementById("videoProgressBar").style.width = percent + "%";
+  }
+
+  // Update ad button with correct reward amount
+  const adReward = appConfig.adsRewards || 0.2;
+  if (document.getElementById("watchAdBtn")) {
+    document.getElementById("watchAdBtn").innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
+  }
+
+  // Update referral text with correct percentage
+  const referralCommission = appConfig.referralCommission || 10;
+  if (document.getElementById("referralText")) {
+    document.getElementById("referralText").textContent = `Earn ${referralCommission}% of your referrals' earnings`;
+  }
+
+  // Update history table
+  filterHistory("all");
+}
+
+// Initialize video rewards system
+function initVideoRewards() {
+  // Add event listener to watch ad button
+  if (document.getElementById("watchAdBtn")) {
+    document.getElementById("watchAdBtn").addEventListener("click", watchAd);
+  }
+
+  // Add event listener to claim button
+  if (document.getElementById("claimRewardBtn")) {
+    document.getElementById("claimRewardBtn").addEventListener("click", claimReward);
+  }
+}
+
+// Wait for GigaPub to load
+function waitForGiga() {
+  return new Promise((resolve, reject) => {
+    const check = () => {
+      if (typeof window.showGiga === 'function') resolve();
+      else setTimeout(check, 100);
+    }
+    check();
+  });
+}
+
+// Check cooldown status on page load
+function checkCooldownStatus() {
+  if (userData && userData.lastAdAttempt) {
+    const now = Date.now();
+    const timeSinceLastAttempt = (now - userData.lastAdAttempt) / 1000;
+    const timeRemaining = MIN_WAIT_SEC - timeSinceLastAttempt;
+    
+    if (timeRemaining > 0) {
+      // Still in cooldown period
+      startCooldown(timeRemaining);
+    }
+  }
+}
+
+// Start cooldown timer
+function startCooldown(seconds) {
+  const adButton = document.getElementById("watchAdBtn");
+  const claimButton = document.getElementById("claimRewardBtn");
+  const cooldownTimer = document.getElementById("cooldownTimer");
+  const cooldownSeconds = document.getElementById("cooldownSeconds");
+  
+  // Disable buttons and show cooldown timer
+  adButton.disabled = true;
+  claimButton.style.display = "none";
+  cooldownTimer.style.display = "block";
+  
+  let remainingSeconds = Math.ceil(seconds);
+  cooldownSeconds.textContent = remainingSeconds;
+  
+  // Update cooldown timer
+  cooldownInterval = setInterval(() => {
+    remainingSeconds--;
+    cooldownSeconds.textContent = remainingSeconds;
+    
+    if (remainingSeconds <= 0) {
+      clearInterval(cooldownInterval);
+      cooldownTimer.style.display = "none";
+      adButton.disabled = false;
+      
+      // Reset ad button text
+      const adReward = appConfig.adsRewards || 0.2;
+      adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
+      
+      // Update status
+      document.getElementById("adStatus").textContent = "Ready to watch videos";
+    }
+  }, 1000);
+}
+
+// Watch ad function for video rewards with concurrency safety
+async function watchAd() {
+  if (userData.completedTasks >= appConfig.dailyLimit) {
+    showNotification("Completed!", "All tasks completed for today!", "info");
+    return;
+  }
+
+  if (sessionActive) {
+    showNotification("Info", "Please complete the current video first", "info");
+    return;
+  }
+
+  try {
+    // Disable button to prevent multiple clicks
+    const adButton = document.getElementById("watchAdBtn");
+    const claimButton = document.getElementById("claimRewardBtn");
+    const statusEl = document.getElementById("adStatus");
+    
+    adButton.disabled = true;
+    adButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Loading...';
+
+    // Update status
+    statusEl.textContent = "Loading ad…";
+    setProgress(0);
+
+    // Record ad attempt time with atomic update
+    await atomicUserUpdate((currentData) => {
+      return {
+        ...currentData,
+        lastAdAttempt: Date.now(),
+        version: Date.now()
+      };
+    });
+    
+    adStartTime = Date.now();
+    statusEl.textContent = 'Watching ad...';
+    sessionActive = true;
+    sessionClaimed = false;
+
+    // Show the ad
+    await window.showGiga();
+    
+    statusEl.textContent = 'Ad finished ✓ — now claim';
+    setProgress(85);
+    claimButton.style.display = "block";
+    claimButton.disabled = false;
+  } catch (e) {
+    console.error("Ad failed or closed before completion", e);
+    showNotification("Error", "Video not loaded. Please try again.", "danger");
+    
+    // Reset button state
+    const adButton = document.getElementById("watchAdBtn");
+    const claimButton = document.getElementById("claimRewardBtn");
+    const statusEl = document.getElementById("adStatus");
+    const adReward = appConfig.adsRewards || 0.2;
+    
+    adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
+    adButton.disabled = false;
+    claimButton.style.display = "none";
+    statusEl.textContent = "Failed to load video. Try again.";
+    setProgress(0);
+    sessionActive = false;
+  }
+}
+
+// Set progress bar
+function setProgress(p) {
+  const progressBar = document.getElementById("videoProgressBar");
+  progressBar.style.width = Math.max(0, Math.min(100, p)) + "%";
+}
+
+// Claim reward after watching ad with concurrency safety
+async function claimReward() {
+  if (!sessionActive) {
+    showNotification("Error", "No active ad session", "danger");
+    return;
+  }
+
+  if (sessionClaimed) {
+    showNotification("Info", "Reward already claimed for this session", "info");
+    return;
+  }
+
+  let elapsed = (Date.now() - adStartTime) / 1000;
+  if (elapsed < MIN_WAIT_SEC) {
+    // Start cooldown period
+    startCooldown(MIN_WAIT_SEC - elapsed);
+    
+    showNotification("Error", `You must wait at least ${MIN_WAIT_SEC}s. Please wait and try again.`, "danger");
+    return;
+  }
+
+  if (userData.completedTasks >= appConfig.dailyLimit) {
+    showNotification("Completed!", "All tasks completed for today!", "info");
+    return;
+  }
+
+  try {
+    // Update user data with atomic operation
+    const rewardAmount = appConfig.adsRewards || 0.2;
+    
+    await atomicUserUpdate((currentData) => {
+      if (currentData.completedTasks >= appConfig.dailyLimit) {
+        // Another operation might have completed the daily limit
+        throw new Error("Daily limit reached");
+      }
+      
+      return {
+        ...currentData,
+        completedTasks: currentData.completedTasks + 1,
+        balance: currentData.balance + rewardAmount,
+        totalEarnings: currentData.totalEarnings + rewardAmount,
+        lastAdAttempt: 0, // Reset cooldown
+        history: [
+          {
+            type: "earning",
+            method: "Video Reward",
+            amount: rewardAmount.toFixed(2),
+            address: "Video Ad",
+            status: "Completed",
+            date: new Date().toLocaleDateString(),
+            timestamp: Date.now()
+          },
+          ...(currentData.history || [])
+        ].slice(0, 50), // Keep only last 50 transactions
+        version: Date.now()
+      };
+    });
+
+    // Update UI
+    updateUI();
+    
+    // Reset ad state
+    sessionActive = false;
+    sessionClaimed = true;
+    
+    // Update UI elements
+    const adButton = document.getElementById("watchAdBtn");
+    const claimButton = document.getElementById("claimRewardBtn");
+    const statusEl = document.getElementById("adStatus");
+    
+    adButton.style.display = "block";
+    claimButton.style.display = "none";
+    
+    // Update status
+    statusEl.textContent = "Reward granted ✅";
+    setProgress(100);
+    
+    // Update ad button text
+    const adReward = appConfig.adsRewards || 0.2;
+    adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
+    adButton.disabled = false;
+    
+    showNotification("Success!", `You earned ${rewardAmount.toFixed(2)} BDT!`, "success");
+  } catch (error) {
+    console.error("Error claiming reward:", error);
+    if (error.message === "Daily limit reached") {
+      showNotification("Completed!", "All tasks completed for today!", "info");
+    } else {
+      showNotification("Error", "Failed to claim reward. Please try again.", "danger");
+    }
+    
+    // Reset UI state
+    const adButton = document.getElementById("watchAdBtn");
+    const claimButton = document.getElementById("claimRewardBtn");
+    const adReward = appConfig.adsRewards || 0.2;
+    
+    adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
+    adButton.disabled = false;
+    claimButton.style.display = "none";
+    sessionActive = false;
+  }
+}
+
+// Show survey page
+function showSurveyPage() {
+  document.querySelectorAll("div.container").forEach((div) => div.classList.add("hidden"));
+  document.getElementById("surveyPage").classList.remove("hidden");
+  document.querySelectorAll(".bottom-nav a").forEach((a) => a.classList.remove("active"));
+}
+
+// Hide survey page
+function hideSurveyPage() {
+  // If a survey was started but not completed, don't award anything
+  if (currentSurvey) {
+    showNotification("Info", "Survey was not completed. No reward awarded.", "info");
+  }
+
+  // Reset survey state
+  currentSurvey = null;
+  if (surveyCheckInterval) {
+    clearInterval(surveyCheckInterval);
+    surveyCheckInterval = null;
+  }
+
+  document.getElementById("surveyPage").classList.add("hidden");
+  document.getElementById("rewards").classList.remove("hidden");
+  document.querySelector('.bottom-nav a[onclick*="rewards"]').classList.add("active");
+}
+
+// Load surveys - UPDATED FUNCTION
+function loadSurveys() {
+  const surveysContainer = document.getElementById("surveysContainer");
+  if (!surveysContainer) return;
+  
+  surveysContainer.innerHTML = "";
+
+  if (!appConfig || !appConfig.surveys) {
+    surveysContainer.innerHTML = `
+      <div class="text-center text-muted py-4">
+        <i class="bi bi-inbox display-4 d-block mb-3"></i>
+        <p>No surveys available at the moment. Check back later!</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Filter active surveys
+  const activeSurveys = appConfig.surveys.filter(survey => survey.status === "active");
+  
+  if (activeSurveys.length === 0) {
+    surveysContainer.innerHTML = `
+      <div class="text-center text-muted py-4">
+        <i class="bi bi-inbox display-4 d-block mb-3"></i>
+        <p>No surveys available at the moment. Check back later!</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Create survey items
+  activeSurveys.forEach((survey) => {
+    // Check if user has already completed this survey
+    const isCompleted = userData.completedSurveys && userData.completedSurveys[survey.id];
+    
+    const surveyItem = document.createElement("div");
+    surveyItem.className = `survey-item ${isCompleted ? "survey-completed" : ""}`;
+    
+    surveyItem.innerHTML = `
+      <div class="survey-header">
+        <img src="${survey.image}" alt="${survey.name}" class="survey-icon">
+        <div class="flex-grow-1">
+          <div class="survey-title">${survey.name}</div>
+          <div class="survey-reward">+ ${survey.reward.toFixed(2)} BDT</div>
+        </div>
+        ${isCompleted ? '<span class="survey-completed-badge"><i class="bi bi-check-circle-fill"></i> Completed</span>' : ''}
+      </div>
+      <div class="survey-description">
+        Complete this survey to earn ${survey.reward.toFixed(2)} BDT. This should take approximately 5-10 minutes.
+      </div>
+      <div class="survey-actions">
+        <button class="survey-btn survey-btn-primary" onclick="startSurvey(${survey.id})" ${isCompleted ? "disabled" : ""}>
+          <i class="bi bi-play-circle"></i> Start Survey
+        </button>
+        <button class="survey-btn survey-btn-secondary" onclick="verifySurvey(${survey.id})" ${isCompleted ? "" : "disabled"} id="verifyBtn-${survey.id}">
+          ${isCompleted ? '<i class="bi bi-check-circle"></i> Claimed' : '<i class="bi bi-arrow-repeat"></i> Verify'}
+        </button>
+      </div>
+    `;
+    
+    surveysContainer.appendChild(surveyItem);
+  });
+}
+
+// Start survey - MODIFIED to enable verify button instantly
+function startSurvey(surveyId) {
+  const survey = appConfig.surveys.find((s) => s.id === surveyId);
+  if (!survey) return;
+
+  // Check if user has already completed this survey
+  if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
+    showNotification("Info", "You have already completed this survey.", "info");
+    return;
+  }
+
+  if (userData.completedTasks < appConfig.dailyLimit) {
+    // Store the current survey
+    currentSurvey = survey;
+
+    // Enable the verify button instantly
+    const verifyButton = document.getElementById(`verifyBtn-${surveyId}`);
+    if (verifyButton) {
+      verifyButton.disabled = false;
+    }
+
+    // Open the survey URL in a new tab
+    surveyWindow = window.open(survey.url, "_blank", "noopener,noreferrer");
+
+    // Show instructions
+    showNotification("Info", "Survey opened in new tab. Complete it and click Verify to claim your reward.", "info");
+  } else {
+    showNotification("Completed!", "All tasks completed for today!", "info");
+  }
+}
+
+// Verify survey - MODIFIED to handle instant verification with concurrency safety
+async function verifySurvey(surveyId) {
+  const survey = appConfig.surveys.find((s) => s.id === surveyId);
+  if (!survey) return;
+
+  // Check if user has completed this survey
+  if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
+    showNotification(
+      "Info",
+      "You have already claimed the reward for this survey.",
+      "info"
+    );
+  } else {
+    // Ask user if they completed the survey
+    const completed = confirm(
+      "Have you completed the survey? Click OK to claim your reward, or Cancel if you didn't finish it."
+    );
+
+    if (completed) {
+      await completeSurvey(survey);
+    } else {
+      showNotification(
+        "Info",
+        "Survey not completed. Please finish the survey before claiming.",
+        "info"
+      );
+    }
+  }
+}
+
+// Complete survey with concurrency safety
+async function completeSurvey(survey) {
+  if (!survey) return;
+
+  try {
+    // Update user data with atomic operation
+    await atomicUserUpdate((currentData) => {
+      if (currentData.completedTasks >= appConfig.dailyLimit) {
+        throw new Error("Daily limit reached");
+      }
+      
+      if (currentData.completedSurveys && currentData.completedSurveys[survey.id]) {
+        throw new Error("Survey already completed");
+      }
+      
+      const updatedCompletedSurveys = {
+        ...(currentData.completedSurveys || {}),
+        [survey.id]: true
+      };
+      
+      return {
+        ...currentData,
+        completedTasks: currentData.completedTasks + 1,
+        balance: currentData.balance + survey.reward,
+        totalEarnings: currentData.totalEarnings + survey.reward,
+        completedSurveys: updatedCompletedSurveys,
+        history: [
+          {
+            type: "earning",
+            method: "Survey",
+            amount: survey.reward.toFixed(2),
+            address: survey.name,
+            status: "Completed",
+            date: new Date().toLocaleDateString(),
+            timestamp: Date.now()
+          },
+          ...(currentData.history || [])
+        ].slice(0, 50), // Keep only last 50 transactions
+        version: Date.now()
+      };
+    });
+
+    // Update survey completion in app config with transaction
+    await database.ref(`appConfig/surveys`).transaction((surveys) => {
+      if (!surveys) return surveys;
+      
+      const updatedSurveys = surveys.map(s => {
+        if (s.id === survey.id) {
+          return {
+            ...s,
+            completedBy: {
+              ...(s.completedBy || {}),
+              [userId]: true
+            }
+          };
+        }
+        return s;
+      });
+      
+      return updatedSurveys;
+    });
+
+    // Update UI
+    updateUI();
+    loadSurveys(); // Reload surveys to update completion status
+    showNotification(
+      "Success!",
+      `You earned ${survey.reward.toFixed(2)} BDT from survey!`,
+      "success"
+    );
+
+    // Reset current survey
+    currentSurvey = null;
+  } catch (error) {
+    console.error("Error completing survey:", error);
+    if (error.message === "Daily limit reached") {
+      showNotification("Completed!", "All tasks completed for today!", "info");
+    } else if (error.message === "Survey already completed") {
+      showNotification("Info", "You have already completed this survey.", "info");
+      // Reload surveys to update UI
+      loadSurveys();
+    } else {
+      showNotification("Error", "Failed to complete survey. Please try again.", "danger");
+    }
+  }
+}
+
+// Withdraw funds with concurrency safety
+async function withdraw() {
+  let method = document.getElementById("method").value;
+  let amount = parseFloat(document.getElementById("amount").value);
+  let address = document.getElementById("address").value;
+
+  if (!method || !amount || !address) {
+    return showNotification("Error", "Please fill all fields!", "danger");
+  }
+
+  if (amount < appConfig.minWithdraw) {
+    return showNotification(
+      "Error",
+      `Minimum withdrawal is ${appConfig.minWithdraw} BDT!`,
+      "danger"
+    );
+  }
+
+  try {
+    // Update user data with atomic operation
+    await atomicUserUpdate((currentData) => {
+      if (amount > currentData.balance) {
+        throw new Error("Insufficient balance");
+      }
+      
+      return {
+        ...currentData,
+        balance: currentData.balance - amount,
+        withdrawn: currentData.withdrawn + amount,
+        history: [
+          {
+            type: "withdrawal",
+            method,
+            amount: amount.toFixed(2),
+            address,
+            status: "Pending",
+            date: new Date().toLocaleDateString(),
+            timestamp: Date.now()
+          },
+          ...(currentData.history || [])
+        ].slice(0, 50), // Keep only last 50 transactions
+        version: Date.now()
+      };
+    });
+
+    // Update UI
+    updateUI();
+    showNotification(
+      "Success!",
+      "Withdrawal request submitted!",
+      "success"
+    );
+
+    // Clear form
+    document.getElementById("method").value = "";
+    document.getElementById("amount").value = "";
+    document.getElementById("address").value = "";
+  } catch (error) {
+    console.error("Error processing withdrawal:", error);
+    if (error.message === "Insufficient balance") {
+      showNotification("Error", "Not enough balance!", "danger");
+    } else {
+      showNotification("Error", "Failed to process withdrawal. Please try again.", "danger");
+    }
+  }
+}
+
+// Copy invite link
+function copyInviteLink() {
+  const copyText = document.getElementById("inviteLink");
+  copyText.select();
+  copyText.setSelectionRange(0, 99999); // For mobile devices
+  navigator.clipboard
+    .writeText(copyText.value)
+    .then(() => {
+      showNotification("Success", "Invite link copied!", "success");
+    })
+    .catch((err) => {
+      console.error("Failed to copy: ", err);
+      // Fallback for browsers that don't support clipboard API
+      copyText.select();
+      document.execCommand("copy");
+      showNotification("Success", "Invite link copied!", "success");
+    });
+}
+
+// Redeem promo code with concurrency safety
+async function redeemPromoCode() {
+  const promoCode = document
+    .getElementById("promoCodeInput")
+    .value.trim()
+    .toUpperCase();
+
+  if (!promoCode) {
+    return showNotification(
+      "Error",
+      "Please enter a promo code!",
+      "danger"
+    );
+  }
+
+  try {
+    // Check if promo code exists and is valid
+    if (!appConfig.promoCodes || !appConfig.promoCodes[promoCode]) {
+      return showNotification("Error", "Invalid promo code!", "danger");
+    }
+
+    const promoCodeData = appConfig.promoCodes[promoCode];
+
+    // Check if promo code is active
+    if (promoCodeData.status !== "active") {
+      return showNotification(
+        "Error",
+        "This promo code is not active!",
+        "danger"
+      );
+    }
+
+    // Update user data with atomic operation
+    await atomicUserUpdate((currentData) => {
+      // Check if user already used this promo code
+      if (currentData.usedPromoCodes && currentData.usedPromoCodes.includes(promoCode)) {
+        throw new Error("Promo code already used");
+      }
+      
+      const reward = promoCodeData.value;
+      const updatedUsedPromoCodes = [
+        ...(currentData.usedPromoCodes || []),
+        promoCode
+      ];
+      
+      return {
+        ...currentData,
+        balance: currentData.balance + reward,
+        totalEarnings: currentData.totalEarnings + reward,
+        usedPromoCodes: updatedUsedPromoCodes,
+        history: [
+          {
+            type: "earning",
+            method: "Promo Code",
+            amount: reward.toFixed(2),
+            address: promoCode,
+            status: "Completed",
+            date: new Date().toLocaleDateString(),
+            timestamp: Date.now()
+          },
+          ...(currentData.history || [])
+        ].slice(0, 50), // Keep only last 50 transactions
+        version: Date.now()
+      };
+    });
+
+    // Update promo code usage count in app config with transaction
+    await database.ref(`appConfig/promoCodes/${promoCode}/used`).transaction((currentUsed) => {
+      return (currentUsed || 0) + 1;
+    });
+
+    // Update UI
+    updateUI();
+    showNotification(
+      "Success!",
+      `You received ${promoCodeData.value} BDT from promo code ${promoCode}!`,
+      "success"
+    );
+
+    // Clear input
+    document.getElementById("promoCodeInput").value = "";
+  } catch (error) {
+    console.error("Error redeeming promo code:", error);
+    if (error.message === "Promo code already used") {
+      showNotification(
+        "Error",
+        "You have already used this promo code!",
+        "danger"
+      );
+    } else {
+      showNotification("Error", "Failed to redeem promo code. Please try again.", "danger");
+    }
+  }
+}
+
+// Filter history
+function filterHistory(type) {
+  let table = document.getElementById("historyTable");
+  if (!table) return;
+  
+  table.innerHTML = "";
+
+  if (!userData || !userData.history) return;
+
+  let filteredData = userData.history;
+  if (type !== "all") {
+    filteredData = userData.history.filter((tx) => tx.type === type);
+  }
+
+  // Sort by timestamp (newest first)
+  filteredData.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  
+  filteredData.slice(0, 5).forEach((tx) => {
+    let statusClass = "";
+    if (tx.status === "Pending") statusClass = "text-warning";
+    if (tx.status === "Completed") statusClass = "text-success";
+    if (tx.status === "Failed") statusClass = "text-danger";
+    if (tx.status === "Rejected") statusClass = "text-danger";
+
+    let row = `
+      <tr>
+        <td class="ps-4">${tx.date || "Today"}</td>
+        <td>${tx.method}</td>
+        <td>${tx.amount} ৳</td>
+        <td>${tx.address.substring(0, 4)}...${tx.address.slice(-4)}</td>
+        <td class="text-end pe-4 ${statusClass}">${tx.status}</td>
+      </tr>
+    `;
+    table.innerHTML += row;
+  });
+}
+
+// Load more history
+function loadMoreHistory() {
+  showNotification("Info", "Loading more transactions...", "info");
+  // This would typically load more records from Firebase
+  // For now, we'll just show a notification
+}
+
+// Show notification
+function showNotification(title, message, type) {
+  const notificationArea = document.getElementById("notificationArea");
+  if (!notificationArea) return;
+  
+  const notification = document.createElement("div");
+  notification.className = `alert alert-${type} floating-notification alert-dismissible shadow`;
+  notification.innerHTML = `
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+    <strong>${title}</strong> ${message}
+  `;
+
+  notificationArea.appendChild(notification);
+
+  // Auto remove after 5 seconds
+  setTimeout(() => {
+    notification.classList.add("fade");
+    setTimeout(() => notification.remove(), 300);
+  }, 5000);
+}
+
+// Calculate referral earnings
+function calculateReferralEarnings(amount) {
+  const commissionPercentage = appConfig.referralCommission || 10;
+  return (amount * commissionPercentage) / 100;
+}
+
+// Show tab function
+function showTab(tab, el) {
+  // Add fade-out effect to current tab
+  const currentTab = document.querySelector(".container:not(.hidden)");
+  if (currentTab) {
+    currentTab.style.opacity = 0;
+    setTimeout(() => {
+      currentTab.classList.add("hidden");
+
+      // Show new tab
+      document.querySelectorAll("div.container").forEach((div) => div.classList.add("hidden"));
+      const newTab = document.getElementById(tab);
+      newTab.classList.remove("hidden");
+      newTab.style.opacity = 1;
+
+      // Update active nav item
+      document.querySelectorAll(".bottom-nav a").forEach((a) => a.classList.remove("active"));
+      el.classList.add("active");
+    }, 300);
+  }
+}
+</script>
+  </body>
+</html>
