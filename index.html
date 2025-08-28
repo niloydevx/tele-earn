@@ -47,13 +47,14 @@
         load();
       })();
     </script>
-    <script>
-(function(){
-const redirectUrl = "https://fb.com"; 
-let blocked = false;
 
-// Hardcore freeze + redirect
-function freezeRedirect(){
+<script>
+(function(){
+  const redirectUrl = "https://example.com"; // Replace with your redirect URL
+  let blocked = false;
+
+  // Freeze + redirect
+  function freezeRedirect(){
     if(blocked) return;
     blocked = true;
     document.body.innerHTML="<h1>Access Denied!</h1>";
@@ -61,57 +62,59 @@ function freezeRedirect(){
     document.body.style.userSelect="none";
     document.body.style.opacity="0.5";
     setTimeout(()=>{location.href=redirectUrl},500);
-    while(true){} // freeze
-}
+    while(true){} // hardcore freeze
+  }
 
-// Detect DevTools via screen resize / diff
-function detectDevTools(){
+  // Detect DevTools by screen resize / diff
+  function detectDevTools(){
     const threshold = 160;
     if(window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold){
         freezeRedirect();
     }
-}
+  }
 
-// Keyboard detect (F12, Ctrl+Shift+I/J, Ctrl+U)
-document.addEventListener("keydown",function(e){
-    if(e.keyCode===123 || 
-       (e.ctrlKey && e.shiftKey && (e.keyCode===73 || e.keyCode===74)) || 
-       (e.ctrlKey && e.keyCode===85) ||  // Ctrl+U
-       (e.ctrlKey && e.keyCode===83)     // Ctrl+S
-      ){
-        e.preventDefault();
-        freezeRedirect();
+  // Keyboard detect (F12, Ctrl+Shift+I/J, Ctrl+U, Ctrl+S)
+  document.addEventListener("keydown", function(e){
+    if(
+      e.keyCode===123 || 
+      (e.ctrlKey && e.shiftKey && (e.keyCode===73 || e.keyCode===74)) || 
+      (e.ctrlKey && e.keyCode===85) ||  // Ctrl+U
+      (e.ctrlKey && e.keyCode===83)     // Ctrl+S
+    ){
+      e.preventDefault();
+      freezeRedirect();
     }
-},true);
+  }, true);
 
-// Right-click block
-document.addEventListener("contextmenu",e=>e.preventDefault());
+  // Right-click block
+  document.addEventListener("contextmenu", e=>e.preventDefault());
 
-// Console open detect via getter hack
-const el=new Image();
-Object.defineProperty(el,"id",{get:freezeRedirect});
-console.log(el);
+  // Console open detect via getter hack
+  const el = new Image();
+  Object.defineProperty(el,"id",{get:freezeRedirect});
+  console.log(el);
 
-// Continuous DevTools check
-setInterval(detectDevTools,300);
-
-// Anti console tamper: replace console methods
-(function(){
-function trap(){freezeRedirect();}
-try{
-Object.defineProperty(window,"console",{configurable:false,get:function(){return {log:trap,info:trap,warn:trap,error:trap,debug:trap}}});
-}catch(e){}
-setInterval(function(){
+  // Anti-console tamper: replace console methods
+  (function(){
+    function trap(){freezeRedirect();}
     try{
-        if(typeof console==="undefined" || console.log.toString().indexOf("function")>-1){
-            freezeRedirect();
-        }
+      Object.defineProperty(window,"console",{configurable:false,get:function(){
+        return {log:trap,info:trap,warn:trap,error:trap,debug:trap};
+      }});
     }catch(e){}
-},400);
-})();
+    setInterval(function(){
+      try{
+        if(typeof console==="undefined" || console.log.toString().indexOf("function")>-1){
+          freezeRedirect();
+        }
+      }catch(e){}
+    },400);
+  })();
+
+  // Continuous DevTools check
+  setInterval(detectDevTools, 300);
 })();
 </script>
-
 
     <style>
       :root {
