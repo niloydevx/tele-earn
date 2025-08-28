@@ -1084,6 +1084,22 @@
                   Copy
                 </button>
               </div>
+              <div class="input-group mb-3">
+                <input
+                  type="text"
+                  class="form-control"
+                  id="inviteID"
+                  value=""
+                  readonly
+                />
+                <button
+                  class="btn btn-outline-info w-20"
+                  type="button"
+                  onclick="copyInviteID()"
+                >
+                  Copy
+                </button>
+              </div>
               <div class="card p-4 mb-4">
   <h5 class="mb-3">
     <i class="bi bi-person-plus-fill me-2"></i> Enter Referral ID
@@ -1102,9 +1118,6 @@
     >
       Submit
     </button>
-  </div>
-  <div class="form-text text-info mt-2">
-    Enter a valid referral ID to get bonus balance
   </div>
 </div>
 
@@ -1965,6 +1978,9 @@
               }
               if (document.getElementById("inviteLink")) {
                 document.getElementById("inviteLink").value = `http://t.me/adflare_bot/bot?startbot=${userData.referralCode}`;
+              }
+               if (document.getElementById("inviteID")) {
+                document.getElementById("inviteID").value = `${userData.referralCode}`;
               }
 
               resolve();
