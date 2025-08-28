@@ -826,76 +826,6 @@
       </div>
     </div>
 
-    <!-- REFERRAL SIGNUP MODAL (hidden by default) - UPDATED FOR OPTIONAL REFERRAL -->
-    <div
-      class="modal fade"
-      id="referralModal"
-      tabindex="-1"
-      aria-hidden="true"
-      data-bs-backdrop="static"
-      data-bs-keyboard="false"
-    >
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark text-light">
-          <div class="modal-header border-secondary">
-            <h5 class="modal-title text-warning">Welcome to Ad Flare!</h5>
-            <button
-              type="button"
-              class="btn-close btn-close-white"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-              onclick="skipReferral()"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <div class="referral-info">
-              <i class="bi bi-gift-fill text-warning"></i>
-              <div>
-                <h6 class="mb-1">Have a referral code?</h6>
-                <p class="mb-0 small">
-                  Enter a friend's code to get bonus rewards!
-                </p>
-              </div>
-            </div>
-
-            <div class="referral-form-group">
-              <label for="referralCodeInput"
-                >Enter Referral Code (Optional)</label
-              >
-              <input
-                type="text"
-                id="referralCodeInput"
-                placeholder="Enter referral code"
-              />
-              <div class="referral-error" id="referralError">
-                Please enter a valid referral code
-              </div>
-            </div>
-
-            <div class="form-text text-warning mt-2">
-              You can skip this and enter a code later from your profile.
-            </div>
-          </div>
-          <div class="modal-footer border-secondary">
-            <button
-              type="button"
-              class="btn btn-custom"
-              onclick="validateAndContinue()"
-            >
-              Continue
-            </button>
-            <button
-              type="button"
-              class="btn btn-outline-secondary"
-              onclick="skipReferral()"
-            >
-              Skip
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- REFERRAL SUCCESS MODAL (hidden by default) -->
     <div
       class="modal fade referral-success-modal"
@@ -1564,26 +1494,15 @@ let cooldownEndTime = 0;
 
 // Referral tracking
 let referralCode = null;
-let referralModalShown = false;
 let referrerId = null;
-let referralValidated = false;
 
 // Initialize the application with concurrency safety
 document.addEventListener("DOMContentLoaded", async function () {
   // Check for referral code in URL first
   checkReferralCode();
   
-  // Show referral modal only for new users who haven't skipped before
-  if (!localStorage.getItem('userCreated') && !localStorage.getItem('skippedReferral') && !referralCode) {
-    showReferralModal();
-  } else if (referralCode) {
-    // Validate the referral code before proceeding
-    await validateReferralCode(referralCode);
-    continueAppInitialization();
-  } else {
-    // If user already exists or skipped referral, proceed with normal initialization
-    continueAppInitialization();
-  }
+  // Proceed with normal initialization
+  continueAppInitialization();
 });
 
 // Check for referral code in URL
@@ -1598,80 +1517,7 @@ function checkReferralCode() {
   }
 }
 
-// Show referral modal (optional for new users)
-function showReferralModal() {
-  const referralModal = new bootstrap.Modal(document.getElementById('referralModal'));
-  referralModal.show();
-  referralModalShown = true;
-}
-
-// Skip referral requirement permanently
-function skipReferral() {
-  const referralModal = bootstrap.Modal.getInstance(document.getElementById('referralModal'));
-  if (referralModal) {
-    referralModal.hide();
-  }
-  
-  // Store that user skipped referral to never show again
-  localStorage.setItem('skippedReferral', 'true');
-  referralModalShown = true;
-  
-  continueAppInitialization();
-}
-
-// Validate referral code and continue
-async function validateAndContinue() {
-  const inputCode = document.getElementById('referralCodeInput').value.trim();
-  
-  if (inputCode) {
-    const isValid = await validateReferralCode(inputCode);
-    
-    if (isValid) {
-      referralCode = inputCode;
-      document.getElementById('referralError').style.display = 'none';
-      
-      // Close the modal and continue with app initialization
-      const referralModal = bootstrap.Modal.getInstance(document.getElementById('referralModal'));
-      if (referralModal) {
-        referralModal.hide();
-      }
-      
-      continueAppInitialization();
-    } else {
-      document.getElementById('referralError').style.display = 'block';
-    }
-  } else {
-    // No code entered, just continue
-    const referralModal = bootstrap.Modal.getInstance(document.getElementById('referralModal'));
-    if (referralModal) {
-      referralModal.hide();
-    }
-    
-    continueAppInitialization();
-  }
-}
-
-// Validate referral code
-async function validateReferralCode(code) {
-  try {
-    // Check if code exists in users collection
-    const usersRef = database.ref("users");
-    const snapshot = await usersRef.orderByChild("referralCode").equalTo(code).once("value");
-    
-    if (snapshot.exists()) {
-      const userData = snapshot.val();
-      referrerId = Object.keys(userData)[0];
-      return true;
-    }
-    
-    return false;
-  } catch (error) {
-    console.error("Error validating referral code:", error);
-    return false;
-  }
-}
-
-// Continue with app initialization after referral validation
+// Continue with app initialization
 async function continueAppInitialization() {
   // Get user IP and device info
   await getUserIP();
@@ -2009,14 +1855,8 @@ async function loadUserData() {
         } else {
           // Check if this IP or device already has an account
           checkForDuplicateAccounts(true);
-
-          // For new users, check if they skipped referral
-          if (!referrerId && localStorage.getItem('skippedReferral')) {
-            // User skipped referral, proceed normally
-            console.log("User skipped referral, proceeding with account creation");
-          }
           
-          // Update referrer's referral count with atomic operation
+          // Update referrer's referral count with atomic operation if referral code exists
           if (referrerId) {
             await updateReferrerCount(referrerId);
             
@@ -2899,7 +2739,7 @@ function copyInviteID() {
     });
 }
 
-// Submit referral ID
+// Submit referral ID - FIXED to properly validate and count referrals
 async function submitReferralId() {
   const referralId = document.getElementById("referralIdInput").value.trim();
   
@@ -2908,13 +2748,52 @@ async function submitReferralId() {
     return;
   }
   
+  // Check if user is trying to use their own referral code
+  if (userData && userData.referralCode === referralId) {
+    showNotification("Error", "You cannot use your own referral code", "danger");
+    return;
+  }
+  
+  // Validate the referral code
   const isValid = await validateReferralCode(referralId);
   
   if (isValid) {
+    // Update the user's data to include the referrer
+    await atomicUserUpdate((currentData) => {
+      return {
+        ...currentData,
+        referredBy: referrerId,
+        version: Date.now()
+      };
+    });
+    
+    // Update the referrer's count
+    await updateReferrerCount(referrerId);
+    
     showNotification("Success", "Referral ID submitted successfully!", "success");
     document.getElementById("referralIdInput").value = "";
   } else {
     showNotification("Error", "Invalid referral ID", "danger");
+  }
+}
+
+// Validate referral code
+async function validateReferralCode(code) {
+  try {
+    // Check if code exists in users collection
+    const usersRef = database.ref("users");
+    const snapshot = await usersRef.orderByChild("referralCode").equalTo(code).once("value");
+    
+    if (snapshot.exists()) {
+      const userData = snapshot.val();
+      referrerId = Object.keys(userData)[0];
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error("Error validating referral code:", error);
+    return false;
   }
 }
 
