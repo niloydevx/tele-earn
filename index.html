@@ -385,6 +385,7 @@
         color: var(--primary-color);
         font-weight: 600;
         margin-bottom: 8px;
+        font-size: 1.1rem;
       }
 
       .survey-card .card-text {
@@ -524,6 +525,7 @@
         background: linear-gradient(90deg, #ffd700, #ffcc00);
         border-radius: 10px;
         transition: width 0.5s ease;
+        max-width: 100%;
       }
 
       .ad-status {
@@ -603,6 +605,7 @@
         font-weight: 600;
         color: var(--primary-color);
         margin-bottom: 4px;
+        font-size: 1.1rem;
       }
 
       .survey-reward {
@@ -677,42 +680,6 @@
         gap: 4px;
       }
 
-      /* Responsive adjustments */
-      @media (max-width: 576px) {
-        .cover-img {
-          height: 150px;
-        }
-
-        .bottom-nav a {
-          padding: 10px 12px;
-          max-width: 64px;
-        }
-
-        .top-header {
-          padding: 10px 15px;
-        }
-
-        .survey-img {
-          height: 120px;
-        }
-
-        .survey-card .card-body {
-          height: calc(100% - 120px);
-        }
-
-        #vpnCheck {
-          padding: 1rem;
-        }
-
-        #vpnCheck .vpn-check-container {
-          padding: 1.5rem 1rem;
-        }
-        
-        .survey-actions {
-          flex-direction: column;
-        }
-      }
-      
       /* Referral System Styles */
       .referral-info {
         background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.05));
@@ -753,6 +720,46 @@
       .referral-form-group input:read-only {
         background: rgba(0, 0, 0, 0.3);
         color: rgba(255, 215, 0, 0.7);
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 576px) {
+        .cover-img {
+          height: 150px;
+        }
+
+        .bottom-nav a {
+          padding: 10px 12px;
+          max-width: 64px;
+        }
+
+        .top-header {
+          padding: 10px 15px;
+        }
+
+        .survey-img {
+          height: 120px;
+        }
+
+        .survey-card .card-body {
+          height: calc(100% - 120px);
+        }
+
+        #vpnCheck {
+          padding: 1rem;
+        }
+
+        #vpnCheck .vpn-check-container {
+          padding: 1.5rem 1rem;
+        }
+        
+        .survey-actions {
+          flex-direction: column;
+        }
+        
+        .survey-card .card-title {
+          font-size: 1rem;
+        }
       }
     </style>
   </head>
@@ -2847,6 +2854,6 @@ function showTab(tab, el) {
     }, 300);
   }
 }
-      </script>
+    </script>
   </body>
 </html>
