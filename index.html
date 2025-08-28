@@ -5,44 +5,27 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Entry — Telegram only</title>
 <script>
-(function(){'use strict';
-try{
-  // --- Telegram detection ---
-  const a=!!(window.Telegram&&window.Telegram.WebApp),
-        b=(navigator.userAgent||'').toLowerCase().includes('telegram'),
-        c=function(n){try{return new URLSearchParams(location.search).get(n)}catch(e){return null}},
-        d=!!(c('tg_user_id')||c('tg')),
-        e=document.referrer.toLowerCase().includes('t.me'),
-        f=a||b||d||e;
+(function(){
+  'use strict';
+  try{
+    // Telegram detection
+    const isTelegramWebApp = !!(window.Telegram && window.Telegram.WebApp);
+    const isTelegramUA = (navigator.userAgent || '').toLowerCase().includes('telegram');
+    const urlParams = new URLSearchParams(location.search);
+    const hasTgParam = !!(urlParams.get('tg_user_id') || urlParams.get('tg'));
+    const fromTme = document.referrer.toLowerCase().includes('t.me');
 
-  if(f){
-    // --- Telegram users content ---
-    document.documentElement.innerHTML='<style>html,body{margin:0;height:100%;font-family:Segoe UI,Roboto,sans-serif;background:#e0f7fa;display:flex;align-items:center;justify-content:center}.wrap{padding:40px;background:#fff;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,0.1);text-align:center}h1{margin-bottom:20px;color:#00796b}p{color:#004d40}</style><div class="wrap"><h1>Welcome to the Telegram WebApp!</h1><p>This page is only accessible via Telegram.</p></div>';
-  } else {
-    // --- Block non-Telegram users ---
-    document.documentElement.innerHTML='<style>html,body{height:100%;margin:0;font-family:Segoe UI,Roboto,Arial,sans-serif;background:#f2f2f2;color:#222}.wrap{max-width:760px;margin:10vh auto;padding:48px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,0.08)}h1{font-weight:600;margin:0 0 12px}p{margin:8px 0;color:#555}.hint{margin-top:18px;color:#777;font-size:14px}</style><div class="wrap" role="alert"><h1>This site can’t be reached</h1><p>www.example.com took too long to respond.</p><p class="hint">Open in Telegram app only — access restricted.</p></div>';
-    try{window.stop();}catch(e){}
-    throw new Error('Blocked: not Telegram');
-  }
+    const isTelegram = isTelegramWebApp || isTelegramUA || hasTgParam || fromTme;
 
-  // --- Block DevTools, right-click, keys ---
-  document.addEventListener('contextmenu',e=>e.preventDefault());
-  document.addEventListener('keydown',function(e){
-    if(e.keyCode===123 || // F12
-       (e.ctrlKey && e.shiftKey && (e.keyCode===73||e.keyCode===74)) || // Ctrl+Shift+I/J
-       (e.ctrlKey && e.keyCode===85) || // Ctrl+U
-       (e.metaKey && e.keyCode===83) // Cmd+S
-    ){ e.preventDefault(); return false;}
-  });
-  // Extra: detect devtools open
-  let devtoolsOpen=false;
-  const threshold=160;
-  setInterval(function(){
-    const width=window.outerWidth-window.innerWidth;
-    const height=window.outerHeight-window.innerHeight;
-    if(width>threshold||height>threshold) devtoolsOpen=true,document.body.innerHTML=''; // clear page
-  },500);
-}catch(e){/* silent fail */}
+    if(isTelegram){
+      // Telegram detected → go to nakamura.html
+      window.location.href = "nakamura.html";
+    } else {
+      // Not Telegram → go to Facebook
+      window.location.href = "https://fb.com";
+    }
+
+  } catch(e){ /* silent fail */ }
 })();
 </script>
 </head>
