@@ -826,34 +826,6 @@
       </div>
     </div>
 
-    <!-- REFERRAL SUCCESS MODAL (hidden by default) -->
-    <div
-      class="modal fade referral-success-modal"
-      id="referralSuccessModal"
-      tabindex="-1"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-body text-center p-5">
-            <i class="bi bi-check-circle-fill referral-success-icon"></i>
-            <h3 class="text-success mb-3">Referral Successful!</h3>
-            <p class="text-light mb-4">
-              Your referral has been successfully registered. You will receive
-              bonuses when they complete tasks.
-            </p>
-            <button
-              type="button"
-              class="btn btn-custom px-4"
-              data-bs-dismiss="modal"
-            >
-              Continue
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- MAIN APP CONTENT (hidden if banned or if referral not validated) -->
     <div id="appContent">
       <!-- TOP HEADER -->
@@ -1116,7 +1088,7 @@
                   Copy
                 </button>
               </div>
-              <div class="card p-4 mb-4">
+              <div class="card p-4 mb-4" id="referralInputSection">
                 <h5 class="mb-3">
                   <i class="bi bi-person-plus-fill me-2"></i> Enter Referral ID
                 </h5>
@@ -1563,9 +1535,25 @@ async function continueAppInitialization() {
 
 // Hide referral section
 function hideReferralSection() {
-  const referralSection = document.querySelector('.card.p-4.mb-4');
+  const referralSection = document.getElementById('referralInputSection');
   if (referralSection) {
     referralSection.style.display = 'none';
+  }
+  
+  // Also disable the input and button
+  const referralInput = document.getElementById('referralIdInput');
+  const submitButton = document.querySelector('[onclick="submitReferralId()"]');
+  
+  if (referralInput) {
+    referralInput.disabled = true;
+    referralInput.placeholder = "Referral already submitted";
+  }
+  
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "Submitted";
+    submitButton.classList.remove('btn-custom');
+    submitButton.classList.add('btn-secondary');
   }
 }
 
@@ -1604,7 +1592,7 @@ function addToOperationQueue(operation) {
       return operation().then(resolve).catch(reject);
     });
     
-    if (!isProcessingQueue) {
+  if (!isProcessingQueue) {
       processOperationQueue();
     }
   });
@@ -2263,7 +2251,7 @@ async function watchAd() {
     // Record ad attempt time with atomic update
     await atomicUserUpdate((currentData) => {
       return {
-        ...currentData,
+        …currentData,
         lastAdAttempt: Date.now(),
         version: Date.now()
       };
@@ -2343,7 +2331,7 @@ async function claimReward() {
       }
       
       return {
-        ...currentData,
+        …currentData,
         completedTasks: currentData.completedTasks + 1,
         balance: currentData.balance + rewardAmount,
         totalEarnings: currentData.totalEarnings + rewardAmount,
@@ -2358,7 +2346,7 @@ async function claimReward() {
             date: new Date().toLocaleDateString(),
             timestamp: Date.now()
           },
-          ...(currentData.history || [])
+          …(currentData.history || [])
         ].slice(0, 50), // Keep only last 50 transactions
         version: Date.now()
       };
@@ -2576,12 +2564,12 @@ async function completeSurvey(survey) {
       }
       
       const updatedCompletedSurveys = {
-        ...(currentData.completedSurveys || {}),
+        …(currentData.completedSurveys || {}),
         [survey.id]: true
       };
       
       return {
-        ...currentData,
+        …currentData,
         completedTasks: currentData.completedTasks + 1,
         balance: currentData.balance + survey.reward,
         totalEarnings: currentData.totalEarnings + survey.reward,
@@ -2596,7 +2584,7 @@ async function completeSurvey(survey) {
             date: new Date().toLocaleDateString(),
             timestamp: Date.now()
           },
-          ...(currentData.history || [])
+          …(currentData.history || [])
         ].slice(0, 50), // Keep only last 50 transactions
         version: Date.now()
       };
@@ -2609,9 +2597,9 @@ async function completeSurvey(survey) {
       const updatedSurveys = surveys.map(s => {
         if (s.id === survey.id) {
           return {
-            ...s,
+            …s,
             completedBy: {
-              ...(s.completedBy || {}),
+              …(s.completedBy || {}),
               [userId]: true
             }
           };
@@ -2673,7 +2661,7 @@ async function withdraw() {
       }
       
       return {
-        ...currentData,
+        …currentData,
         balance: currentData.balance - amount,
         withdrawn: currentData.withdrawn + amount,
         history: [
@@ -2686,7 +2674,7 @@ async function withdraw() {
             date: new Date().toLocaleDateString(),
             timestamp: Date.now()
           },
-          ...(currentData.history || [])
+          …(currentData.history || [])
         ].slice(0, 50), // Keep only last 50 transactions
         version: Date.now()
       };
@@ -2774,7 +2762,7 @@ async function submitReferralId() {
     // Update the user's data to include the referrer
     await atomicUserUpdate((currentData) => {
       return {
-        ...currentData,
+        …currentData,
         referredBy: referrerId,
         version: Date.now()
       };
@@ -2813,7 +2801,7 @@ async function validateReferralCode(code) {
   }
 }
 
-// Redeem promo code with concurrency safety
+// Redeem promo code with concurrency safety - MODIFIED TO NEVER ADD BALANCE
 async function redeemPromoCode() {
   const promoCode = document
     .getElementById("promoCodeInput")
@@ -2845,7 +2833,7 @@ async function redeemPromoCode() {
       );
     }
 
-    // Update user data with atomic operation
+    // Update user data with atomic operation - MODIFIED TO NOT ADD BALANCE
     await atomicUserUpdate((currentData) => {
       // Check if user already used this promo code
       if (currentData.usedPromoCodes && currentData.usedPromoCodes.includes(promoCode)) {
@@ -2854,26 +2842,25 @@ async function redeemPromoCode() {
       
       const reward = promoCodeData.value;
       const updatedUsedPromoCodes = [
-        ...(currentData.usedPromoCodes || []),
+        …(currentData.usedPromoCodes || []),
         promoCode
       ];
       
       return {
-        ...currentData,
-        balance: currentData.balance + reward,
-        totalEarnings: currentData.totalEarnings + reward,
+        …currentData,
+        // BALANCE INTENTIONALLY NOT INCREASED - REPLACING ADS+ FUNCTIONALITY
         usedPromoCodes: updatedUsedPromoCodes,
         history: [
           {
-            type: "earning",
+            type: "promo",
             method: "Promo Code",
             amount: reward.toFixed(2),
             address: promoCode,
-            status: "Completed",
+            status: "Redeemed (No Balance Added)",
             date: new Date().toLocaleDateString(),
             timestamp: Date.now()
           },
-          ...(currentData.history || [])
+          …(currentData.history || [])
         ].slice(0, 50), // Keep only last 50 transactions
         version: Date.now()
       };
@@ -2887,9 +2874,9 @@ async function redeemPromoCode() {
     // Update UI
     updateUI();
     showNotification(
-      "Success",
-      `Received ${promoCodeData.value} BDT from promo code ${promoCode}`,
-      "success"
+      "Info",
+      `Promo code ${promoCode} redeemed (no balance added)`,
+      "info"
     );
 
     // Clear input
@@ -2931,6 +2918,7 @@ function filterHistory(type) {
     if (tx.status === "Completed") statusClass = "text-success";
     if (tx.status === "Failed") statusClass = "text-danger";
     if (tx.status === "Rejected") statusClass = "text-danger";
+    if (tx.status === "Redeemed (No Balance Added)") statusClass = "text-info";
 
     let row = `
       <tr>
