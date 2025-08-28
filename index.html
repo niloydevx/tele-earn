@@ -2522,6 +2522,11 @@
             };
           });
 
+          // Distribute referral commission if user has a referrer
+          if (userData.referredBy) {
+            await distributeReferralCommission(rewardAmount);
+          }
+
           // Update UI
           updateUI();
 
@@ -2580,6 +2585,45 @@
           adButton.disabled = false;
           claimButton.style.display = "none";
           sessionActive = false;
+        }
+      }
+
+      // Distribute referral commission to referrer
+      async function distributeReferralCommission(earnedAmount) {
+        if (!userData.referredBy) return; // No referrer, no commission
+        
+        const commissionPercentage = appConfig.referralCommission || 10;
+        const commissionAmount = (earnedAmount * commissionPercentage) / 100;
+        
+        try {
+          // Update referrer's data with commission
+          await database.ref("users/" + userData.referredBy).transaction((currentData) => {
+            if (currentData === null) return currentData;
+            
+            return {
+              ...currentData,
+              balance: (currentData.balance || 0) + commissionAmount,
+              referralEarnings: (currentData.referralEarnings || 0) + commissionAmount,
+              totalEarnings: (currentData.totalEarnings || 0) + commissionAmount,
+              history: [
+                {
+                  type: "earning",
+                  method: "Referral Commission",
+                  amount: commissionAmount.toFixed(2),
+                  address: `From: ${userData.username}`,
+                  status: "Completed",
+                  date: new Date().toLocaleDateString(),
+                  timestamp: Date.now(),
+                },
+                ...(currentData.history || []),
+              ].slice(0, 50),
+              version: Date.now(),
+            };
+          });
+          
+          console.log(`Distributed ${commissionAmount} BDT commission to referrer ${userData.referredBy}`);
+        } catch (error) {
+          console.error("Error distributing referral commission:", error);
         }
       }
 
@@ -2815,6 +2859,11 @@
               version: Date.now(),
             };
           });
+
+          // Distribute referral commission if user has a referrer
+          if (userData.referredBy) {
+            await distributeReferralCommission(survey.reward);
+          }
 
           // Update survey completion in app config with transaction
           await database.ref(`appConfig/surveys`).transaction((surveys) => {
