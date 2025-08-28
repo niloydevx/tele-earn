@@ -774,6 +774,19 @@
         margin-top: 5px;
         display: none;
       }
+      
+      /* Referral success modal styles */
+      .referral-success-modal .modal-content {
+        background: var(--card-bg);
+        border-radius: 20px;
+        border: 1px solid rgba(255, 215, 0, 0.3);
+      }
+      
+      .referral-success-icon {
+        font-size: 64px;
+        color: #28a745;
+        margin-bottom: 20px;
+      }
     </style>
   </head>
   <body>
@@ -824,6 +837,7 @@
           </div>
           <div class="modal-footer border-secondary">
             <button type="button" class="btn btn-custom" onclick="validateAndContinue()">Continue</button>
+            <button type="button" class="btn btn-secondary" onclick="skipReferral()">Skip</button>
           </div>
         </div>
       </div>
@@ -1101,26 +1115,25 @@
                 </button>
               </div>
               <div class="card p-4 mb-4">
-  <h5 class="mb-3">
-    <i class="bi bi-person-plus-fill me-2"></i> Enter Referral ID
-  </h5>
-  <div class="input-group">
-    <input
-      type="text"
-      class="form-control"
-      id="referralIdInput"
-      placeholder="Enter referral ID"
-    />
-    <button
-      class="btn btn-custom"
-      type="button"
-      onclick="submitReferralId()"
-    >
-      Submit
-    </button>
-  </div>
-</div>
-
+                <h5 class="mb-3">
+                  <i class="bi bi-person-plus-fill me-2"></i> Enter Referral ID
+                </h5>
+                <div class="input-group">
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="referralIdInput"
+                    placeholder="Enter referral ID"
+                  />
+                  <button
+                    class="btn btn-custom"
+                    type="button"
+                    onclick="submitReferralId()"
+                  >
+                    Submit
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1522,6 +1535,15 @@
         document.getElementById('referralCodeInput').classList.add('referral-required');
       }
 
+      // Skip referral requirement
+      function skipReferral() {
+        const referralModal = bootstrap.Modal.getInstance(document.getElementById('referralModal'));
+        if (referralModal) {
+          referralModal.hide();
+        }
+        continueAppInitialization();
+      }
+
       // Validate referral code and continue
       async function validateAndContinue() {
         const inputCode = document.getElementById('referralCodeInput').value.trim();
@@ -1906,17 +1928,19 @@
                 checkForDuplicateAccounts(true);
 
                 // For new users, require a referral code
-                if (!referrerId) {
+                if (!referrerId && !localStorage.getItem('skippedReferral')) {
                   showNotification("Error", "A valid referral code is required to sign up.", "danger");
                   showReferralModal();
                   return resolve();
                 }
                 
                 // Update referrer's referral count with atomic operation
-                await updateReferrerCount(referrerId);
-                
-                // Show success message
-                showReferralSuccess();
+                if (referrerId) {
+                  await updateReferrerCount(referrerId);
+                  
+                  // Show success message
+                  showReferralSuccess();
+                }
 
                 // Create new user with atomic operation
                 await atomicUserUpdate((currentData) => {
@@ -1979,7 +2003,7 @@
               if (document.getElementById("inviteLink")) {
                 document.getElementById("inviteLink").value = `http://t.me/adflare_bot/bot?startbot=${userData.referralCode}`;
               }
-               if (document.getElementById("inviteID")) {
+              if (document.getElementById("inviteID")) {
                 document.getElementById("inviteID").value = `${userData.referralCode}`;
               }
 
@@ -2209,764 +2233,802 @@
         filterHistory("all");
       }
 
-       // Initialize video rewards system
-function initVideoRewards() {
-  // Add event listener to watch ad button
-  if (document.getElementById("watchAdBtn")) {
-    document.getElementById("watchAdBtn").addEventListener("click", watchAd);
-  }
-
-  // Add event listener to claim button
-  if (document.getElementById("claimRewardBtn")) {
-    document.getElementById("claimRewardBtn").addEventListener("click", claimReward);
-  }
-}
-
-// Wait for GigaPub to load
-function waitForGiga() {
-  return new Promise((resolve, reject) => {
-    const check = () => {
-      if (typeof window.showGiga === 'function') resolve();
-      else setTimeout(check, 100);
-    }
-    check();
-  });
-}
-
-// Check cooldown status on page load
-function checkCooldownStatus() {
-  if (userData && userData.lastAdAttempt) {
-    const now = Date.now();
-    const timeSinceLastAttempt = (now - userData.lastAdAttempt) / 1000;
-    const timeRemaining = MIN_WAIT_SEC - timeSinceLastAttempt;
-    
-    if (timeRemaining > 0) {
-      // Still in cooldown period
-      startCooldown(timeRemaining);
-    }
-  }
-}
-
-// Start cooldown timer
-function startCooldown(seconds) {
-  const adButton = document.getElementById("watchAdBtn");
-  const claimButton = document.getElementById("claimRewardBtn");
-  const cooldownTimer = document.getElementById("cooldownTimer");
-  const cooldownSeconds = document.getElementById("cooldownSeconds");
-  
-  // Disable buttons and show cooldown timer
-  adButton.disabled = true;
-  claimButton.style.display = "none";
-  cooldownTimer.style.display = "block";
-  
-  let remainingSeconds = Math.ceil(seconds);
-  cooldownSeconds.textContent = remainingSeconds;
-  
-  // Update cooldown timer
-  cooldownInterval = setInterval(() => {
-    remainingSeconds--;
-    cooldownSeconds.textContent = remainingSeconds;
-    
-    if (remainingSeconds <= 0) {
-      clearInterval(cooldownInterval);
-      cooldownTimer.style.display = "none";
-      adButton.disabled = false;
-      
-      // Reset ad button text
-      const adReward = appConfig.adsRewards || 0.2;
-      adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
-      
-      // Update status
-      document.getElementById("adStatus").textContent = "Ready to watch videos";
-    }
-  }, 1000);
-}
-
-// Watch ad function for video rewards with concurrency safety
-async function watchAd() {
-  if (userData.completedTasks >= appConfig.dailyLimit) {
-    showNotification("Completed!", "All tasks completed for today!", "info");
-    return;
-  }
-
-  if (sessionActive) {
-    showNotification("Info", "Please complete the current video first", "info");
-    return;
-  }
-
-  try {
-    // Disable button to prevent multiple clicks
-    const adButton = document.getElementById("watchAdBtn");
-    const claimButton = document.getElementById("claimRewardBtn");
-    const statusEl = document.getElementById("adStatus");
-    
-    adButton.disabled = true;
-    adButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Loading...';
-
-    // Update status
-    statusEl.textContent = "Loading ad…";
-    setProgress(0);
-
-    // Record ad attempt time with atomic update
-    await atomicUserUpdate((currentData) => {
-      return {
-        ...currentData,
-        lastAdAttempt: Date.now(),
-        version: Date.now()
-      };
-    });
-    
-    adStartTime = Date.now();
-    statusEl.textContent = 'Watching ad...';
-    sessionActive = true;
-    sessionClaimed = false;
-
-    // Show the ad
-    await window.showGiga();
-    
-    statusEl.textContent = 'Ad finished ✓ — now claim';
-    setProgress(85);
-    claimButton.style.display = "block";
-    claimButton.disabled = false;
-  } catch (e) {
-    console.error("Ad failed or closed before completion", e);
-    showNotification("Error", "Video not loaded. Please try again.", "danger");
-    
-    // Reset button state
-    const adButton = document.getElementById("watchAdBtn");
-    const claimButton = document.getElementById("claimRewardBtn");
-    const statusEl = document.getElementById("adStatus");
-    const adReward = appConfig.adsRewards || 0.2;
-    
-    adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
-    adButton.disabled = false;
-    claimButton.style.display = "none";
-    statusEl.textContent = "Failed to load video. Try again.";
-    setProgress(0);
-    sessionActive = false;
-  }
-}
-
-// Set progress bar
-function setProgress(p) {
-  const progressBar = document.getElementById("videoProgressBar");
-  progressBar.style.width = Math.max(0, Math.min(100, p)) + "%";
-}
-
-// Claim reward after watching ad with concurrency safety
-async function claimReward() {
-  if (!sessionActive) {
-    showNotification("Error", "No active ad session", "danger");
-    return;
-  }
-
-  if (sessionClaimed) {
-    showNotification("Info", "Reward already claimed for this session", "info");
-    return;
-  }
-
-  let elapsed = (Date.now() - adStartTime) / 1000;
-  if (elapsed < MIN_WAIT_SEC) {
-    // Start cooldown period
-    startCooldown(MIN_WAIT_SEC - elapsed);
-    
-    showNotification("Error", `You must wait at least ${MIN_WAIT_SEC}s. Please wait and try again.`, "danger");
-    return;
-  }
-
-  if (userData.completedTasks >= appConfig.dailyLimit) {
-    showNotification("Completed!", "All tasks completed for today!", "info");
-    return;
-  }
-
-  try {
-    // Update user data with atomic operation
-    const rewardAmount = appConfig.adsRewards || 0.2;
-    
-    await atomicUserUpdate((currentData) => {
-      if (currentData.completedTasks >= appConfig.dailyLimit) {
-        // Another operation might have completed the daily limit
-        throw new Error("Daily limit reached");
-      }
-      
-      return {
-        ...currentData,
-        completedTasks: currentData.completedTasks + 1,
-        balance: currentData.balance + rewardAmount,
-        totalEarnings: currentData.totalEarnings + rewardAmount,
-        lastAdAttempt: 0, // Reset cooldown
-        history: [
-          {
-            type: "earning",
-            method: "Video Reward",
-            amount: rewardAmount.toFixed(2),
-            address: "Video Ad",
-            status: "Completed",
-            date: new Date().toLocaleDateString(),
-            timestamp: Date.now()
-          },
-          ...(currentData.history || [])
-        ].slice(0, 50), // Keep only last 50 transactions
-        version: Date.now()
-      };
-    });
-
-    // Update UI
-    updateUI();
-    
-    // Reset ad state
-    sessionActive = false;
-    sessionClaimed = true;
-    
-    // Update UI elements
-    const adButton = document.getElementById("watchAdBtn");
-    const claimButton = document.getElementById("claimRewardBtn");
-    const statusEl = document.getElementById("adStatus");
-    
-    adButton.style.display = "block";
-    claimButton.style.display = "none";
-    
-    // Update status
-    statusEl.textContent = "Reward granted ✅";
-    setProgress(100);
-    
-    // Update ad button text
-    const adReward = appConfig.adsRewards || 0.2;
-    adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
-    adButton.disabled = false;
-    
-    showNotification("Success!", `You earned ${rewardAmount.toFixed(2)} BDT!`, "success");
-  } catch (error) {
-    console.error("Error claiming reward:", error);
-    if (error.message === "Daily limit reached") {
-      showNotification("Completed!", "All tasks completed for today!", "info");
-    } else {
-      showNotification("Error", "Failed to claim reward. Please try again.", "danger");
-    }
-    
-    // Reset UI state
-    const adButton = document.getElementById("watchAdBtn");
-    const claimButton = document.getElementById("claimRewardBtn");
-    const adReward = appConfig.adsRewards || 0.2;
-    
-    adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
-    adButton.disabled = false;
-    claimButton.style.display = "none";
-    sessionActive = false;
-  }
-}
-
-// Show survey page
-function showSurveyPage() {
-  document.querySelectorAll("div.container").forEach((div) => div.classList.add("hidden"));
-  document.getElementById("surveyPage").classList.remove("hidden");
-  document.querySelectorAll(".bottom-nav a").forEach((a) => a.classList.remove("active"));
-}
-
-// Hide survey page
-function hideSurveyPage() {
-  // If a survey was started but not completed, don't award anything
-  if (currentSurvey) {
-    showNotification("Info", "Survey was not completed. No reward awarded.", "info");
-  }
-
-  // Reset survey state
-  currentSurvey = null;
-  if (surveyCheckInterval) {
-    clearInterval(surveyCheckInterval);
-    surveyCheckInterval = null;
-  }
-
-  document.getElementById("surveyPage").classList.add("hidden");
-  document.getElementById("rewards").classList.remove("hidden");
-  document.querySelector('.bottom-nav a[onclick*="rewards"]').classList.add("active");
-}
-
-// Load surveys - UPDATED FUNCTION
-function loadSurveys() {
-  const surveysContainer = document.getElementById("surveysContainer");
-  if (!surveysContainer) return;
-  
-  surveysContainer.innerHTML = "";
-
-  if (!appConfig || !appConfig.surveys) {
-    surveysContainer.innerHTML = `
-      <div class="text-center text-muted py-4">
-        <i class="bi bi-inbox display-4 d-block mb-3"></i>
-        <p>No surveys available at the moment. Check back later!</p>
-      </div>
-    `;
-    return;
-  }
-
-  // Filter active surveys
-  const activeSurveys = appConfig.surveys.filter(survey => survey.status === "active");
-  
-  if (activeSurveys.length === 0) {
-    surveysContainer.innerHTML = `
-      <div class="text-center text-muted py-4">
-        <i class="bi bi-inbox display-4 d-block mb-3"></i>
-        <p>No surveys available at the moment. Check back later!</p>
-      </div>
-    `;
-    return;
-  }
-
-  // Create survey items
-  activeSurveys.forEach((survey) => {
-    // Check if user has already completed this survey
-    const isCompleted = userData.completedSurveys && userData.completedSurveys[survey.id];
-    
-    const surveyItem = document.createElement("div");
-    surveyItem.className = `survey-item ${isCompleted ? "survey-completed" : ""}`;
-    
-    surveyItem.innerHTML = `
-      <div class="survey-header">
-        <img src="${survey.image}" alt="${survey.name}" class="survey-icon">
-        <div class="flex-grow-1">
-          <div class="survey-title">${survey.name}</div>
-          <div class="survey-reward">+ ${survey.reward.toFixed(2)} BDT</div>
-        </div>
-        ${isCompleted ? '<span class="survey-completed-badge"><i class="bi bi-check-circle-fill"></i> Completed</span>' : ''}
-      </div>
-      <div class="survey-description">
-        Complete this survey to earn ${survey.reward.toFixed(2)} BDT. This should take approximately 5-10 minutes.
-      </div>
-      <div class="survey-actions">
-        <button class="survey-btn survey-btn-primary" onclick="startSurvey(${survey.id})" ${isCompleted ? "disabled" : ""}>
-          <i class="bi bi-play-circle"></i> Start Survey
-        </button>
-        <button class="survey-btn survey-btn-secondary" onclick="verifySurvey(${survey.id})" ${isCompleted ? "" : "disabled"} id="verifyBtn-${survey.id}">
-          ${isCompleted ? '<i class="bi bi-check-circle"></i> Claimed' : '<i class="bi bi-arrow-repeat"></i> Verify'}
-        </button>
-      </div>
-    `;
-    
-    surveysContainer.appendChild(surveyItem);
-  });
-}
-
-// Start survey - MODIFIED to enable verify button instantly
-function startSurvey(surveyId) {
-  const survey = appConfig.surveys.find((s) => s.id === surveyId);
-  if (!survey) return;
-
-  // Check if user has already completed this survey
-  if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
-    showNotification("Info", "You have already completed this survey.", "info");
-    return;
-  }
-
-  if (userData.completedTasks < appConfig.dailyLimit) {
-    // Store the current survey
-    currentSurvey = survey;
-
-    // Enable the verify button instantly
-    const verifyButton = document.getElementById(`verifyBtn-${surveyId}`);
-    if (verifyButton) {
-      verifyButton.disabled = false;
-    }
-
-    // Open the survey URL in a new tab
-    surveyWindow = window.open(survey.url, "_blank", "noopener,noreferrer");
-
-    // Show instructions
-    showNotification("Info", "Survey opened in new tab. Complete it and click Verify to claim your reward.", "info");
-  } else {
-    showNotification("Completed!", "All tasks completed for today!", "info");
-  }
-}
-
-// Verify survey - MODIFIED to handle instant verification with concurrency safety
-async function verifySurvey(surveyId) {
-  const survey = appConfig.surveys.find((s) => s.id === surveyId);
-  if (!survey) return;
-
-  // Check if user has completed this survey
-  if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
-    showNotification(
-      "Info",
-      "You have already claimed the reward for this survey.",
-      "info"
-    );
-  } else {
-    // Ask user if they completed the survey
-    const completed = confirm(
-      "Have you completed the survey? Click OK to claim your reward, or Cancel if you didn't finish it."
-    );
-
-    if (completed) {
-      await completeSurvey(survey);
-    } else {
-      showNotification(
-        "Info",
-        "Survey not completed. Please finish the survey before claiming.",
-        "info"
-      );
-    }
-  }
-}
-
-// Complete survey with concurrency safety
-async function completeSurvey(survey) {
-  if (!survey) return;
-
-  try {
-    // Update user data with atomic operation
-    await atomicUserUpdate((currentData) => {
-      if (currentData.completedTasks >= appConfig.dailyLimit) {
-        throw new Error("Daily limit reached");
-      }
-      
-      if (currentData.completedSurveys && currentData.completedSurveys[survey.id]) {
-        throw new Error("Survey already completed");
-      }
-      
-      const updatedCompletedSurveys = {
-        ...(currentData.completedSurveys || {}),
-        [survey.id]: true
-      };
-      
-      return {
-        ...currentData,
-        completedTasks: currentData.completedTasks + 1,
-        balance: currentData.balance + survey.reward,
-        totalEarnings: currentData.totalEarnings + survey.reward,
-        completedSurveys: updatedCompletedSurveys,
-        history: [
-          {
-            type: "earning",
-            method: "Survey",
-            amount: survey.reward.toFixed(2),
-            address: survey.name,
-            status: "Completed",
-            date: new Date().toLocaleDateString(),
-            timestamp: Date.now()
-          },
-          ...(currentData.history || [])
-        ].slice(0, 50), // Keep only last 50 transactions
-        version: Date.now()
-      };
-    });
-
-    // Update survey completion in app config with transaction
-    await database.ref(`appConfig/surveys`).transaction((surveys) => {
-      if (!surveys) return surveys;
-      
-      const updatedSurveys = surveys.map(s => {
-        if (s.id === survey.id) {
-          return {
-            ...s,
-            completedBy: {
-              ...(s.completedBy || {}),
-              [userId]: true
-            }
-          };
+      // Initialize video rewards system
+      function initVideoRewards() {
+        // Add event listener to watch ad button
+        if (document.getElementById("watchAdBtn")) {
+          document.getElementById("watchAdBtn").addEventListener("click", watchAd);
         }
-        return s;
-      });
-      
-      return updatedSurveys;
-    });
 
-    // Update UI
-    updateUI();
-    loadSurveys(); // Reload surveys to update completion status
-    showNotification(
-      "Success!",
-      `You earned ${survey.reward.toFixed(2)} BDT from survey!`,
-      "success"
-    );
-
-    // Reset current survey
-    currentSurvey = null;
-  } catch (error) {
-    console.error("Error completing survey:", error);
-    if (error.message === "Daily limit reached") {
-      showNotification("Completed!", "All tasks completed for today!", "info");
-    } else if (error.message === "Survey already completed") {
-      showNotification("Info", "You have already completed this survey.", "info");
-      // Reload surveys to update UI
-      loadSurveys();
-    } else {
-      showNotification("Error", "Failed to complete survey. Please try again.", "danger");
-    }
-  }
-}
-
-// Withdraw funds with concurrency safety
-async function withdraw() {
-  let method = document.getElementById("method").value;
-  let amount = parseFloat(document.getElementById("amount").value);
-  let address = document.getElementById("address").value;
-
-  if (!method || !amount || !address) {
-    return showNotification("Error", "Please fill all fields!", "danger");
-  }
-
-  if (amount < appConfig.minWithdraw) {
-    return showNotification(
-      "Error",
-      `Minimum withdrawal is ${appConfig.minWithdraw} BDT!`,
-      "danger"
-    );
-  }
-
-  try {
-    // Update user data with atomic operation
-    await atomicUserUpdate((currentData) => {
-      if (amount > currentData.balance) {
-        throw new Error("Insufficient balance");
+        // Add event listener to claim button
+        if (document.getElementById("claimRewardBtn")) {
+          document.getElementById("claimRewardBtn").addEventListener("click", claimReward);
+        }
       }
-      
-      return {
-        ...currentData,
-        balance: currentData.balance - amount,
-        withdrawn: currentData.withdrawn + amount,
-        history: [
-          {
-            type: "withdrawal",
-            method,
-            amount: amount.toFixed(2),
-            address,
-            status: "Pending",
-            date: new Date().toLocaleDateString(),
-            timestamp: Date.now()
-          },
-          ...(currentData.history || [])
-        ].slice(0, 50), // Keep only last 50 transactions
-        version: Date.now()
-      };
-    });
 
-    // Update UI
-    updateUI();
-    showNotification(
-      "Success!",
-      "Withdrawal request submitted!",
-      "success"
-    );
-
-    // Clear form
-    document.getElementById("method").value = "";
-    document.getElementById("amount").value = "";
-    document.getElementById("address").value = "";
-  } catch (error) {
-    console.error("Error processing withdrawal:", error);
-    if (error.message === "Insufficient balance") {
-      showNotification("Error", "Not enough balance!", "danger");
-    } else {
-      showNotification("Error", "Failed to process withdrawal. Please try again.", "danger");
-    }
-  }
-}
-
-// Copy invite link
-function copyInviteLink() {
-  const copyText = document.getElementById("inviteLink");
-  copyText.select();
-  copyText.setSelectionRange(0, 99999); // For mobile devices
-  navigator.clipboard
-    .writeText(copyText.value)
-    .then(() => {
-      showNotification("Success", "Invite link copied!", "success");
-    })
-    .catch((err) => {
-      console.error("Failed to copy: ", err);
-      // Fallback for browsers that don't support clipboard API
-      copyText.select();
-      document.execCommand("copy");
-      showNotification("Success", "Invite link copied!", "success");
-    });
-}
-
-// Redeem promo code with concurrency safety
-async function redeemPromoCode() {
-  const promoCode = document
-    .getElementById("promoCodeInput")
-    .value.trim()
-    .toUpperCase();
-
-  if (!promoCode) {
-    return showNotification(
-      "Error",
-      "Please enter a promo code!",
-      "danger"
-    );
-  }
-
-  try {
-    // Check if promo code exists and is valid
-    if (!appConfig.promoCodes || !appConfig.promoCodes[promoCode]) {
-      return showNotification("Error", "Invalid promo code!", "danger");
-    }
-
-    const promoCodeData = appConfig.promoCodes[promoCode];
-
-    // Check if promo code is active
-    if (promoCodeData.status !== "active") {
-      return showNotification(
-        "Error",
-        "This promo code is not active!",
-        "danger"
-      );
-    }
-
-    // Update user data with atomic operation
-    await atomicUserUpdate((currentData) => {
-      // Check if user already used this promo code
-      if (currentData.usedPromoCodes && currentData.usedPromoCodes.includes(promoCode)) {
-        throw new Error("Promo code already used");
+      // Wait for GigaPub to load
+      function waitForGiga() {
+        return new Promise((resolve, reject) => {
+          const check = () => {
+            if (typeof window.showGiga === 'function') resolve();
+            else setTimeout(check, 100);
+          }
+          check();
+        });
       }
-      
-      const reward = promoCodeData.value;
-      const updatedUsedPromoCodes = [
-        ...(currentData.usedPromoCodes || []),
-        promoCode
-      ];
-      
-      return {
-        ...currentData,
-        balance: currentData.balance + reward,
-        totalEarnings: currentData.totalEarnings + reward,
-        usedPromoCodes: updatedUsedPromoCodes,
-        history: [
-          {
-            type: "earning",
-            method: "Promo Code",
-            amount: reward.toFixed(2),
-            address: promoCode,
-            status: "Completed",
-            date: new Date().toLocaleDateString(),
-            timestamp: Date.now()
-          },
-          ...(currentData.history || [])
-        ].slice(0, 50), // Keep only last 50 transactions
-        version: Date.now()
-      };
-    });
 
-    // Update promo code usage count in app config with transaction
-    await database.ref(`appConfig/promoCodes/${promoCode}/used`).transaction((currentUsed) => {
-      return (currentUsed || 0) + 1;
-    });
+      // Check cooldown status on page load
+      function checkCooldownStatus() {
+        if (userData && userData.lastAdAttempt) {
+          const now = Date.now();
+          const timeSinceLastAttempt = (now - userData.lastAdAttempt) / 1000;
+          const timeRemaining = MIN_WAIT_SEC - timeSinceLastAttempt;
+          
+          if (timeRemaining > 0) {
+            // Still in cooldown period
+            startCooldown(timeRemaining);
+          }
+        }
+      }
 
-    // Update UI
-    updateUI();
-    showNotification(
-      "Success!",
-      `You received ${promoCodeData.value} BDT from promo code ${promoCode}!`,
-      "success"
-    );
+      // Start cooldown timer
+      function startCooldown(seconds) {
+        const adButton = document.getElementById("watchAdBtn");
+        const claimButton = document.getElementById("claimRewardBtn");
+        const cooldownTimer = document.getElementById("cooldownTimer");
+        const cooldownSeconds = document.getElementById("cooldownSeconds");
+        
+        // Disable buttons and show cooldown timer
+        adButton.disabled = true;
+        claimButton.style.display = "none";
+        cooldownTimer.style.display = "block";
+        
+        let remainingSeconds = Math.ceil(seconds);
+        cooldownSeconds.textContent = remainingSeconds;
+        
+        // Update cooldown timer
+        cooldownInterval = setInterval(() => {
+          remainingSeconds--;
+          cooldownSeconds.textContent = remainingSeconds;
+          
+          if (remainingSeconds <= 0) {
+            clearInterval(cooldownInterval);
+            cooldownTimer.style.display = "none";
+            adButton.disabled = false;
+            
+            // Reset ad button text
+            const adReward = appConfig.adsRewards || 0.2;
+            adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
+            
+            // Update status
+            document.getElementById("adStatus").textContent = "Ready to watch videos";
+          }
+        }, 1000);
+      }
 
-    // Clear input
-    document.getElementById("promoCodeInput").value = "";
-  } catch (error) {
-    console.error("Error redeeming promo code:", error);
-    if (error.message === "Promo code already used") {
-      showNotification(
-        "Error",
-        "You have already used this promo code!",
-        "danger"
-      );
-    } else {
-      showNotification("Error", "Failed to redeem promo code. Please try again.", "danger");
-    }
-  }
-}
+      // Watch ad function for video rewards with concurrency safety
+      async function watchAd() {
+        if (userData.completedTasks >= appConfig.dailyLimit) {
+          showNotification("Completed!", "All tasks completed for today!", "info");
+          return;
+        }
 
-// Filter history
-function filterHistory(type) {
-  let table = document.getElementById("historyTable");
-  if (!table) return;
-  
-  table.innerHTML = "";
+        if (sessionActive) {
+          showNotification("Info", "Please complete the current video first", "info");
+          return;
+        }
 
-  if (!userData || !userData.history) return;
+        try {
+          // Disable button to prevent multiple clicks
+          const adButton = document.getElementById("watchAdBtn");
+          const claimButton = document.getElementById("claimRewardBtn");
+          const statusEl = document.getElementById("adStatus");
+          
+          adButton.disabled = true;
+          adButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Loading...';
 
-  let filteredData = userData.history;
-  if (type !== "all") {
-    filteredData = userData.history.filter((tx) => tx.type === type);
-  }
+          // Update status
+          statusEl.textContent = "Loading ad…";
+          setProgress(0);
 
-  // Sort by timestamp (newest first)
-  filteredData.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-  
-  filteredData.slice(0, 5).forEach((tx) => {
-    let statusClass = "";
-    if (tx.status === "Pending") statusClass = "text-warning";
-    if (tx.status === "Completed") statusClass = "text-success";
-    if (tx.status === "Failed") statusClass = "text-danger";
-    if (tx.status === "Rejected") statusClass = "text-danger";
+          // Record ad attempt time with atomic update
+          await atomicUserUpdate((currentData) => {
+            return {
+              ...currentData,
+              lastAdAttempt: Date.now(),
+              version: Date.now()
+            };
+          });
+          
+          adStartTime = Date.now();
+          statusEl.textContent = 'Watching ad...';
+          sessionActive = true;
+          sessionClaimed = false;
 
-    let row = `
-      <tr>
-        <td class="ps-4">${tx.date || "Today"}</td>
-        <td>${tx.method}</td>
-        <td>${tx.amount} ৳</td>
-        <td>${tx.address.substring(0, 4)}...${tx.address.slice(-4)}</td>
-        <td class="text-end pe-4 ${statusClass}">${tx.status}</td>
-      </tr>
-    `;
-    table.innerHTML += row;
-  });
-}
+          // Show the ad
+          await window.showGiga();
+          
+          statusEl.textContent = 'Ad finished ✓ — now claim';
+          setProgress(85);
+          claimButton.style.display = "block";
+          claimButton.disabled = false;
+        } catch (e) {
+          console.error("Ad failed or closed before completion", e);
+          showNotification("Error", "Video not loaded. Please try again.", "danger");
+          
+          // Reset button state
+          const adButton = document.getElementById("watchAdBtn");
+          const claimButton = document.getElementById("claimRewardBtn");
+          const statusEl = document.getElementById("adStatus");
+          const adReward = appConfig.adsRewards || 0.2;
+          
+          adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
+          adButton.disabled = false;
+          claimButton.style.display = "none";
+          statusEl.textContent = "Failed to load video. Try again.";
+          setProgress(0);
+          sessionActive = false;
+        }
+      }
 
-// Load more history
-function loadMoreHistory() {
-  showNotification("Info", "Loading more transactions...", "info");
-  // This would typically load more records from Firebase
-  // For now, we'll just show a notification
-}
+      // Set progress bar
+      function setProgress(p) {
+        const progressBar = document.getElementById("videoProgressBar");
+        progressBar.style.width = Math.max(0, Math.min(100, p)) + "%";
+      }
 
-// Show notification
-function showNotification(title, message, type) {
-  const notificationArea = document.getElementById("notificationArea");
-  if (!notificationArea) return;
-  
-  const notification = document.createElement("div");
-  notification.className = `alert alert-${type} floating-notification alert-dismissible shadow`;
-  notification.innerHTML = `
-    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
-    <strong>${title}</strong> ${message}
-  `;
+      // Claim reward after watching ad with concurrency safety
+      async function claimReward() {
+        if (!sessionActive) {
+          showNotification("Error", "No active ad session", "danger");
+          return;
+        }
 
-  notificationArea.appendChild(notification);
+        if (sessionClaimed) {
+          showNotification("Info", "Reward already claimed for this session", "info");
+          return;
+        }
 
-  // Auto remove after 5 seconds
-  setTimeout(() => {
-    notification.classList.add("fade");
-    setTimeout(() => notification.remove(), 300);
-  }, 5000);
-}
+        let elapsed = (Date.now() - adStartTime) / 1000;
+        if (elapsed < MIN_WAIT_SEC) {
+          // Start cooldown period
+          startCooldown(MIN_WAIT_SEC - elapsed);
+          
+          showNotification("Error", `You must wait at least ${MIN_WAIT_SEC}s. Please wait and try again.`, "danger");
+          return;
+        }
 
-// Calculate referral earnings
-function calculateReferralEarnings(amount) {
-  const commissionPercentage = appConfig.referralCommission || 10;
-  return (amount * commissionPercentage) / 100;
-}
+        if (userData.completedTasks >= appConfig.dailyLimit) {
+          showNotification("Completed!", "All tasks completed for today!", "info");
+          return;
+        }
 
-// Show tab function
-function showTab(tab, el) {
-  // Add fade-out effect to current tab
-  const currentTab = document.querySelector(".container:not(.hidden)");
-  if (currentTab) {
-    currentTab.style.opacity = 0;
-    setTimeout(() => {
-      currentTab.classList.add("hidden");
+        try {
+          // Update user data with atomic operation
+          const rewardAmount = appConfig.adsRewards || 0.2;
+          
+          await atomicUserUpdate((currentData) => {
+            if (currentData.completedTasks >= appConfig.dailyLimit) {
+              // Another operation might have completed the daily limit
+              throw new Error("Daily limit reached");
+            }
+            
+            return {
+              ...currentData,
+              completedTasks: currentData.completedTasks + 1,
+              balance: currentData.balance + rewardAmount,
+              totalEarnings: currentData.totalEarnings + rewardAmount,
+              lastAdAttempt: 0, // Reset cooldown
+              history: [
+                {
+                  type: "earning",
+                  method: "Video Reward",
+                  amount: rewardAmount.toFixed(2),
+                  address: "Video Ad",
+                  status: "Completed",
+                  date: new Date().toLocaleDateString(),
+                  timestamp: Date.now()
+                },
+                ...(currentData.history || [])
+              ].slice(0, 50), // Keep only last 50 transactions
+              version: Date.now()
+            };
+          });
 
-      // Show new tab
-      document.querySelectorAll("div.container").forEach((div) => div.classList.add("hidden"));
-      const newTab = document.getElementById(tab);
-      newTab.classList.remove("hidden");
-      newTab.style.opacity = 1;
+          // Update UI
+          updateUI();
+          
+          // Reset ad state
+          sessionActive = false;
+          sessionClaimed = true;
+          
+          // Update UI elements
+          const adButton = document.getElementById("watchAdBtn");
+          const claimButton = document.getElementById("claimRewardBtn");
+          const statusEl = document.getElementById("adStatus");
+          
+          adButton.style.display = "block";
+          claimButton.style.display = "none";
+          
+          // Update status
+          statusEl.textContent = "Reward granted ✅";
+          setProgress(100);
+          
+          // Update ad button text
+          const adReward = appConfig.adsRewards || 0.2;
+          adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
+          adButton.disabled = false;
+          
+          showNotification("Success!", `You earned ${rewardAmount.toFixed(2)} BDT!`, "success");
+        } catch (error) {
+          console.error("Error claiming reward:", error);
+          if (error.message === "Daily limit reached") {
+            showNotification("Completed!", "All tasks completed for today!", "info");
+          } else {
+            showNotification("Error", "Failed to claim reward. Please try again.", "danger");
+          }
+          
+          // Reset UI state
+          const adButton = document.getElementById("watchAdBtn");
+          const claimButton = document.getElementById("claimRewardBtn");
+          const adReward = appConfig.adsRewards || 0.2;
+          
+          adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
+          adButton.disabled = false;
+          claimButton.style.display = "none";
+          sessionActive = false;
+        }
+      }
 
-      // Update active nav item
-      document.querySelectorAll(".bottom-nav a").forEach((a) => a.classList.remove("active"));
-      el.classList.add("active");
-    }, 300);
-  }
-}
+      // Show survey page
+      function showSurveyPage() {
+        document.querySelectorAll("div.container").forEach((div) => div.classList.add("hidden"));
+        document.getElementById("surveyPage").classList.remove("hidden");
+        document.querySelectorAll(".bottom-nav a").forEach((a) => a.classList.remove("active"));
+      }
+
+      // Hide survey page
+      function hideSurveyPage() {
+        // If a survey was started but not completed, don't award anything
+        if (currentSurvey) {
+          showNotification("Info", "Survey was not completed. No reward awarded.", "info");
+        }
+
+        // Reset survey state
+        currentSurvey = null;
+        if (surveyCheckInterval) {
+          clearInterval(surveyCheckInterval);
+          surveyCheckInterval = null;
+        }
+
+        document.getElementById("surveyPage").classList.add("hidden");
+        document.getElementById("rewards").classList.remove("hidden");
+        document.querySelector('.bottom-nav a[onclick*="rewards"]').classList.add("active");
+      }
+
+      // Load surveys - UPDATED FUNCTION
+      function loadSurveys() {
+        const surveysContainer = document.getElementById("surveysContainer");
+        if (!surveysContainer) return;
+        
+        surveysContainer.innerHTML = "";
+
+        if (!appConfig || !appConfig.surveys) {
+          surveysContainer.innerHTML = `
+            <div class="text-center text-muted py-4">
+              <i class="bi bi-inbox display-4 d-block mb-3"></i>
+              <p>No surveys available at the moment. Check back later!</p>
+            </div>
+          `;
+          return;
+        }
+
+        // Filter active surveys
+        const activeSurveys = appConfig.surveys.filter(survey => survey.status === "active");
+        
+        if (activeSurveys.length === 0) {
+          surveysContainer.innerHTML = `
+            <div class="text-center text-muted py-4">
+              <i class="bi bi-inbox display-4 d-block mb-3"></i>
+              <p>No surveys available at the moment. Check back later!</p>
+            </div>
+          `;
+          return;
+        }
+
+        // Create survey items
+        activeSurveys.forEach((survey) => {
+          // Check if user has already completed this survey
+          const isCompleted = userData.completedSurveys && userData.completedSurveys[survey.id];
+          
+          const surveyItem = document.createElement("div");
+          surveyItem.className = `survey-item ${isCompleted ? "survey-completed" : ""}`;
+          
+          surveyItem.innerHTML = `
+            <div class="survey-header">
+              <img src="${survey.image}" alt="${survey.name}" class="survey-icon">
+              <div class="flex-grow-1">
+                <div class="survey-title">${survey.name}</div>
+                <div class="survey-reward">+ ${survey.reward.toFixed(2)} BDT</div>
+              </div>
+              ${isCompleted ? '<span class="survey-completed-badge"><i class="bi bi-check-circle-fill"></i> Completed</span>' : ''}
+            </div>
+            <div class="survey-description">
+              Complete this survey to earn ${survey.reward.toFixed(2)} BDT. This should take approximately 5-10 minutes.
+            </div>
+            <div class="survey-actions">
+              <button class="survey-btn survey-btn-primary" onclick="startSurvey(${survey.id})" ${isCompleted ? "disabled" : ""}>
+                <i class="bi bi-play-circle"></i> Start Survey
+              </button>
+              <button class="survey-btn survey-btn-secondary" onclick="verifySurvey(${survey.id})" ${isCompleted ? "" : "disabled"} id="verifyBtn-${survey.id}">
+                ${isCompleted ? '<i class="bi bi-check-circle"></i> Claimed' : '<i class="bi bi-arrow-repeat"></i> Verify'}
+              </button>
+            </div>
+          `;
+          
+          surveysContainer.appendChild(surveyItem);
+        });
+      }
+
+      // Start survey - MODIFIED to enable verify button instantly
+      function startSurvey(surveyId) {
+        const survey = appConfig.surveys.find((s) => s.id === surveyId);
+        if (!survey) return;
+
+        // Check if user has already completed this survey
+        if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
+          showNotification("Info", "You have already completed this survey.", "info");
+          return;
+        }
+
+        if (userData.completedTasks < appConfig.dailyLimit) {
+          // Store the current survey
+          currentSurvey = survey;
+
+          // Enable the verify button instantly
+          const verifyButton = document.getElementById(`verifyBtn-${surveyId}`);
+          if (verifyButton) {
+            verifyButton.disabled = false;
+          }
+
+          // Open the survey URL in a new tab
+          surveyWindow = window.open(survey.url, "_blank", "noopener,noreferrer");
+
+          // Show instructions
+          showNotification("Info", "Survey opened in new tab. Complete it and click Verify to claim your reward.", "info");
+        } else {
+          showNotification("Completed!", "All tasks completed for today!", "info");
+        }
+      }
+
+      // Verify survey - MODIFIED to handle instant verification with concurrency safety
+      async function verifySurvey(surveyId) {
+        const survey = appConfig.surveys.find((s) => s.id === surveyId);
+        if (!survey) return;
+
+        // Check if user has completed this survey
+        if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
+          showNotification(
+            "Info",
+            "You have already claimed the reward for this survey.",
+            "info"
+          );
+        } else {
+          // Ask user if they completed the survey
+          const completed = confirm(
+            "Have you completed the survey? Click OK to claim your reward, or Cancel if you didn't finish it."
+          );
+
+          if (completed) {
+            await completeSurvey(survey);
+          } else {
+            showNotification(
+              "Info",
+              "Survey not completed. Please finish the survey before claiming.",
+              "info"
+            );
+          }
+        }
+      }
+
+      // Complete survey with concurrency safety
+      async function completeSurvey(survey) {
+        if (!survey) return;
+
+        try {
+          // Update user data with atomic operation
+          await atomicUserUpdate((currentData) => {
+            if (currentData.completedTasks >= appConfig.dailyLimit) {
+              throw new Error("Daily limit reached");
+            }
+            
+            if (currentData.completedSurveys && currentData.completedSurveys[survey.id]) {
+              throw new Error("Survey already completed");
+            }
+            
+            const updatedCompletedSurveys = {
+              ...(currentData.completedSurveys || {}),
+              [survey.id]: true
+            };
+            
+            return {
+              ...currentData,
+              completedTasks: currentData.completedTasks + 1,
+              balance: currentData.balance + survey.reward,
+              totalEarnings: currentData.totalEarnings + survey.reward,
+              completedSurveys: updatedCompletedSurveys,
+              history: [
+                {
+                  type: "earning",
+                  method: "Survey",
+                  amount: survey.reward.toFixed(2),
+                  address: survey.name,
+                  status: "Completed",
+                  date: new Date().toLocaleDateString(),
+                  timestamp: Date.now()
+                },
+                ...(currentData.history || [])
+              ].slice(0, 50), // Keep only last 50 transactions
+              version: Date.now()
+            };
+          });
+
+          // Update survey completion in app config with transaction
+          await database.ref(`appConfig/surveys`).transaction((surveys) => {
+            if (!surveys) return surveys;
+            
+            const updatedSurveys = surveys.map(s => {
+              if (s.id === survey.id) {
+                return {
+                  ...s,
+                  completedBy: {
+                    ...(s.completedBy || {}),
+                    [userId]: true
+                  }
+                };
+              }
+              return s;
+            });
+            
+            return updatedSurveys;
+          });
+
+          // Update UI
+          updateUI();
+          loadSurveys(); // Reload surveys to update completion status
+          showNotification(
+            "Success!",
+            `You earned ${survey.reward.toFixed(2)} BDT from survey!`,
+            "success"
+          );
+
+          // Reset current survey
+          currentSurvey = null;
+        } catch (error) {
+          console.error("Error completing survey:", error);
+          if (error.message === "Daily limit reached") {
+            showNotification("Completed!", "All tasks completed for today!", "info");
+          } else if (error.message === "Survey already completed") {
+            showNotification("Info", "You have already completed this survey.", "info");
+            // Reload surveys to update UI
+            loadSurveys();
+          } else {
+            showNotification("Error", "Failed to complete survey. Please try again.", "danger");
+          }
+        }
+      }
+
+      // Withdraw funds with concurrency safety
+      async function withdraw() {
+        let method = document.getElementById("method").value;
+        let amount = parseFloat(document.getElementById("amount").value);
+        let address = document.getElementById("address").value;
+
+        if (!method || !amount || !address) {
+          return showNotification("Error", "Please fill all fields!", "danger");
+        }
+
+        if (amount < appConfig.minWithdraw) {
+          return showNotification(
+            "Error",
+            `Minimum withdrawal is ${appConfig.minWithdraw} BDT!`,
+            "danger"
+          );
+        }
+
+        try {
+          // Update user data with atomic operation
+          await atomicUserUpdate((currentData) => {
+            if (amount > currentData.balance) {
+              throw new Error("Insufficient balance");
+            }
+            
+            return {
+              ...currentData,
+              balance: currentData.balance - amount,
+              withdrawn: currentData.withdrawn + amount,
+              history: [
+                {
+                  type: "withdrawal",
+                  method,
+                  amount: amount.toFixed(2),
+                  address,
+                  status: "Pending",
+                  date: new Date().toLocaleDateString(),
+                  timestamp: Date.now()
+                },
+                ...(currentData.history || [])
+              ].slice(0, 50), // Keep only last 50 transactions
+              version: Date.now()
+            };
+          });
+
+          // Update UI
+          updateUI();
+          showNotification(
+            "Success!",
+            "Withdrawal request submitted!",
+            "success"
+          );
+
+          // Clear form
+          document.getElementById("method").value = "";
+          document.getElementById("amount").value = "";
+          document.getElementById("address").value = "";
+        } catch (error) {
+          console.error("Error processing withdrawal:", error);
+          if (error.message === "Insufficient balance") {
+            showNotification("Error", "Not enough balance!", "danger");
+          } else {
+            showNotification("Error", "Failed to process withdrawal. Please try again.", "danger");
+          }
+        }
+      }
+
+      // Copy invite link
+      function copyInviteLink() {
+        const copyText = document.getElementById("inviteLink");
+        copyText.select();
+        copyText.setSelectionRange(0, 99999); // For mobile devices
+        navigator.clipboard
+          .writeText(copyText.value)
+          .then(() => {
+            showNotification("Success", "Invite link copied!", "success");
+          })
+          .catch((err) => {
+            console.error("Failed to copy: ", err);
+            // Fallback for browsers that don't support clipboard API
+            copyText.select();
+            document.execCommand("copy");
+            showNotification("Success", "Invite link copied!", "success");
+          });
+      }
+
+      // Copy invite ID
+      function copyInviteID() {
+        const copyText = document.getElementById("inviteID");
+        copyText.select();
+        copyText.setSelectionRange(0, 99999); // For mobile devices
+        navigator.clipboard
+          .writeText(copyText.value)
+          .then(() => {
+            showNotification("Success", "Referral ID copied!", "success");
+          })
+          .catch((err) => {
+            console.error("Failed to copy: ", err);
+            // Fallback for browsers that don't support clipboard API
+            copyText.select();
+            document.execCommand("copy");
+            showNotification("Success", "Referral ID copied!", "success");
+          });
+      }
+
+      // Submit referral ID
+      async function submitReferralId() {
+        const referralId = document.getElementById("referralIdInput").value.trim();
+        
+        if (!referralId) {
+          showNotification("Error", "Please enter a referral ID", "danger");
+          return;
+        }
+        
+        const isValid = await validateReferralCode(referralId);
+        
+        if (isValid) {
+          showNotification("Success", "Referral ID submitted successfully!", "success");
+          document.getElementById("referralIdInput").value = "";
+        } else {
+          showNotification("Error", "Invalid referral ID", "danger");
+        }
+      }
+
+      // Redeem promo code with concurrency safety
+      async function redeemPromoCode() {
+        const promoCode = document
+          .getElementById("promoCodeInput")
+          .value.trim()
+          .toUpperCase();
+
+        if (!promoCode) {
+          return showNotification(
+            "Error",
+            "Please enter a promo code!",
+            "danger"
+          );
+        }
+
+        try {
+          // Check if promo code exists and is valid
+          if (!appConfig.promoCodes || !appConfig.promoCodes[promoCode]) {
+            return showNotification("Error", "Invalid promo code!", "danger");
+          }
+
+          const promoCodeData = appConfig.promoCodes[promoCode];
+
+          // Check if promo code is active
+          if (promoCodeData.status !== "active") {
+            return showNotification(
+              "Error",
+              "This promo code is not active!",
+              "danger"
+            );
+          }
+
+          // Update user data with atomic operation
+          await atomicUserUpdate((currentData) => {
+            // Check if user already used this promo code
+            if (currentData.usedPromoCodes && currentData.usedPromoCodes.includes(promoCode)) {
+              throw new Error("Promo code already used");
+            }
+            
+            const reward = promoCodeData.value;
+            const updatedUsedPromoCodes = [
+              ...(currentData.usedPromoCodes || []),
+              promoCode
+            ];
+            
+            return {
+              ...currentData,
+              balance: currentData.balance + reward,
+              totalEarnings: currentData.totalEarnings + reward,
+              usedPromoCodes: updatedUsedPromoCodes,
+              history: [
+                {
+                  type: "earning",
+                  method: "Promo Code",
+                  amount: reward.toFixed(2),
+                  address: promoCode,
+                  status: "Completed",
+                  date: new Date().toLocaleDateString(),
+                  timestamp: Date.now()
+                },
+                ...(currentData.history || [])
+              ].slice(0, 50), // Keep only last 50 transactions
+              version: Date.now()
+            };
+          });
+
+          // Update promo code usage count in app config with transaction
+          await database.ref(`appConfig/promoCodes/${promoCode}/used`).transaction((currentUsed) => {
+            return (currentUsed || 0) + 1;
+          });
+
+          // Update UI
+          updateUI();
+          showNotification(
+            "Success!",
+            `You received ${promoCodeData.value} BDT from promo code ${promoCode}!`,
+            "success"
+          );
+
+          // Clear input
+          document.getElementById("promoCodeInput").value = "";
+        } catch (error) {
+          console.error("Error redeeming promo code:", error);
+          if (error.message === "Promo code already used") {
+            showNotification(
+              "Error",
+              "You have already used this promo code!",
+              "danger"
+            );
+          } else {
+            showNotification("Error", "Failed to redeem promo code. Please try again.", "danger");
+          }
+        }
+      }
+
+      // Filter history
+      function filterHistory(type) {
+        let table = document.getElementById("historyTable");
+        if (!table) return;
+        
+        table.innerHTML = "";
+
+        if (!userData || !userData.history) return;
+
+        let filteredData = userData.history;
+        if (type !== "all") {
+          filteredData = userData.history.filter((tx) => tx.type === type);
+        }
+
+        // Sort by timestamp (newest first)
+        filteredData.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        
+        filteredData.slice(0, 5).forEach((tx) => {
+          let statusClass = "";
+          if (tx.status === "Pending") statusClass = "text-warning";
+          if (tx.status === "Completed") statusClass = "text-success";
+          if (tx.status === "Failed") statusClass = "text-danger";
+          if (tx.status === "Rejected") statusClass = "text-danger";
+
+          let row = `
+            <tr>
+              <td class="ps-4">${tx.date || "Today"}</td>
+              <td>${tx.method}</td>
+              <td>${tx.amount} ৳</td>
+              <td>${tx.address.substring(0, 4)}...${tx.address.slice(-4)}</td>
+              <td class="text-end pe-4 ${statusClass}">${tx.status}</td>
+            </tr>
+          `;
+          table.innerHTML += row;
+        });
+      }
+
+      // Load more history
+      function loadMoreHistory() {
+        showNotification("Info", "Loading more transactions...", "info");
+        // This would typically load more records from Firebase
+        // For now, we'll just show a notification
+      }
+
+      // Show notification
+      function showNotification(title, message, type) {
+        const notificationArea = document.getElementById("notificationArea");
+        if (!notificationArea) return;
+        
+        const notification = document.createElement("div");
+        notification.className = `alert alert-${type} floating-notification alert-dismissible shadow`;
+        notification.innerHTML = `
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+          <strong>${title}</strong> ${message}
+        `;
+
+        notificationArea.appendChild(notification);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+          notification.classList.add("fade");
+          setTimeout(() => notification.remove(), 300);
+        }, 5000);
+      }
+
+      // Calculate referral earnings
+      function calculateReferralEarnings(amount) {
+        const commissionPercentage = appConfig.referralCommission || 10;
+        return (amount * commissionPercentage) / 100;
+      }
+
+      // Show tab function
+      function showTab(tab, el) {
+        // Add fade-out effect to current tab
+        const currentTab = document.querySelector(".container:not(.hidden)");
+        if (currentTab) {
+          currentTab.style.opacity = 0;
+          setTimeout(() => {
+            currentTab.classList.add("hidden");
+
+            // Show new tab
+            document.querySelectorAll("div.container").forEach((div) => div.classList.add("hidden"));
+            const newTab = document.getElementById(tab);
+            newTab.classList.remove("hidden");
+            newTab.style.opacity = 1;
+
+            // Update active nav item
+            document.querySelectorAll(".bottom-nav a").forEach((a) => a.classList.remove("active"));
+            el.classList.add("active");
+          }, 300);
+        }
+      }
     </script>
   </body>
 </html>
