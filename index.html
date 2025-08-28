@@ -722,6 +722,19 @@
         color: rgba(255, 215, 0, 0.7);
       }
 
+      /* Referral Success Modal */
+      .referral-success-modal .modal-content {
+        background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+        border: 2px solid var(--primary-color);
+        border-radius: 20px;
+      }
+      
+      .referral-success-icon {
+        font-size: 4rem;
+        color: #00ff88;
+        margin-bottom: 1rem;
+      }
+
       /* Responsive adjustments */
       @media (max-width: 576px) {
         .cover-img {
@@ -812,6 +825,20 @@
           <div class="modal-footer border-secondary">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             <button type="button" class="btn btn-custom" onclick="continueWithReferral()">Continue</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REFERRAL SUCCESS MODAL (hidden by default) -->
+    <div class="modal fade referral-success-modal" id="referralSuccessModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-body text-center p-5">
+            <i class="bi bi-check-circle-fill referral-success-icon"></i>
+            <h3 class="text-success mb-3">Referral Successful!</h3>
+            <p class="text-light mb-4">Your referral has been successfully registered. You will receive bonuses when they complete tasks.</p>
+            <button type="button" class="btn btn-custom px-4" data-bs-dismiss="modal">Continue</button>
           </div>
         </div>
       </div>
@@ -1418,6 +1445,7 @@
       // Referral tracking
       let referralCode = null;
       let referralModalShown = false;
+      let referrerId = null;
 
       // Initialize the application with concurrency safety
       document.addEventListener("DOMContentLoaded", async function () {
@@ -1524,7 +1552,7 @@
                     usedPromoCodes: [],
                     completedSurveys: {},
                     lastAdAttempt: 0,
-                    referredBy: referralCode, // Store referral code if available
+                    referredBy: referrerId, // Store referrer ID if available
                     version: Date.now() // Add version for optimistic concurrency
                   };
                 }
@@ -1795,7 +1823,6 @@
                 checkForDuplicateAccounts(true);
 
                 // Check if user was referred by someone
-                let referredBy = null;
                 if (referralCode) {
                   // Find user with this referral code
                   const refSnapshot = await database.ref("users")
@@ -1805,10 +1832,13 @@
                   
                   if (refSnapshot.exists()) {
                     const referrerData = refSnapshot.val();
-                    referredBy = Object.keys(referrerData)[0];
+                    referrerId = Object.keys(referrerData)[0];
                     
                     // Update referrer's referral count with atomic operation
-                    await updateReferrerCount(referredBy);
+                    await updateReferrerCount(referrerId);
+                    
+                    // Show success message
+                    showReferralSuccess();
                   } else {
                     // Invalid referral code
                     referralCode = null;
@@ -1839,7 +1869,7 @@
                     usedPromoCodes: [],
                     completedSurveys: {},
                     lastAdAttempt: 0,
-                    referredBy: referredBy,
+                    referredBy: referrerId,
                     version: Date.now()
                   };
                 });
@@ -1901,11 +1931,17 @@
                 usedPromoCodes: [],
                 completedSurveys: {},
                 lastAdAttempt: 0,
-                referredBy: referralCode,
+                referredBy: referrerId,
               };
               resolve();
             });
         });
+      }
+
+      // Show referral success modal
+      function showReferralSuccess() {
+        const referralSuccessModal = new bootstrap.Modal(document.getElementById('referralSuccessModal'));
+        referralSuccessModal.show();
       }
 
       // Update referrer's referral count
