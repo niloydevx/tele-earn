@@ -1554,6 +1554,19 @@ async function continueAppInitialization() {
   
   // Show app content
   document.getElementById("appContent").classList.remove("hidden");
+  
+  // Hide referral section if user already has a referrer
+  if (userData && userData.referredBy) {
+    hideReferralSection();
+  }
+}
+
+// Hide referral section
+function hideReferralSection() {
+  const referralSection = document.querySelector('.card.p-4.mb-4');
+  if (referralSection) {
+    referralSection.style.display = 'none';
+  }
 }
 
 // Show referral success modal
@@ -1991,7 +2004,7 @@ async function checkForDuplicateAccounts(isNewUser = false) {
                 // Prevent creating new account
                 showNotification(
                   "Error",
-                  "You already have an account with this device/IP",
+                  "Account already exists with this device/IP",
                   "danger"
                 );
                 document.getElementById("bannedScreen").classList.remove("hidden");
@@ -2225,7 +2238,7 @@ function startCooldown(seconds) {
 // Watch ad function for video rewards with concurrency safety
 async function watchAd() {
   if (userData.completedTasks >= appConfig.dailyLimit) {
-    showNotification("Completed!", "All tasks completed for today!", "info");
+    showNotification("Completed", "All tasks completed for today", "info");
     return;
   }
 
@@ -2270,7 +2283,7 @@ async function watchAd() {
     claimButton.disabled = false;
   } catch (e) {
     console.error("Ad failed or closed before completion", e);
-    showNotification("Error", "Video not loaded. Please try again.", "danger");
+    showNotification("Error", "Video not loaded. Please try again", "danger");
     
     // Reset button state
     const adButton = document.getElementById("watchAdBtn");
@@ -2310,12 +2323,12 @@ async function claimReward() {
     // Start cooldown period
     startCooldown(MIN_WAIT_SEC - elapsed);
     
-    showNotification("Error", `You must wait at least ${MIN_WAIT_SEC}s. Please wait and try again.`, "danger");
+    showNotification("Error", `Wait ${MIN_WAIT_SEC}s before trying again`, "danger");
     return;
   }
 
   if (userData.completedTasks >= appConfig.dailyLimit) {
-    showNotification("Completed!", "All tasks completed for today!", "info");
+    showNotification("Completed", "All tasks completed for today", "info");
     return;
   }
 
@@ -2375,13 +2388,13 @@ async function claimReward() {
     adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
     adButton.disabled = false;
     
-    showNotification("Success!", `You earned ${rewardAmount.toFixed(2)} BDT!`, "success");
+    showNotification("Success", `Earned ${rewardAmount.toFixed(2)} BDT!`, "success");
   } catch (error) {
     console.error("Error claiming reward:", error);
     if (error.message === "Daily limit reached") {
-      showNotification("Completed!", "All tasks completed for today!", "info");
+      showNotification("Completed", "All tasks completed for today", "info");
     } else {
-      showNotification("Error", "Failed to claim reward. Please try again.", "danger");
+      showNotification("Error", "Failed to claim reward. Try again", "danger");
     }
     
     // Reset UI state
@@ -2407,7 +2420,7 @@ function showSurveyPage() {
 function hideSurveyPage() {
   // If a survey was started but not completed, don't award anything
   if (currentSurvey) {
-    showNotification("Info", "Survey was not completed. No reward awarded.", "info");
+    showNotification("Info", "Survey not completed. No reward", "info");
   }
 
   // Reset survey state
@@ -2493,7 +2506,7 @@ function startSurvey(surveyId) {
 
   // Check if user has already completed this survey
   if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
-    showNotification("Info", "You have already completed this survey.", "info");
+    showNotification("Info", "Already completed this survey", "info");
     return;
   }
 
@@ -2511,9 +2524,9 @@ function startSurvey(surveyId) {
     surveyWindow = window.open(survey.url, "_blank", "noopener,noreferrer");
 
     // Show instructions
-    showNotification("Info", "Survey opened in new tab. Complete it and click Verify to claim your reward.", "info");
+    showNotification("Info", "Survey opened in new tab. Complete it and click Verify", "info");
   } else {
-    showNotification("Completed!", "All tasks completed for today!", "info");
+    showNotification("Completed", "All tasks completed for today", "info");
   }
 }
 
@@ -2526,7 +2539,7 @@ async function verifySurvey(surveyId) {
   if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
     showNotification(
       "Info",
-      "You have already claimed the reward for this survey.",
+      "Already claimed reward for this survey",
       "info"
     );
   } else {
@@ -2540,7 +2553,7 @@ async function verifySurvey(surveyId) {
     } else {
       showNotification(
         "Info",
-        "Survey not completed. Please finish the survey before claiming.",
+        "Survey not completed. Please finish the survey",
         "info"
       );
     }
@@ -2613,8 +2626,8 @@ async function completeSurvey(survey) {
     updateUI();
     loadSurveys(); // Reload surveys to update completion status
     showNotification(
-      "Success!",
-      `You earned ${survey.reward.toFixed(2)} BDT from survey!`,
+      "Success",
+      `Earned ${survey.reward.toFixed(2)} BDT from survey!`,
       "success"
     );
 
@@ -2623,13 +2636,13 @@ async function completeSurvey(survey) {
   } catch (error) {
     console.error("Error completing survey:", error);
     if (error.message === "Daily limit reached") {
-      showNotification("Completed!", "All tasks completed for today!", "info");
+      showNotification("Completed", "All tasks completed for today", "info");
     } else if (error.message === "Survey already completed") {
-      showNotification("Info", "You have already completed this survey.", "info");
+      showNotification("Info", "Already completed this survey", "info");
       // Reload surveys to update UI
       loadSurveys();
     } else {
-      showNotification("Error", "Failed to complete survey. Please try again.", "danger");
+      showNotification("Error", "Failed to complete survey. Try again", "danger");
     }
   }
 }
@@ -2641,13 +2654,13 @@ async function withdraw() {
   let address = document.getElementById("address").value;
 
   if (!method || !amount || !address) {
-    return showNotification("Error", "Please fill all fields!", "danger");
+    return showNotification("Error", "Please fill all fields", "danger");
   }
 
   if (amount < appConfig.minWithdraw) {
     return showNotification(
       "Error",
-      `Minimum withdrawal is ${appConfig.minWithdraw} BDT!`,
+      `Minimum withdrawal is ${appConfig.minWithdraw} BDT`,
       "danger"
     );
   }
@@ -2682,8 +2695,8 @@ async function withdraw() {
     // Update UI
     updateUI();
     showNotification(
-      "Success!",
-      "Withdrawal request submitted!",
+      "Success",
+      "Withdrawal request submitted",
       "success"
     );
 
@@ -2694,9 +2707,9 @@ async function withdraw() {
   } catch (error) {
     console.error("Error processing withdrawal:", error);
     if (error.message === "Insufficient balance") {
-      showNotification("Error", "Not enough balance!", "danger");
+      showNotification("Error", "Not enough balance", "danger");
     } else {
-      showNotification("Error", "Failed to process withdrawal. Please try again.", "danger");
+      showNotification("Error", "Failed to process withdrawal. Try again", "danger");
     }
   }
 }
@@ -2709,14 +2722,14 @@ function copyInviteLink() {
   navigator.clipboard
     .writeText(copyText.value)
     .then(() => {
-      showNotification("Success", "Invite link copied!", "success");
+      showNotification("Success", "Invite link copied", "success");
     })
     .catch((err) => {
       console.error("Failed to copy: ", err);
       // Fallback for browsers that don't support clipboard API
       copyText.select();
       document.execCommand("copy");
-      showNotification("Success", "Invite link copied!", "success");
+      showNotification("Success", "Invite link copied", "success");
     });
 }
 
@@ -2728,14 +2741,14 @@ function copyInviteID() {
   navigator.clipboard
     .writeText(copyText.value)
     .then(() => {
-      showNotification("Success", "Referral ID copied!", "success");
+      showNotification("Success", "Referral ID copied", "success");
     })
     .catch((err) => {
       console.error("Failed to copy: ", err);
       // Fallback for browsers that don't support clipboard API
       copyText.select();
       document.execCommand("copy");
-      showNotification("Success", "Referral ID copied!", "success");
+      showNotification("Success", "Referral ID copied", "success");
     });
 }
 
@@ -2750,7 +2763,7 @@ async function submitReferralId() {
   
   // Check if user is trying to use their own referral code
   if (userData && userData.referralCode === referralId) {
-    showNotification("Error", "You cannot use your own referral code", "danger");
+    showNotification("Error", "Cannot use your own referral code", "danger");
     return;
   }
   
@@ -2770,7 +2783,10 @@ async function submitReferralId() {
     // Update the referrer's count
     await updateReferrerCount(referrerId);
     
-    showNotification("Success", "Referral ID submitted successfully!", "success");
+    // Hide the referral section
+    hideReferralSection();
+    
+    showNotification("Success", "Referral submitted successfully", "success");
     document.getElementById("referralIdInput").value = "";
   } else {
     showNotification("Error", "Invalid referral ID", "danger");
@@ -2807,7 +2823,7 @@ async function redeemPromoCode() {
   if (!promoCode) {
     return showNotification(
       "Error",
-      "Please enter a promo code!",
+      "Please enter a promo code",
       "danger"
     );
   }
@@ -2815,7 +2831,7 @@ async function redeemPromoCode() {
   try {
     // Check if promo code exists and is valid
     if (!appConfig.promoCodes || !appConfig.promoCodes[promoCode]) {
-      return showNotification("Error", "Invalid promo code!", "danger");
+      return showNotification("Error", "Invalid promo code", "danger");
     }
 
     const promoCodeData = appConfig.promoCodes[promoCode];
@@ -2824,7 +2840,7 @@ async function redeemPromoCode() {
     if (promoCodeData.status !== "active") {
       return showNotification(
         "Error",
-        "This promo code is not active!",
+        "This promo code is not active",
         "danger"
       );
     }
@@ -2871,8 +2887,8 @@ async function redeemPromoCode() {
     // Update UI
     updateUI();
     showNotification(
-      "Success!",
-      `You received ${promoCodeData.value} BDT from promo code ${promoCode}!`,
+      "Success",
+      `Received ${promoCodeData.value} BDT from promo code ${promoCode}`,
       "success"
     );
 
@@ -2883,11 +2899,11 @@ async function redeemPromoCode() {
     if (error.message === "Promo code already used") {
       showNotification(
         "Error",
-        "You have already used this promo code!",
+        "Already used this promo code",
         "danger"
       );
     } else {
-      showNotification("Error", "Failed to redeem promo code. Please try again.", "danger");
+      showNotification("Error", "Failed to redeem promo code. Try again", "danger");
     }
   }
 }
@@ -2931,7 +2947,7 @@ function filterHistory(type) {
 
 // Load more history
 function loadMoreHistory() {
-  showNotification("Info", "Loading more transactions...", "info");
+  showNotification("Info", "Loading more transactions", "info");
   // This would typically load more records from Firebase
   // For now, we'll just show a notification
 }
