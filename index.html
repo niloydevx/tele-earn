@@ -471,7 +471,6 @@
       .alert {
         border-radius: 0.75rem;
         font-weight: 500;
-        width: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -479,8 +478,10 @@
         transition: all 0.3s ease;
         text-align: center;
         padding: 0.75rem 2rem;
-        margin-bottom: 1rem;
+        margin: 1rem auto; /* center the whole alert horizontally */
         border: 1px solid transparent;
+        max-width: 600px; /* optional: limit width for nicer look */
+        width: auto; /* let it fit content */
       }
 
       .alert-primary {
@@ -491,7 +492,6 @@
 
       .alert-warning {
         background-color: #331a00;
-        width: 90%;
         color: #ffcc66;
         border: 1px solid #ff9900;
       }
@@ -1404,1523 +1404,1746 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyD9RdK77SckQQXtYobeBJBdaF4XOQvDbKU",
-  authDomain: "ads-flare.firebaseapp.com",
-  projectId: "ads-flare",
-  storageBucket: "ads-flare.firebasestorage.app",
-  messagingSenderId: "358472214301",
-  appId: "1:358472214301:web:ebc5991dc60c52f1c4a3f4",
-  measurementId: "G-Q5T7HZ4FKF"
-};
+      // Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyD9RdK77SckQQXtYobeBJBdaF4XOQvDbKU",
+        authDomain: "ads-flare.firebaseapp.com",
+        projectId: "ads-flare",
+        storageBucket: "ads-flare.firebasestorage.app",
+        messagingSenderId: "358472214301",
+        appId: "1:358472214301:web:ebc5991dc60c52f1c4a3f4",
+        measurementId: "G-Q5T7HZ4FKF",
+      };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const database = firebase.database();
 
-// Initialize Telegram Web App
-const tg = window.Telegram?.WebApp;
-const user = tg?.initDataUnsafe?.user ?? null;
+      // Initialize Telegram Web App
+      const tg = window.Telegram?.WebApp;
+      const user = tg?.initDataUnsafe?.user ?? null;
 
-// Use only Telegram user ID; if not available, block or handle differently
-if (!user || !user.id) {
-  alert("Telegram user not detected. Cannot proceed.");
-  // Optionally, hide the app or redirect
-  document.getElementById("appContent").classList.add("hidden");
-  throw new Error("Telegram user ID missing");
-}
-
-const userId = user.id;
-const username = user.username || user.first_name || "User" + userId;
-const userPhotoUrl = user.photo_url || "https://via.placeholder.com/120";
-
-// Expand Telegram Web App if available
-if (tg) {
-  tg.expand(); // full height
-}
-
-// App state with concurrency control
-let userData = null;
-let appConfig = null;
-let vpnRequired = true;
-let userIP = "";
-let deviceID = "";
-let currentSurvey = null;
-let surveyWindow = null;
-let surveyCheckInterval = null;
-
-// Concurrency control flags
-let isProcessingTransaction = false;
-let pendingOperations = [];
-let operationQueue = [];
-let isProcessingQueue = false;
-
-// Video rewards state
-const MIN_WAIT_SEC = 15;
-let sessionActive = false;
-let adStartTime = 0;
-let sessionClaimed = false;
-let cooldownInterval = null;
-let cooldownEndTime = 0;
-
-// Referral tracking
-let referralCode = null;
-let referrerId = null;
-
-// Initialize the application with concurrency safety
-document.addEventListener("DOMContentLoaded", async function () {
-  // Check for referral code in URL first
-  checkReferralCode();
-  
-  // Proceed with normal initialization
-  continueAppInitialization();
-});
-
-// Check for referral code in URL
-function checkReferralCode() {
-  const urlParams = new URLSearchParams(window.location.search);
-  referralCode = urlParams.get('ref');
-  
-  if (referralCode) {
-    console.log("Referral code detected:", referralCode);
-    // Track this referral click
-    trackReferralClick(referralCode);
-  }
-}
-
-// Continue with app initialization
-async function continueAppInitialization() {
-  // Get user IP and device info
-  await getUserIP();
-  getDeviceFingerprint();
-
-  // Check if user is banned
-  const isBanned = await checkIfBanned();
-  if (isBanned) {
-    document.getElementById("bannedScreen").classList.remove("hidden");
-    document.getElementById("appContent").classList.add("hidden");
-    return;
-  }
-
-  // Load app configuration
-  await loadAppConfig();
-
-  // Check VPN status
-  await checkVPN();
-
-  // Load or create user data
-  await loadUserData();
-
-  // Update UI with user data
-  updateUI();
-
-  // Load surveys
-  loadSurveys();
-
-  // Initialize video rewards system
-  initVideoRewards();
-  
-  // Check for active cooldown
-  checkCooldownStatus();
-  
-  // Show app content
-  document.getElementById("appContent").classList.remove("hidden");
-  
-  // Hide referral section if user already has a referrer
-  if (userData && userData.referredBy) {
-    hideReferralSection();
-  }
-}
-
-// Hide referral section
-function hideReferralSection() {
-  const referralSection = document.getElementById('referralInputSection');
-  if (referralSection) {
-    referralSection.style.display = 'none';
-  }
-  
-  // Also disable the input and button
-  const referralInput = document.getElementById('referralIdInput');
-  const submitButton = document.querySelector('[onclick="submitReferralId()"]');
-  
-  if (referralInput) {
-    referralInput.disabled = true;
-    referralInput.placeholder = "Referral already submitted";
-  }
-  
-  if (submitButton) {
-    submitButton.disabled = true;
-    submitButton.textContent = "Submitted";
-    submitButton.classList.remove('btn-custom');
-    submitButton.classList.add('btn-secondary');
-  }
-}
-
-// Show referral success modal
-function showReferralSuccess() {
-  const referralSuccessModal = new bootstrap.Modal(document.getElementById('referralSuccessModal'));
-  referralSuccessModal.show();
-}
-
-// OPERATION QUEUE SYSTEM FOR CONCURRENCY SAFETY
-function processOperationQueue() {
-  if (isProcessingQueue || operationQueue.length === 0) return;
-  
-  isProcessingQueue = true;
-  const operation = operationQueue.shift();
-  
-  operation()
-    .then(() => {
-      isProcessingQueue = false;
-      if (operationQueue.length > 0) {
-        setTimeout(processOperationQueue, 100);
+      // Use only Telegram user ID; if not available, block or handle differently
+      if (!user || !user.id) {
+        alert("Telegram user not detected. Cannot proceed.");
+        // Optionally, hide the app or redirect
+        document.getElementById("appContent").classList.add("hidden");
+        throw new Error("Telegram user ID missing");
       }
-    })
-    .catch((error) => {
-      console.error("Operation failed:", error);
-      isProcessingQueue = false;
-      if (operationQueue.length > 0) {
-        setTimeout(processOperationQueue, 100);
+
+      const userId = user.id;
+      const username = user.username || user.first_name || "User" + userId;
+      const userPhotoUrl = user.photo_url || "https://via.placeholder.com/120";
+
+      // Expand Telegram Web App if available
+      if (tg) {
+        tg.expand(); // full height
       }
-    });
-}
 
-function addToOperationQueue(operation) {
-  return new Promise((resolve, reject) => {
-    operationQueue.push(() => {
-      return operation().then(resolve).catch(reject);
-    });
-    
-    if (!isProcessingQueue) {
-      processOperationQueue();
-    }
-  });
-}
+      // App state with concurrency control
+      let userData = null;
+      let appConfig = null;
+      let vpnRequired = true;
+      let userIP = "";
+      let deviceID = "";
+      let currentSurvey = null;
+      let surveyWindow = null;
+      let surveyCheckInterval = null;
 
-// ATOMIC OPERATIONS WITH TRANSACTION SUPPORT
-async function atomicUserUpdate(updateFunction, retries = 3) {
-  return addToOperationQueue(async () => {
-    const userRef = database.ref("users/" + userId);
-    
-    for (let attempt = 0; attempt < retries; attempt++) {
-      try {
-        const result = await database.ref("users/" + userId).transaction((currentData) => {
-          if (currentData === null) {
-            // User doesn't exist yet, create initial data
-            const joinDate = new Date().toISOString().split("T")[0];
-            const promoCode = "ML" + Math.random().toString(36).substring(2, 8).toUpperCase();
-            
-            return {
-              username: username,
-              photoUrl: userPhotoUrl,
-              joinDate: joinDate,
-              promoCode: promoCode,
-              balance: 0.0,
-              totalEarnings: 0.0,
-              withdrawn: 0.0,
-              referralEarnings: 0.0,
-              completedTasks: 0,
-              referrals: 0,
-              referralCode: "REF" + Math.random().toString(36).substring(2, 8).toUpperCase(),
-              history: [],
-              ip: userIP,
-              deviceID: deviceID,
-              usedPromoCodes: [],
-              completedSurveys: {},
-              lastAdAttempt: 0,
-              referredBy: referrerId, // Store referrer ID if available
-              version: Date.now() // Add version for optimistic concurrency
-            };
-          }
-          
-          // Apply the update function to the current data
-          return updateFunction(currentData);
-        });
-        
-        if (result.committed) {
-          userData = result.snapshot.val();
-          return result.snapshot.val();
-        } else {
-          throw new Error("Transaction not committed");
+      // Concurrency control flags
+      let isProcessingTransaction = false;
+      let pendingOperations = [];
+      let operationQueue = [];
+      let isProcessingQueue = false;
+
+      // Video rewards state
+      const MIN_WAIT_SEC = 15;
+      let sessionActive = false;
+      let adStartTime = 0;
+      let sessionClaimed = false;
+      let cooldownInterval = null;
+      let cooldownEndTime = 0;
+
+      // Referral tracking
+      let referralCode = null;
+      let referrerId = null;
+
+      // Initialize the application with concurrency safety
+      document.addEventListener("DOMContentLoaded", async function () {
+        // Check for referral code in URL first
+        checkReferralCode();
+
+        // Proceed with normal initialization
+        continueAppInitialization();
+      });
+
+      // Check for referral code in URL
+      function checkReferralCode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        referralCode = urlParams.get("ref");
+
+        if (referralCode) {
+          console.log("Referral code detected:", referralCode);
+          // Track this referral click
+          trackReferralClick(referralCode);
         }
-      } catch (error) {
-        if (attempt === retries - 1) {
-          console.error("Atomic update failed after retries:", error);
-          throw error;
-        }
-        // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 100 * (attempt + 1)));
       }
-    }
-  });
-}
 
-// Track referral click in Firebase with concurrency safety
-function trackReferralClick(refCode) {
-  return addToOperationQueue(async () => {
-    // Check if this referral has already been tracked for this user
-    const trackedReferrals = JSON.parse(localStorage.getItem('trackedReferrals') || '{}');
-    
-    if (!trackedReferrals[refCode]) {
-      // Use transaction for atomic update
-      await database.ref(`referralClicks/${refCode}`).transaction((currentCount) => {
-        return (currentCount || 0) + 1;
-      });
-      
-      // Mark this referral as tracked for this user
-      trackedReferrals[refCode] = true;
-      localStorage.setItem('trackedReferrals', JSON.stringify(trackedReferrals));
-      
-      console.log(`Tracked referral click for code: ${refCode}`);
-    }
-  });
-}
+      // Continue with app initialization
+      async function continueAppInitialization() {
+        // Get user IP and device info
+        await getUserIP();
+        getDeviceFingerprint();
 
-// Get user IP address
-async function getUserIP() {
-  try {
-    let res = await fetch("https://api.ipify.org?format=json");
-    let data = await res.json();
-    userIP = data.ip;
-  } catch (e) {
-    console.error("Failed to get IP:", e);
-  }
-}
-
-// Get device fingerprint
-function getDeviceFingerprint() {
-  let ua = navigator.userAgent;
-  let screenRes = window.screen.width + "x" + window.screen.height;
-  let lang = navigator.language;
-
-  // Device ID (encoded)
-  deviceID = btoa(ua + screenRes + lang);
-}
-
-// Check if user is banned
-async function checkIfBanned() {
-  return new Promise((resolve) => {
-    database
-      .ref("bannedUsers")
-      .once("value", (snapshot) => {
-        const bannedUsers = snapshot.val() || {};
-        resolve(bannedUsers[userId.toString()] || false);
-      })
-      .catch((error) => {
-        console.error("Error checking banned status:", error);
-        resolve(false);
-      });
-  });
-}
-
-// Load app configuration from Firebase
-async function loadAppConfig() {
-  return new Promise((resolve) => {
-    database
-      .ref("appConfig")
-      .once("value", (snapshot) => {
-        appConfig = snapshot.val();
-
-        if (!appConfig) {
-          // Default configuration if none exists
-          appConfig = {
-            dailyLimit: 60,
-            adsRewards: 0.2,
-            referralCommission: 10,
-            minWithdraw: 50,
-            logo: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
-            cover: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
-            surveys: [
-              {
-                id: 1,
-                name: "Consumer Survey",
-                reward: 1.5,
-                image: "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-                url: "https://www.surveys.com/consumer",
-                completedBy: {},
-                status: "active",
-              },
-              {
-                id: 2,
-                name: "Product Feedback",
-                reward: 2.0,
-                image: "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-                url: "https://www.surveys.com/product",
-                completedBy: {},
-                status: "active",
-              },
-              {
-                id: 3,
-                name: "Market Research",
-                reward: 3.5,
-                image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-                url: "https://www.surveys.com/market",
-                completedBy: {},
-                status: "active",
-              }
-            ],
-            vpnRequired: true,
-            promoCodes: {
-              WELCOME10: { value: 10, status: "active", used: 0 },
-              BONUS5: { value: 5, status: "active", used: 0 },
-            },
-            supportContact: "support@AdFlare.com",
-          };
-
-          // Save default config to Firebase
-          database
-            .ref("appConfig")
-            .set(appConfig)
-            .catch((error) => {
-              console.error("Error saving default config:", error);
-            });
+        // Check if user is banned
+        const isBanned = await checkIfBanned();
+        if (isBanned) {
+          document.getElementById("bannedScreen").classList.remove("hidden");
+          document.getElementById("appContent").classList.add("hidden");
+          return;
         }
 
-        // Ensure adsRewards and referralCommission exist with defaults
-        if (appConfig.adsRewards === undefined) {
-          appConfig.adsRewards = 0.2;
+        // Load app configuration
+        await loadAppConfig();
+
+        // Check VPN status
+        await checkVPN();
+
+        // Load or create user data
+        await loadUserData();
+
+        // Update UI with user data
+        updateUI();
+
+        // Load surveys
+        loadSurveys();
+
+        // Initialize video rewards system
+        initVideoRewards();
+
+        // Check for active cooldown
+        checkCooldownStatus();
+
+        // Show app content
+        document.getElementById("appContent").classList.remove("hidden");
+
+        // Hide referral section if user already has a referrer
+        if (userData && userData.referredBy) {
+          hideReferralSection();
         }
-        if (appConfig.referralCommission === undefined) {
-          appConfig.referralCommission = 10;
+      }
+
+      // Hide referral section
+      function hideReferralSection() {
+        const referralSection = document.getElementById("referralInputSection");
+        if (referralSection) {
+          referralSection.style.display = "none";
         }
 
-        // Apply app configuration
-        if (document.getElementById("logoImg")) {
-          document.getElementById("logoImg").src = appConfig.logo;
-        }
-        if (document.getElementById("coverImg")) {
-          document.getElementById("coverImg").src = appConfig.cover;
-        }
-        if (document.getElementById("dailyLimit")) {
-          document.getElementById("dailyLimit").textContent = appConfig.dailyLimit;
-        }
-        if (document.getElementById("dailyLimitText")) {
-          document.getElementById("dailyLimitText").textContent = appConfig.dailyLimit;
-        }
-        if (document.getElementById("minWithdraw")) {
-          document.getElementById("minWithdraw").textContent = appConfig.minWithdraw;
-        }
-        if (document.getElementById("minWithdrawInfo")) {
-          document.getElementById("minWithdrawInfo").textContent = appConfig.minWithdraw;
+        // Also disable the input and button
+        const referralInput = document.getElementById("referralIdInput");
+        const submitButton = document.querySelector(
+          '[onclick="submitReferralId()"]'
+        );
+
+        if (referralInput) {
+          referralInput.disabled = true;
+          referralInput.placeholder = "Referral already submitted";
         }
 
-        vpnRequired = appConfig.vpnRequired !== undefined ? appConfig.vpnRequired : true;
-
-        resolve();
-      })
-      .catch((error) => {
-        console.error("Error loading app config:", error);
-        // Set default values even if Firebase fails
-        if (document.getElementById("dailyLimit")) {
-          document.getElementById("dailyLimit").textContent = "60";
+        if (submitButton) {
+          submitButton.disabled = true;
+          submitButton.textContent = "Submitted";
+          submitButton.classList.remove("btn-custom");
+          submitButton.classList.add("btn-secondary");
         }
-        if (document.getElementById("dailyLimitText")) {
-          document.getElementById("dailyLimitText").textContent = "60";
-        }
-        if (document.getElementById("minWithdraw")) {
-          document.getElementById("minWaitSec").textContent = "50";
-        }
-        if (document.getElementById("minWithdrawInfo")) {
-          document.getElementById("minWithdrawInfo").textContent = "50";
-        }
-        resolve();
-      });
-  });
-}
+      }
 
-// Load user data from Firebase or create new user with concurrency safety
-async function loadUserData() {
-  return new Promise((resolve) => {
-    database
-      .ref("users/" + userId)
-      .once("value", async (snapshot) => {
-        if (snapshot.exists()) {
-          userData = snapshot.val();
+      // Show referral success modal
+      function showReferralSuccess() {
+        const referralSuccessModal = new bootstrap.Modal(
+          document.getElementById("referralSuccessModal")
+        );
+        referralSuccessModal.show();
+      }
 
-          // Check if user already exists with same IP or device
-          if (!userData.ip || !userData.deviceID) {
-            // Update with IP and device info for existing users
-            await atomicUserUpdate((currentData) => {
-              return {
-                ...currentData,
-                ip: userIP,
-                deviceID: deviceID
-              };
-            });
-          } else if (userData.ip !== userIP || userData.deviceID !== deviceID) {
-            // Check for duplicate accounts
-            checkForDuplicateAccounts();
-          }
-        } else {
-          // Check if this IP or device already has an account
-          checkForDuplicateAccounts(true);
-          
-          // Update referrer's referral count with atomic operation if referral code exists
-          if (referrerId) {
-            await updateReferrerCount(referrerId);
-            
-            // Show success message
-            showReferralSuccess();
-          }
+      // OPERATION QUEUE SYSTEM FOR CONCURRENCY SAFETY
+      function processOperationQueue() {
+        if (isProcessingQueue || operationQueue.length === 0) return;
 
-          // Create new user with atomic operation
-          await atomicUserUpdate((currentData) => {
-            // This will only run if the user doesn't exist
-            const joinDate = new Date().toISOString().split("T")[0];
-            const promoCode = "ML" + Math.random().toString(36).substring(2, 8).toUpperCase();
+        isProcessingQueue = true;
+        const operation = operationQueue.shift();
 
-            return {
-              username: username,
-              photoUrl: userPhotoUrl,
-              joinDate: joinDate,
-              promoCode: promoCode,
-              balance: 0.0,
-              totalEarnings: 0.0,
-              withdrawn: 0.0,
-              referralEarnings: 0.0,
-              completedTasks: 0,
-              referrals: 0,
-              referralCode: "REF" + Math.random().toString(36).substring(2, 8).toUpperCase(),
-              history: [],
-              ip: userIP,
-              deviceID: deviceID,
-              usedPromoCodes: [],
-              completedSurveys: {},
-              lastAdAttempt: 0,
-              referredBy: referrerId,
-              version: Date.now()
-            };
+        operation()
+          .then(() => {
+            isProcessingQueue = false;
+            if (operationQueue.length > 0) {
+              setTimeout(processOperationQueue, 100);
+            }
+          })
+          .catch((error) => {
+            console.error("Operation failed:", error);
+            isProcessingQueue = false;
+            if (operationQueue.length > 0) {
+              setTimeout(processOperationQueue, 100);
+            }
+          });
+      }
+
+      function addToOperationQueue(operation) {
+        return new Promise((resolve, reject) => {
+          operationQueue.push(() => {
+            return operation().then(resolve).catch(reject);
           });
 
-          // Mark user as created in localStorage
-          localStorage.setItem('userCreated', 'true');
-        }
+          if (!isProcessingQueue) {
+            processOperationQueue();
+          }
+        });
+      }
 
-        // Update username in UI
-        if (document.getElementById("username")) {
-          document.getElementById("username").textContent = userData.username;
-        }
-        if (document.getElementById("profileName")) {
-          document.getElementById("profileName").textContent = userData.username;
-        }
-        if (document.getElementById("profileUsername")) {
-          document.getElementById("profileUsername").textContent = userData.username;
-        }
-        if (document.getElementById("profileImg")) {
-          document.getElementById("profileImg").src = userData.photoUrl;
-        }
-        if (document.getElementById("memberSince")) {
-          document.getElementById("memberSince").textContent = userData.joinDate;
-        }
-        if (document.getElementById("promoCode")) {
-          document.getElementById("promoCode").textContent = userData.promoCode;
-        }
-        if (document.getElementById("referralsCount")) {
-          document.getElementById("referralsCount").textContent = userData.referrals;
-        }
-        if (document.getElementById("referralsCountHome")) {
-          document.getElementById("referralsCountHome").textContent = userData.referrals;
-        }
-        if (document.getElementById("inviteLink")) {
-          document.getElementById("inviteLink").value = `http://t.me/adflare_bot/bot?startbot=${userData.referralCode}`;
-        }
-        if (document.getElementById("inviteID")) {
-          document.getElementById("inviteID").value = `${userData.referralCode}`;
-        }
+      // ATOMIC OPERATIONS WITH TRANSACTION SUPPORT
+      async function atomicUserUpdate(updateFunction, retries = 3) {
+        return addToOperationQueue(async () => {
+          const userRef = database.ref("users/" + userId);
 
-        resolve();
-      })
-      .catch((error) => {
-        console.error("Error loading user data:", error);
-        // Create a minimal user data object if Firebase fails
-        const joinDate = new Date().toISOString().split("T")[0];
-        userData = {
-          username: username,
-          photoUrl: userPhotoUrl,
-          joinDate: joinDate,
-          promoCode: "ML" + Math.random().toString(36).substring(2, 8).toUpperCase(),
-          balance: 0.0,
-          totalEarnings: 0.0,
-          withdrawn: 0.0,
-          referralEarnings: 0.0,
-          completedTasks: 0,
-          referrals: 0,
-          referralCode: "REF" + Math.random().toString(36).substring(2, 8).toUpperCase(),
-          history: [],
-          ip: userIP,
-          deviceID: deviceID,
-          usedPromoCodes: [],
-          completedSurveys: {},
-          lastAdAttempt: 0,
-          referredBy: referrerId,
-        };
-        resolve();
-      });
-  });
-}
+          for (let attempt = 0; attempt < retries; attempt++) {
+            try {
+              const result = await database
+                .ref("users/" + userId)
+                .transaction((currentData) => {
+                  if (currentData === null) {
+                    // User doesn't exist yet, create initial data
+                    const joinDate = new Date().toISOString().split("T")[0];
+                    const promoCode =
+                      "ML" +
+                      Math.random().toString(36).substring(2, 8).toUpperCase();
 
-// Update referrer's referral count
-async function updateReferrerCount(referrerId) {
-  return database.ref("users/" + referrerId).transaction((currentData) => {
-    if (currentData === null) return currentData;
-    return {
-      ...currentData,
-      referrals: (currentData.referrals || 0) + 1,
-      version: Date.now()
-    };
-  });
-}
+                    return {
+                      username: username,
+                      photoUrl: userPhotoUrl,
+                      joinDate: joinDate,
+                      promoCode: promoCode,
+                      balance: 0.0,
+                      totalEarnings: 0.0,
+                      withdrawn: 0.0,
+                      referralEarnings: 0.0,
+                      completedTasks: 0,
+                      referrals: 0,
+                      referralCode:
+                        "REF" +
+                        Math.random()
+                          .toString(36)
+                          .substring(2, 8)
+                          .toUpperCase(),
+                      history: [],
+                      ip: userIP,
+                      deviceID: deviceID,
+                      usedPromoCodes: [],
+                      completedSurveys: {},
+                      lastAdAttempt: 0,
+                      referredBy: referrerId, // Store referrer ID if available
+                      version: Date.now(), // Add version for optimistic concurrency
+                    };
+                  }
 
-// Check for duplicate accounts
-async function checkForDuplicateAccounts(isNewUser = false) {
-  database
-    .ref("users")
-    .once("value", (snapshot) => {
-      const users = snapshot.val();
-      let duplicateFound = false;
+                  // Apply the update function to the current data
+                  return updateFunction(currentData);
+                });
 
-      if (users) {
-        Object.keys(users).forEach((key) => {
-          if (key !== userId.toString()) {
-            const user = users[key];
-            if (user.ip === userIP || user.deviceID === deviceID) {
-              duplicateFound = true;
-
-              if (isNewUser) {
-                // Prevent creating new account
-                showNotification(
-                  "Error",
-                  "Account already exists with this device/IP",
-                  "danger"
-                );
-                document.getElementById("bannedScreen").classList.remove("hidden");
-                document.getElementById("appContent").classList.add("hidden");
-
-                // Add to banned users
-                database
-                  .ref("bannedUsers")
-                  .once("value", (bannedSnapshot) => {
-                    const bannedUsers = bannedSnapshot.val() || {};
-                    bannedUsers[userId.toString()] = true;
-                    database
-                      .ref("bannedUsers")
-                      .set(bannedUsers)
-                      .catch((error) => {
-                        console.error("Error adding to banned users:", error);
-                      });
-                  })
-                  .catch((error) => {
-                    console.error("Error checking banned users:", error);
-                  });
-
-                return;
+              if (result.committed) {
+                userData = result.snapshot.val();
+                return result.snapshot.val();
+              } else {
+                throw new Error("Transaction not committed");
               }
+            } catch (error) {
+              if (attempt === retries - 1) {
+                console.error("Atomic update failed after retries:", error);
+                throw error;
+              }
+              // Wait before retrying
+              await new Promise((resolve) =>
+                setTimeout(resolve, 100 * (attempt + 1))
+              );
             }
           }
         });
       }
 
-      if (duplicateFound && !isNewUser) {
-        showNotification("Warning", "Multiple accounts detected", "warning");
+      // Track referral click in Firebase with concurrency safety
+      function trackReferralClick(refCode) {
+        return addToOperationQueue(async () => {
+          // Check if this referral has already been tracked for this user
+          const trackedReferrals = JSON.parse(
+            localStorage.getItem("trackedReferrals") || "{}"
+          );
+
+          if (!trackedReferrals[refCode]) {
+            // Use transaction for atomic update
+            await database
+              .ref(`referralClicks/${refCode}`)
+              .transaction((currentCount) => {
+                return (currentCount || 0) + 1;
+              });
+
+            // Mark this referral as tracked for this user
+            trackedReferrals[refCode] = true;
+            localStorage.setItem(
+              "trackedReferrals",
+              JSON.stringify(trackedReferrals)
+            );
+
+            console.log(`Tracked referral click for code: ${refCode}`);
+          }
+        });
       }
-    })
-    .catch((error) => {
-      console.error("Error checking for duplicates:", error);
-    });
-}
 
-// Check VPN status
-async function checkVPN() {
-  try {
-    document.getElementById("vpnStatus").textContent = "Checking your connection...";
-    document.getElementById("retryVpnCheck").classList.add("d-none");
-
-    // Get public IP
-    let ipRes = await fetch("https://api64.ipify.org?format=json");
-    let ipData = await ipRes.json();
-
-    // Get IP details
-    let geoRes = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
-    let geoData = await geoRes.json();
-
-    document.getElementById("vpnStatus").textContent = `Your country: ${geoData.country_name}`;
-
-    if (vpnRequired) {
-      // VPN required mode
-      if (geoData.country === "BD") {
-        document.getElementById("vpnAlert").classList.remove("d-none");
-        document.getElementById("vpnSuccess").classList.add("d-none");
-        document.getElementById("vpnOffAlert").classList.add("d-none");
-        document.getElementById("retryVpnCheck").classList.remove("d-none");
-      } else {
-        document.getElementById("vpnAlert").classList.add("d-none");
-        document.getElementById("vpnSuccess").classList.remove("d-none");
-        document.getElementById("vpnOffAlert").classList.add("d-none");
-
-        // Hide VPN check and show home page after successful verification
-        setTimeout(() => {
-          document.getElementById("vpnCheck").classList.add("hidden");
-          document.getElementById("home").classList.remove("hidden");
-        }, 2000);
+      // Get user IP address
+      async function getUserIP() {
+        try {
+          let res = await fetch("https://api.ipify.org?format=json");
+          let data = await res.json();
+          userIP = data.ip;
+        } catch (e) {
+          console.error("Failed to get IP:", e);
+        }
       }
-    } else {
-      // VPN not required mode
-      if (geoData.country !== "BD") {
-        document.getElementById("vpnOffAlert").classList.remove("d-none");
-        document.getElementById("vpnAlert").classList.add("d-none");
-        document.getElementById("vpnSuccess").classList.add("d-none");
-        document.getElementById("retryVpnCheck").classList.remove("d-none");
-        document.getElementById("retryVpnCheck").classList.remove("d-none");
-      } else {
-        document.getElementById("vpnOffAlert").classList.add("d-none");
-        document.getElementById("vpnAlert").classList.add("d-none");
-        document.getElementById("vpnSuccess").classList.remove("d-none");
 
-        // Hide VPN check and show home page
-        setTimeout(() => {
-          document.getElementById("vpnCheck").classList.add("hidden");
-          document.getElementById("home").classList.remove("hidden");
-        }, 2000);
+      // Get device fingerprint
+      function getDeviceFingerprint() {
+        let ua = navigator.userAgent;
+        let screenRes = window.screen.width + "x" + window.screen.height;
+        let lang = navigator.language;
+
+        // Device ID (encoded)
+        deviceID = btoa(ua + screenRes + lang);
       }
-    }
-  } catch (e) {
-    document.getElementById("vpnStatus").textContent = "Failed to check IP (API error)";
-    document.getElementById("retryVpnCheck").classList.remove("d-none");
-    console.error("VPN check error:", e);
-  }
-}
 
-// Update UI with user data
-function updateUI() {
-  if (!userData) return;
-
-  // Format balance with commas
-  const formattedBalance = userData.balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  const formattedTotalEarnings = userData.totalEarnings.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  const formattedWithdrawn = userData.withdrawn.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  const formattedReferralEarnings = userData.referralEarnings.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-
-  if (document.getElementById("balance")) {
-    document.getElementById("balance").innerText = formattedBalance;
-  }
-  if (document.getElementById("availableBalance")) {
-    document.getElementById("availableBalance").innerText = formattedBalance;
-  }
-  if (document.getElementById("availableBalanceProfile")) {
-    document.getElementById("availableBalanceProfile").innerText = formattedBalance;
-  }
-  if (document.getElementById("totalEarningsHome")) {
-    document.getElementById("totalEarningsHome").innerText = formattedTotalEarnings;
-  }
-  if (document.getElementById("totalEarnings")) {
-    document.getElementById("totalEarnings").innerText = formattedTotalEarnings;
-  }
-  if (document.getElementById("withdrawnAmount")) {
-    document.getElementById("withdrawnAmount").innerText = formattedWithdrawn;
-  }
-  if (document.getElementById("referralEarnings")) {
-    document.getElementById("referralEarnings").innerText = formattedReferralEarnings;
-  }
-  if (document.getElementById("completed")) {
-    document.getElementById("completed").innerText = userData.completedTasks;
-  }
-  if (document.getElementById("remaining")) {
-    document.getElementById("remaining").innerText = appConfig.dailyLimit - userData.completedTasks;
-  }
-
-  let percent = Math.round((userData.completedTasks / appConfig.dailyLimit) * 100);
-  if (document.getElementById("videoProgressBar")) {
-    document.getElementById("videoProgressBar").style.width = percent + "%";
-  }
-
-  // Update ad button with correct reward amount
-  const adReward = appConfig.adsRewards || 0.2;
-  if (document.getElementById("watchAdBtn")) {
-    document.getElementById("watchAdBtn").innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
-  }
-
-  // Update referral text with correct percentage
-  const referralCommission = appConfig.referralCommission || 10;
-  if (document.getElementById("referralText")) {
-    document.getElementById("referralText").textContent = `Earn ${referralCommission}% of your referrals' earnings`;
-  }
-
-  // Update history table
-  filterHistory("all");
-}
-
-// Initialize video rewards system
-function initVideoRewards() {
-  // Add event listener to watch ad button
-  if (document.getElementById("watchAdBtn")) {
-    document.getElementById("watchAdBtn").addEventListener("click", watchAd);
-  }
-
-  // Add event listener to claim button
-  if (document.getElementById("claimRewardBtn")) {
-    document.getElementById("claimRewardBtn").addEventListener("click", claimReward);
-  }
-}
-
-// Wait for GigaPub to load
-function waitForGiga() {
-  return new Promise((resolve, reject) => {
-    const check = () => {
-      if (typeof window.showGiga === 'function') resolve();
-      else setTimeout(check, 100);
-    }
-    check();
-  });
-}
-
-// Check cooldown status on page load
-function checkCooldownStatus() {
-  if (userData && userData.lastAdAttempt) {
-    const now = Date.now();
-    const timeSinceLastAttempt = (now - userData.lastAdAttempt) / 1000;
-    const timeRemaining = MIN_WAIT_SEC - timeSinceLastAttempt;
-    
-    if (timeRemaining > 0) {
-      // Still in cooldown period
-      startCooldown(timeRemaining);
-    }
-  }
-}
-
-// Start cooldown timer
-function startCooldown(seconds) {
-  const adButton = document.getElementById("watchAdBtn");
-  const claimButton = document.getElementById("claimRewardBtn");
-  const cooldownTimer = document.getElementById("cooldownTimer");
-  const cooldownSeconds = document.getElementById("cooldownSeconds");
-  
-  // Disable buttons and show cooldown timer
-  adButton.disabled = true;
-  claimButton.style.display = "none";
-  cooldownTimer.style.display = "block";
-  
-  let remainingSeconds = Math.ceil(seconds);
-  cooldownSeconds.textContent = remainingSeconds;
-  
-  // Update cooldown timer
-  cooldownInterval = setInterval(() => {
-    remainingSeconds--;
-    cooldownSeconds.textContent = remainingSeconds;
-    
-    if (remainingSeconds <= 0) {
-      clearInterval(cooldownInterval);
-      cooldownTimer.style.display = "none";
-      adButton.disabled = false;
-      
-      // Reset ad button text
-      const adReward = appConfig.adsRewards || 0.2;
-      adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
-      
-      // Update status
-      document.getElementById("adStatus").textContent = "Ready to watch videos";
-    }
-  }, 1000);
-}
-
-// Watch ad function for video rewards with concurrency safety
-async function watchAd() {
-  if (userData.completedTasks >= appConfig.dailyLimit) {
-    showNotification("Completed", "All tasks completed for today", "info");
-    return;
-  }
-
-  if (sessionActive) {
-    showNotification("Info", "Please complete the current video first", "info");
-    return;
-  }
-
-  try {
-    // Disable button to prevent multiple clicks
-    const adButton = document.getElementById("watchAdBtn");
-    const claimButton = document.getElementById("claimRewardBtn");
-    const statusEl = document.getElementById("adStatus");
-    
-    adButton.disabled = true;
-    adButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Loading...';
-
-    // Update status
-    statusEl.textContent = "Loading ad…";
-    setProgress(0);
-
-    // Record ad attempt time with atomic update
-    await atomicUserUpdate((currentData) => {
-      return {
-        ...currentData,
-        lastAdAttempt: Date.now(),
-        version: Date.now()
-      };
-    });
-    
-    adStartTime = Date.now();
-    statusEl.textContent = 'Watching ad...';
-    sessionActive = true;
-    sessionClaimed = false;
-
-    // Show the ad
-    await window.showGiga();
-    
-    statusEl.textContent = 'Ad finished ✓ — now claim';
-    setProgress(85);
-    claimButton.style.display = "block";
-    claimButton.disabled = false;
-  } catch (e) {
-    console.error("Ad failed or closed before completion", e);
-    showNotification("Error", "Video not loaded. Please try again", "danger");
-    
-    // Reset button state
-    const adButton = document.getElementById("watchAdBtn");
-    const claimButton = document.getElementById("claimRewardBtn");
-    const statusEl = document.getElementById("adStatus");
-    const adReward = appConfig.adsRewards || 0.2;
-    
-    adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
-    adButton.disabled = false;
-    claimButton.style.display = "none";
-    statusEl.textContent = "Failed to load video. Try again.";
-    setProgress(0);
-    sessionActive = false;
-  }
-}
-
-// Set progress bar
-function setProgress(p) {
-  const progressBar = document.getElementById("videoProgressBar");
-  progressBar.style.width = Math.max(0, Math.min(100, p)) + "%";
-}
-
-// Claim reward after watching ad with concurrency safety
-async function claimReward() {
-  if (!sessionActive) {
-    showNotification("Error", "No active ad session", "danger");
-    return;
-  }
-
-  if (sessionClaimed) {
-    showNotification("Info", "Reward already claimed for this session", "info");
-    return;
-  }
-
-  let elapsed = (Date.now() - adStartTime) / 1000;
-  if (elapsed < MIN_WAIT_SEC) {
-    // Start cooldown period
-    startCooldown(MIN_WAIT_SEC - elapsed);
-    
-    showNotification("Error", `Wait ${MIN_WAIT_SEC}s before trying again`, "danger");
-    return;
-  }
-
-  if (userData.completedTasks >= appConfig.dailyLimit) {
-    showNotification("Completed", "All tasks completed for today", "info");
-    return;
-  }
-
-  try {
-    // Update user data with atomic operation
-    const rewardAmount = appConfig.adsRewards || 0.2;
-    
-    await atomicUserUpdate((currentData) => {
-      if (currentData.completedTasks >= appConfig.dailyLimit) {
-        // Another operation might have completed the daily limit
-        throw new Error("Daily limit reached");
+      // Check if user is banned
+      async function checkIfBanned() {
+        return new Promise((resolve) => {
+          database
+            .ref("bannedUsers")
+            .once("value", (snapshot) => {
+              const bannedUsers = snapshot.val() || {};
+              resolve(bannedUsers[userId.toString()] || false);
+            })
+            .catch((error) => {
+              console.error("Error checking banned status:", error);
+              resolve(false);
+            });
+        });
       }
-      
-      return {
-        ...currentData,
-        completedTasks: currentData.completedTasks + 1,
-        balance: currentData.balance + rewardAmount,
-        totalEarnings: currentData.totalEarnings + rewardAmount,
-        lastAdAttempt: 0, // Reset cooldown
-        history: [
-          {
-            type: "earning",
-            method: "Video Reward",
-            amount: rewardAmount.toFixed(2),
-            address: "Video Ad",
-            status: "Completed",
-            date: new Date().toLocaleDateString(),
-            timestamp: Date.now()
-          },
-          ...(currentData.history || [])
-        ].slice(0, 50), // Keep only last 50 transactions
-        version: Date.now()
-      };
-    });
 
-    // Update UI
-    updateUI();
-    
-    // Reset ad state
-    sessionActive = false;
-    sessionClaimed = true;
-    
-    // Update UI elements
-    const adButton = document.getElementById("watchAdBtn");
-    const claimButton = document.getElementById("claimRewardBtn");
-    const statusEl = document.getElementById("adStatus");
-    
-    adButton.style.display = "block";
-    claimButton.style.display = "none";
-    
-    // Update status
-    statusEl.textContent = "Reward granted ✅";
-    setProgress(100);
-    
-    // Update ad button text
-    const adReward = appConfig.adsRewards || 0.2;
-    adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
-    adButton.disabled = false;
-    
-    showNotification("Success", `Earned ${rewardAmount.toFixed(2)} BDT!`, "success");
-  } catch (error) {
-    console.error("Error claiming reward:", error);
-    if (error.message === "Daily limit reached") {
-      showNotification("Completed", "All tasks completed for today", "info");
-    } else {
-      showNotification("Error", "Failed to claim reward. Try again", "danger");
-    }
-    
-    // Reset UI state
-    const adButton = document.getElementById("watchAdBtn");
-    const claimButton = document.getElementById("claimRewardBtn");
-    const adReward = appConfig.adsRewards || 0.2;
-    
-    adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(2)} BDT)`;
-    adButton.disabled = false;
-    claimButton.style.display = "none";
-    sessionActive = false;
-  }
-}
+      // Load app configuration from Firebase
+      async function loadAppConfig() {
+        return new Promise((resolve) => {
+          database
+            .ref("appConfig")
+            .once("value", (snapshot) => {
+              appConfig = snapshot.val();
 
-// Show survey page
-function showSurveyPage() {
-  document.querySelectorAll("div.container").forEach((div) => div.classList.add("hidden"));
-  document.getElementById("surveyPage").classList.remove("hidden");
-  document.querySelectorAll(".bottom-nav a").forEach((a) => a.classList.remove("active"));
-}
+              if (!appConfig) {
+                // Default configuration if none exists
+                appConfig = {
+                  dailyLimit: 60,
+                  adsRewards: 0.2,
+                  referralCommission: 10,
+                  minWithdraw: 50,
+                  logo: "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
+                  cover:
+                    "https://res.cloudinary.com/demo/image/upload/v1648039207/sample.jpg",
+                  surveys: [
+                    {
+                      id: 1,
+                      name: "Consumer Survey",
+                      reward: 1.5,
+                      image:
+                        "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                      url: "https://www.surveys.com/consumer",
+                      completedBy: {},
+                      status: "active",
+                    },
+                    {
+                      id: 2,
+                      name: "Product Feedback",
+                      reward: 2.0,
+                      image:
+                        "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                      url: "https://www.surveys.com/product",
+                      completedBy: {},
+                      status: "active",
+                    },
+                    {
+                      id: 3,
+                      name: "Market Research",
+                      reward: 3.5,
+                      image:
+                        "https://images.unsplash.com/photo-1556761175-b413da4baf72?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                      url: "https://www.surveys.com/market",
+                      completedBy: {},
+                      status: "active",
+                    },
+                  ],
+                  vpnRequired: true,
+                  promoCodes: {
+                    WELCOME10: { value: 10, status: "active", used: 0 },
+                    BONUS5: { value: 5, status: "active", used: 0 },
+                  },
+                  supportContact: "support@AdFlare.com",
+                };
 
-// Hide survey page
-function hideSurveyPage() {
-  // If a survey was started but not completed, don't award anything
-  if (currentSurvey) {
-    showNotification("Info", "Survey not completed. No reward", "info");
-  }
+                // Save default config to Firebase
+                database
+                  .ref("appConfig")
+                  .set(appConfig)
+                  .catch((error) => {
+                    console.error("Error saving default config:", error);
+                  });
+              }
 
-  // Reset survey state
-  currentSurvey = null;
-  if (surveyCheckInterval) {
-    clearInterval(surveyCheckInterval);
-    surveyCheckInterval = null;
-  }
+              // Ensure adsRewards and referralCommission exist with defaults
+              if (appConfig.adsRewards === undefined) {
+                appConfig.adsRewards = 0.2;
+              }
+              if (appConfig.referralCommission === undefined) {
+                appConfig.referralCommission = 10;
+              }
 
-  document.getElementById("surveyPage").classList.add("hidden");
-  document.getElementById("rewards").classList.remove("hidden");
-  document.querySelector('.bottom-nav a[onclick*="rewards"]').classList.add("active");
-}
+              // Apply app configuration
+              if (document.getElementById("logoImg")) {
+                document.getElementById("logoImg").src = appConfig.logo;
+              }
+              if (document.getElementById("coverImg")) {
+                document.getElementById("coverImg").src = appConfig.cover;
+              }
+              if (document.getElementById("dailyLimit")) {
+                document.getElementById("dailyLimit").textContent =
+                  appConfig.dailyLimit;
+              }
+              if (document.getElementById("dailyLimitText")) {
+                document.getElementById("dailyLimitText").textContent =
+                  appConfig.dailyLimit;
+              }
+              if (document.getElementById("minWithdraw")) {
+                document.getElementById("minWithdraw").textContent =
+                  appConfig.minWithdraw;
+              }
+              if (document.getElementById("minWithdrawInfo")) {
+                document.getElementById("minWithdrawInfo").textContent =
+                  appConfig.minWithdraw;
+              }
 
-// Load surveys - UPDATED FUNCTION
-function loadSurveys() {
-  const surveysContainer = document.getElementById("surveysContainer");
-  if (!surveysContainer) return;
-  
-  surveysContainer.innerHTML = "";
+              vpnRequired =
+                appConfig.vpnRequired !== undefined
+                  ? appConfig.vpnRequired
+                  : true;
 
-  if (!appConfig || !appConfig.surveys) {
-    surveysContainer.innerHTML = `
+              resolve();
+            })
+            .catch((error) => {
+              console.error("Error loading app config:", error);
+              // Set default values even if Firebase fails
+              if (document.getElementById("dailyLimit")) {
+                document.getElementById("dailyLimit").textContent = "60";
+              }
+              if (document.getElementById("dailyLimitText")) {
+                document.getElementById("dailyLimitText").textContent = "60";
+              }
+              if (document.getElementById("minWithdraw")) {
+                document.getElementById("minWaitSec").textContent = "50";
+              }
+              if (document.getElementById("minWithdrawInfo")) {
+                document.getElementById("minWithdrawInfo").textContent = "50";
+              }
+              resolve();
+            });
+        });
+      }
+
+      // Load user data from Firebase or create new user with concurrency safety
+      async function loadUserData() {
+        return new Promise((resolve) => {
+          database
+            .ref("users/" + userId)
+            .once("value", async (snapshot) => {
+              if (snapshot.exists()) {
+                userData = snapshot.val();
+
+                // Check if user already exists with same IP or device
+                if (!userData.ip || !userData.deviceID) {
+                  // Update with IP and device info for existing users
+                  await atomicUserUpdate((currentData) => {
+                    return {
+                      ...currentData,
+                      ip: userIP,
+                      deviceID: deviceID,
+                    };
+                  });
+                } else if (
+                  userData.ip !== userIP ||
+                  userData.deviceID !== deviceID
+                ) {
+                  // Check for duplicate accounts
+                  checkForDuplicateAccounts();
+                }
+              } else {
+                // Check if this IP or device already has an account
+                checkForDuplicateAccounts(true);
+
+                // Update referrer's referral count with atomic operation if referral code exists
+                if (referrerId) {
+                  await updateReferrerCount(referrerId);
+
+                  // Show success message
+                  showReferralSuccess();
+                }
+
+                // Create new user with atomic operation
+                await atomicUserUpdate((currentData) => {
+                  // This will only run if the user doesn't exist
+                  const joinDate = new Date().toISOString().split("T")[0];
+                  const promoCode =
+                    "ML" +
+                    Math.random().toString(36).substring(2, 8).toUpperCase();
+
+                  return {
+                    username: username,
+                    photoUrl: userPhotoUrl,
+                    joinDate: joinDate,
+                    promoCode: promoCode,
+                    balance: 0.0,
+                    totalEarnings: 0.0,
+                    withdrawn: 0.0,
+                    referralEarnings: 0.0,
+                    completedTasks: 0,
+                    referrals: 0,
+                    referralCode:
+                      "REF" +
+                      Math.random().toString(36).substring(2, 8).toUpperCase(),
+                    history: [],
+                    ip: userIP,
+                    deviceID: deviceID,
+                    usedPromoCodes: [],
+                    completedSurveys: {},
+                    lastAdAttempt: 0,
+                    referredBy: referrerId,
+                    version: Date.now(),
+                  };
+                });
+
+                // Mark user as created in localStorage
+                localStorage.setItem("userCreated", "true");
+              }
+
+              // Update username in UI
+              if (document.getElementById("username")) {
+                document.getElementById("username").textContent =
+                  userData.username;
+              }
+              if (document.getElementById("profileName")) {
+                document.getElementById("profileName").textContent =
+                  userData.username;
+              }
+              if (document.getElementById("profileUsername")) {
+                document.getElementById("profileUsername").textContent =
+                  userData.username;
+              }
+              if (document.getElementById("profileImg")) {
+                document.getElementById("profileImg").src = userData.photoUrl;
+              }
+              if (document.getElementById("memberSince")) {
+                document.getElementById("memberSince").textContent =
+                  userData.joinDate;
+              }
+              if (document.getElementById("promoCode")) {
+                document.getElementById("promoCode").textContent =
+                  userData.promoCode;
+              }
+              if (document.getElementById("referralsCount")) {
+                document.getElementById("referralsCount").textContent =
+                  userData.referrals;
+              }
+              if (document.getElementById("referralsCountHome")) {
+                document.getElementById("referralsCountHome").textContent =
+                  userData.referrals;
+              }
+              if (document.getElementById("inviteLink")) {
+                document.getElementById(
+                  "inviteLink"
+                ).value = `http://t.me/adflare_bot/bot?startbot=${userData.referralCode}`;
+              }
+              if (document.getElementById("inviteID")) {
+                document.getElementById(
+                  "inviteID"
+                ).value = `${userData.referralCode}`;
+              }
+
+              resolve();
+            })
+            .catch((error) => {
+              console.error("Error loading user data:", error);
+              // Create a minimal user data object if Firebase fails
+              const joinDate = new Date().toISOString().split("T")[0];
+              userData = {
+                username: username,
+                photoUrl: userPhotoUrl,
+                joinDate: joinDate,
+                promoCode:
+                  "ML" +
+                  Math.random().toString(36).substring(2, 8).toUpperCase(),
+                balance: 0.0,
+                totalEarnings: 0.0,
+                withdrawn: 0.0,
+                referralEarnings: 0.0,
+                completedTasks: 0,
+                referrals: 0,
+                referralCode:
+                  "REF" +
+                  Math.random().toString(36).substring(2, 8).toUpperCase(),
+                history: [],
+                ip: userIP,
+                deviceID: deviceID,
+                usedPromoCodes: [],
+                completedSurveys: {},
+                lastAdAttempt: 0,
+                referredBy: referrerId,
+              };
+              resolve();
+            });
+        });
+      }
+
+      // Update referrer's referral count
+      async function updateReferrerCount(referrerId) {
+        return database
+          .ref("users/" + referrerId)
+          .transaction((currentData) => {
+            if (currentData === null) return currentData;
+            return {
+              ...currentData,
+              referrals: (currentData.referrals || 0) + 1,
+              version: Date.now(),
+            };
+          });
+      }
+
+      // Check for duplicate accounts
+      async function checkForDuplicateAccounts(isNewUser = false) {
+        database
+          .ref("users")
+          .once("value", (snapshot) => {
+            const users = snapshot.val();
+            let duplicateFound = false;
+
+            if (users) {
+              Object.keys(users).forEach((key) => {
+                if (key !== userId.toString()) {
+                  const user = users[key];
+                  if (user.ip === userIP || user.deviceID === deviceID) {
+                    duplicateFound = true;
+
+                    if (isNewUser) {
+                      // Prevent creating new account
+                      showNotification(
+                        "Error",
+                        "Account already exists with this device/IP",
+                        "danger"
+                      );
+                      document
+                        .getElementById("bannedScreen")
+                        .classList.remove("hidden");
+                      document
+                        .getElementById("appContent")
+                        .classList.add("hidden");
+
+                      // Add to banned users
+                      database
+                        .ref("bannedUsers")
+                        .once("value", (bannedSnapshot) => {
+                          const bannedUsers = bannedSnapshot.val() || {};
+                          bannedUsers[userId.toString()] = true;
+                          database
+                            .ref("bannedUsers")
+                            .set(bannedUsers)
+                            .catch((error) => {
+                              console.error(
+                                "Error adding to banned users:",
+                                error
+                              );
+                            });
+                        })
+                        .catch((error) => {
+                          console.error("Error checking banned users:", error);
+                        });
+
+                      return;
+                    }
+                  }
+                }
+              });
+            }
+
+            if (duplicateFound && !isNewUser) {
+              showNotification(
+                "Warning",
+                "Multiple accounts detected",
+                "warning"
+              );
+            }
+          })
+          .catch((error) => {
+            console.error("Error checking for duplicates:", error);
+          });
+      }
+
+      // Check VPN status
+      async function checkVPN() {
+        try {
+          document.getElementById("vpnStatus").textContent =
+            "Checking your connection...";
+          document.getElementById("retryVpnCheck").classList.add("d-none");
+
+          // Get public IP
+          let ipRes = await fetch("https://api64.ipify.org?format=json");
+          let ipData = await ipRes.json();
+
+          // Get IP details
+          let geoRes = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
+          let geoData = await geoRes.json();
+
+          document.getElementById(
+            "vpnStatus"
+          ).textContent = `Your country: ${geoData.country_name}`;
+
+          if (vpnRequired) {
+            // VPN required mode
+            if (geoData.country === "BD") {
+              document.getElementById("vpnAlert").classList.remove("d-none");
+              document.getElementById("vpnSuccess").classList.add("d-none");
+              document.getElementById("vpnOffAlert").classList.add("d-none");
+              document
+                .getElementById("retryVpnCheck")
+                .classList.remove("d-none");
+            } else {
+              document.getElementById("vpnAlert").classList.add("d-none");
+              document.getElementById("vpnSuccess").classList.remove("d-none");
+              document.getElementById("vpnOffAlert").classList.add("d-none");
+
+              // Hide VPN check and show home page after successful verification
+              setTimeout(() => {
+                document.getElementById("vpnCheck").classList.add("hidden");
+                document.getElementById("home").classList.remove("hidden");
+              }, 2000);
+            }
+          } else {
+            // VPN not required mode
+            if (geoData.country !== "BD") {
+              document.getElementById("vpnOffAlert").classList.remove("d-none");
+              document.getElementById("vpnAlert").classList.add("d-none");
+              document.getElementById("vpnSuccess").classList.add("d-none");
+              document
+                .getElementById("retryVpnCheck")
+                .classList.remove("d-none");
+              document
+                .getElementById("retryVpnCheck")
+                .classList.remove("d-none");
+            } else {
+              document.getElementById("vpnOffAlert").classList.add("d-none");
+              document.getElementById("vpnAlert").classList.add("d-none");
+              document.getElementById("vpnSuccess").classList.remove("d-none");
+
+              // Hide VPN check and show home page
+              setTimeout(() => {
+                document.getElementById("vpnCheck").classList.add("hidden");
+                document.getElementById("home").classList.remove("hidden");
+              }, 2000);
+            }
+          }
+        } catch (e) {
+          document.getElementById("vpnStatus").textContent =
+            "Failed to check IP (API error)";
+          document.getElementById("retryVpnCheck").classList.remove("d-none");
+          console.error("VPN check error:", e);
+        }
+      }
+
+      // Update UI with user data
+      function updateUI() {
+        if (!userData) return;
+
+        // Format balance with commas
+        const formattedBalance = userData.balance
+          .toFixed(2)
+          .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        const formattedTotalEarnings = userData.totalEarnings
+          .toFixed(2)
+          .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        const formattedWithdrawn = userData.withdrawn
+          .toFixed(2)
+          .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        const formattedReferralEarnings = userData.referralEarnings
+          .toFixed(2)
+          .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+        if (document.getElementById("balance")) {
+          document.getElementById("balance").innerText = formattedBalance;
+        }
+        if (document.getElementById("availableBalance")) {
+          document.getElementById("availableBalance").innerText =
+            formattedBalance;
+        }
+        if (document.getElementById("availableBalanceProfile")) {
+          document.getElementById("availableBalanceProfile").innerText =
+            formattedBalance;
+        }
+        if (document.getElementById("totalEarningsHome")) {
+          document.getElementById("totalEarningsHome").innerText =
+            formattedTotalEarnings;
+        }
+        if (document.getElementById("totalEarnings")) {
+          document.getElementById("totalEarnings").innerText =
+            formattedTotalEarnings;
+        }
+        if (document.getElementById("withdrawnAmount")) {
+          document.getElementById("withdrawnAmount").innerText =
+            formattedWithdrawn;
+        }
+        if (document.getElementById("referralEarnings")) {
+          document.getElementById("referralEarnings").innerText =
+            formattedReferralEarnings;
+        }
+        if (document.getElementById("completed")) {
+          document.getElementById("completed").innerText =
+            userData.completedTasks;
+        }
+        if (document.getElementById("remaining")) {
+          document.getElementById("remaining").innerText =
+            appConfig.dailyLimit - userData.completedTasks;
+        }
+
+        let percent = Math.round(
+          (userData.completedTasks / appConfig.dailyLimit) * 100
+        );
+        if (document.getElementById("videoProgressBar")) {
+          document.getElementById("videoProgressBar").style.width =
+            percent + "%";
+        }
+
+        // Update ad button with correct reward amount
+        const adReward = appConfig.adsRewards || 0.2;
+        if (document.getElementById("watchAdBtn")) {
+          document.getElementById(
+            "watchAdBtn"
+          ).innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(
+            2
+          )} BDT)`;
+        }
+
+        // Update referral text with correct percentage
+        const referralCommission = appConfig.referralCommission || 10;
+        if (document.getElementById("referralText")) {
+          document.getElementById(
+            "referralText"
+          ).textContent = `Earn ${referralCommission}% of your referrals' earnings`;
+        }
+
+        // Update history table
+        filterHistory("all");
+      }
+
+      // Initialize video rewards system
+      function initVideoRewards() {
+        // Add event listener to watch ad button
+        if (document.getElementById("watchAdBtn")) {
+          document
+            .getElementById("watchAdBtn")
+            .addEventListener("click", watchAd);
+        }
+
+        // Add event listener to claim button
+        if (document.getElementById("claimRewardBtn")) {
+          document
+            .getElementById("claimRewardBtn")
+            .addEventListener("click", claimReward);
+        }
+      }
+
+      // Wait for GigaPub to load
+      function waitForGiga() {
+        return new Promise((resolve, reject) => {
+          const check = () => {
+            if (typeof window.showGiga === "function") resolve();
+            else setTimeout(check, 100);
+          };
+          check();
+        });
+      }
+
+      // Check cooldown status on page load
+      function checkCooldownStatus() {
+        if (userData && userData.lastAdAttempt) {
+          const now = Date.now();
+          const timeSinceLastAttempt = (now - userData.lastAdAttempt) / 1000;
+          const timeRemaining = MIN_WAIT_SEC - timeSinceLastAttempt;
+
+          if (timeRemaining > 0) {
+            // Still in cooldown period
+            startCooldown(timeRemaining);
+          }
+        }
+      }
+
+      // Start cooldown timer
+      function startCooldown(seconds) {
+        const adButton = document.getElementById("watchAdBtn");
+        const claimButton = document.getElementById("claimRewardBtn");
+        const cooldownTimer = document.getElementById("cooldownTimer");
+        const cooldownSeconds = document.getElementById("cooldownSeconds");
+
+        // Disable buttons and show cooldown timer
+        adButton.disabled = true;
+        claimButton.style.display = "none";
+        cooldownTimer.style.display = "block";
+
+        let remainingSeconds = Math.ceil(seconds);
+        cooldownSeconds.textContent = remainingSeconds;
+
+        // Update cooldown timer
+        cooldownInterval = setInterval(() => {
+          remainingSeconds--;
+          cooldownSeconds.textContent = remainingSeconds;
+
+          if (remainingSeconds <= 0) {
+            clearInterval(cooldownInterval);
+            cooldownTimer.style.display = "none";
+            adButton.disabled = false;
+
+            // Reset ad button text
+            const adReward = appConfig.adsRewards || 0.2;
+            adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(
+              2
+            )} BDT)`;
+
+            // Update status
+            document.getElementById("adStatus").textContent =
+              "Ready to watch videos";
+          }
+        }, 1000);
+      }
+
+      // Watch ad function for video rewards with concurrency safety
+      async function watchAd() {
+        if (userData.completedTasks >= appConfig.dailyLimit) {
+          showNotification(
+            "Completed",
+            "All tasks completed for today",
+            "info"
+          );
+          return;
+        }
+
+        if (sessionActive) {
+          showNotification(
+            "Info",
+            "Please complete the current video first",
+            "info"
+          );
+          return;
+        }
+
+        try {
+          // Disable button to prevent multiple clicks
+          const adButton = document.getElementById("watchAdBtn");
+          const claimButton = document.getElementById("claimRewardBtn");
+          const statusEl = document.getElementById("adStatus");
+
+          adButton.disabled = true;
+          adButton.innerHTML =
+            '<i class="bi bi-hourglass-split me-2"></i> Loading...';
+
+          // Update status
+          statusEl.textContent = "Loading ad…";
+          setProgress(0);
+
+          // Record ad attempt time with atomic update
+          await atomicUserUpdate((currentData) => {
+            return {
+              ...currentData,
+              lastAdAttempt: Date.now(),
+              version: Date.now(),
+            };
+          });
+
+          adStartTime = Date.now();
+          statusEl.textContent = "Watching ad...";
+          sessionActive = true;
+          sessionClaimed = false;
+
+          // Show the ad
+          await window.showGiga();
+
+          statusEl.textContent = "Ad finished ✓ — now claim";
+          setProgress(85);
+          claimButton.style.display = "block";
+          claimButton.disabled = false;
+        } catch (e) {
+          console.error("Ad failed or closed before completion", e);
+          showNotification(
+            "Error",
+            "Video not loaded. Please try again",
+            "danger"
+          );
+
+          // Reset button state
+          const adButton = document.getElementById("watchAdBtn");
+          const claimButton = document.getElementById("claimRewardBtn");
+          const statusEl = document.getElementById("adStatus");
+          const adReward = appConfig.adsRewards || 0.2;
+
+          adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(
+            2
+          )} BDT)`;
+          adButton.disabled = false;
+          claimButton.style.display = "none";
+          statusEl.textContent = "Failed to load video. Try again.";
+          setProgress(0);
+          sessionActive = false;
+        }
+      }
+
+      // Set progress bar
+      function setProgress(p) {
+        const progressBar = document.getElementById("videoProgressBar");
+        progressBar.style.width = Math.max(0, Math.min(100, p)) + "%";
+      }
+
+      // Claim reward after watching ad with concurrency safety
+      async function claimReward() {
+        if (!sessionActive) {
+          showNotification("Error", "No active ad session", "danger");
+          return;
+        }
+
+        if (sessionClaimed) {
+          showNotification(
+            "Info",
+            "Reward already claimed for this session",
+            "info"
+          );
+          return;
+        }
+
+        let elapsed = (Date.now() - adStartTime) / 1000;
+        if (elapsed < MIN_WAIT_SEC) {
+          // Start cooldown period
+          startCooldown(MIN_WAIT_SEC - elapsed);
+
+          showNotification(
+            "Error",
+            `Wait ${MIN_WAIT_SEC}s before trying again`,
+            "danger"
+          );
+          return;
+        }
+
+        if (userData.completedTasks >= appConfig.dailyLimit) {
+          showNotification(
+            "Completed",
+            "All tasks completed for today",
+            "info"
+          );
+          return;
+        }
+
+        try {
+          // Update user data with atomic operation
+          const rewardAmount = appConfig.adsRewards || 0.2;
+
+          await atomicUserUpdate((currentData) => {
+            if (currentData.completedTasks >= appConfig.dailyLimit) {
+              // Another operation might have completed the daily limit
+              throw new Error("Daily limit reached");
+            }
+
+            return {
+              ...currentData,
+              completedTasks: currentData.completedTasks + 1,
+              balance: currentData.balance + rewardAmount,
+              totalEarnings: currentData.totalEarnings + rewardAmount,
+              lastAdAttempt: 0, // Reset cooldown
+              history: [
+                {
+                  type: "earning",
+                  method: "Video Reward",
+                  amount: rewardAmount.toFixed(2),
+                  address: "Video Ad",
+                  status: "Completed",
+                  date: new Date().toLocaleDateString(),
+                  timestamp: Date.now(),
+                },
+                ...(currentData.history || []),
+              ].slice(0, 50), // Keep only last 50 transactions
+              version: Date.now(),
+            };
+          });
+
+          // Update UI
+          updateUI();
+
+          // Reset ad state
+          sessionActive = false;
+          sessionClaimed = true;
+
+          // Update UI elements
+          const adButton = document.getElementById("watchAdBtn");
+          const claimButton = document.getElementById("claimRewardBtn");
+          const statusEl = document.getElementById("adStatus");
+
+          adButton.style.display = "block";
+          claimButton.style.display = "none";
+
+          // Update status
+          statusEl.textContent = "Reward granted ✅";
+          setProgress(100);
+
+          // Update ad button text
+          const adReward = appConfig.adsRewards || 0.2;
+          adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(
+            2
+          )} BDT)`;
+          adButton.disabled = false;
+
+          showNotification(
+            "Success",
+            `Earned ${rewardAmount.toFixed(2)} BDT!`,
+            "success"
+          );
+        } catch (error) {
+          console.error("Error claiming reward:", error);
+          if (error.message === "Daily limit reached") {
+            showNotification(
+              "Completed",
+              "All tasks completed for today",
+              "info"
+            );
+          } else {
+            showNotification(
+              "Error",
+              "Failed to claim reward. Try again",
+              "danger"
+            );
+          }
+
+          // Reset UI state
+          const adButton = document.getElementById("watchAdBtn");
+          const claimButton = document.getElementById("claimRewardBtn");
+          const adReward = appConfig.adsRewards || 0.2;
+
+          adButton.innerHTML = `<i class="bi bi-play-circle me-2"></i> Watch Video (+${adReward.toFixed(
+            2
+          )} BDT)`;
+          adButton.disabled = false;
+          claimButton.style.display = "none";
+          sessionActive = false;
+        }
+      }
+
+      // Show survey page
+      function showSurveyPage() {
+        document
+          .querySelectorAll("div.container")
+          .forEach((div) => div.classList.add("hidden"));
+        document.getElementById("surveyPage").classList.remove("hidden");
+        document
+          .querySelectorAll(".bottom-nav a")
+          .forEach((a) => a.classList.remove("active"));
+      }
+
+      // Hide survey page
+      function hideSurveyPage() {
+        // If a survey was started but not completed, don't award anything
+        if (currentSurvey) {
+          showNotification("Info", "Survey not completed. No reward", "info");
+        }
+
+        // Reset survey state
+        currentSurvey = null;
+        if (surveyCheckInterval) {
+          clearInterval(surveyCheckInterval);
+          surveyCheckInterval = null;
+        }
+
+        document.getElementById("surveyPage").classList.add("hidden");
+        document.getElementById("rewards").classList.remove("hidden");
+        document
+          .querySelector('.bottom-nav a[onclick*="rewards"]')
+          .classList.add("active");
+      }
+
+      // Load surveys - UPDATED FUNCTION
+      function loadSurveys() {
+        const surveysContainer = document.getElementById("surveysContainer");
+        if (!surveysContainer) return;
+
+        surveysContainer.innerHTML = "";
+
+        if (!appConfig || !appConfig.surveys) {
+          surveysContainer.innerHTML = `
       <div class="text-center text-muted py-4">
         <i class="bi bi-inbox display-4 d-block mb-3"></i>
         <p>No surveys available at the moment. Check back later!</p>
       </div>
     `;
-    return;
-  }
+          return;
+        }
 
-  // Filter active surveys
-  const activeSurveys = appConfig.surveys.filter(survey => survey.status === "active");
-  
-  if (activeSurveys.length === 0) {
-    surveysContainer.innerHTML = `
+        // Filter active surveys
+        const activeSurveys = appConfig.surveys.filter(
+          (survey) => survey.status === "active"
+        );
+
+        if (activeSurveys.length === 0) {
+          surveysContainer.innerHTML = `
       <div class="text-center text-muted py-4">
         <i class="bi bi-inbox display-4 d-block mb-3"></i>
         <p>No surveys available at the moment. Check back later!</p>
       </div>
     `;
-    return;
-  }
+          return;
+        }
 
-  // Create survey items
-  activeSurveys.forEach((survey) => {
-    // Check if user has already completed this survey
-    const isCompleted = userData.completedSurveys && userData.completedSurveys[survey.id];
-    
-    const surveyItem = document.createElement("div");
-    surveyItem.className = `survey-item ${isCompleted ? "survey-completed" : ""}`;
-    
-    surveyItem.innerHTML = `
+        // Create survey items
+        activeSurveys.forEach((survey) => {
+          // Check if user has already completed this survey
+          const isCompleted =
+            userData.completedSurveys && userData.completedSurveys[survey.id];
+
+          const surveyItem = document.createElement("div");
+          surveyItem.className = `survey-item ${
+            isCompleted ? "survey-completed" : ""
+          }`;
+
+          surveyItem.innerHTML = `
       <div class="survey-header">
         <img src="${survey.image}" alt="${survey.name}" class="survey-icon">
         <div class="flex-grow-1">
           <div class="survey-title">${survey.name}</div>
           <div class="survey-reward">+ ${survey.reward.toFixed(2)} BDT</div>
         </div>
-        ${isCompleted ? '<span class="survey-completed-badge"><i class="bi bi-check-circle-fill"></i> Completed</span>' : ''}
+        ${
+          isCompleted
+            ? '<span class="survey-completed-badge"><i class="bi bi-check-circle-fill"></i> Completed</span>'
+            : ""
+        }
       </div>
       <div class="survey-description">
-        Complete this survey to earn ${survey.reward.toFixed(2)} BDT. This should take approximately 5-10 minutes.
+        Complete this survey to earn ${survey.reward.toFixed(
+          2
+        )} BDT. This should take approximately 5-10 minutes.
       </div>
       <div class="survey-actions">
-        <button class="survey-btn survey-btn-primary" onclick="startSurvey(${survey.id})" ${isCompleted ? "disabled" : ""}>
+        <button class="survey-btn survey-btn-primary" onclick="startSurvey(${
+          survey.id
+        })" ${isCompleted ? "disabled" : ""}>
           <i class="bi bi-play-circle"></i> Start Survey
         </button>
-        <button class="survey-btn survey-btn-secondary" onclick="verifySurvey(${survey.id})" ${isCompleted ? "" : "disabled"} id="verifyBtn-${survey.id}">
-          ${isCompleted ? '<i class="bi bi-check-circle"></i> Claimed' : '<i class="bi bi-arrow-repeat"></i> Verify'}
+        <button class="survey-btn survey-btn-secondary" onclick="verifySurvey(${
+          survey.id
+        })" ${isCompleted ? "" : "disabled"} id="verifyBtn-${survey.id}">
+          ${
+            isCompleted
+              ? '<i class="bi bi-check-circle"></i> Claimed'
+              : '<i class="bi bi-arrow-repeat"></i> Verify'
+          }
         </button>
       </div>
     `;
-    
-    surveysContainer.appendChild(surveyItem);
-  });
-}
 
-// Start survey - MODIFIED to enable verify button instantly
-function startSurvey(surveyId) {
-  const survey = appConfig.surveys.find((s) => s.id === surveyId);
-  if (!survey) return;
-
-  // Check if user has already completed this survey
-  if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
-    showNotification("Info", "Already completed this survey", "info");
-    return;
-  }
-
-  if (userData.completedTasks < appConfig.dailyLimit) {
-    // Store the current survey
-    currentSurvey = survey;
-
-    // Enable the verify button instantly
-    const verifyButton = document.getElementById(`verifyBtn-${surveyId}`);
-    if (verifyButton) {
-      verifyButton.disabled = false;
-    }
-
-    // Open the survey URL in a new tab
-    surveyWindow = window.open(survey.url, "_blank", "noopener,noreferrer");
-
-    // Show instructions
-    showNotification("Info", "Survey opened in new tab. Complete it and click Verify", "info");
-  } else {
-    showNotification("Completed", "All tasks completed for today", "info");
-  }
-}
-
-// Verify survey - MODIFIED to handle instant verification with concurrency safety
-async function verifySurvey(surveyId) {
-  const survey = appConfig.surveys.find((s) => s.id === surveyId);
-  if (!survey) return;
-
-  // Check if user has completed this survey
-  if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
-    showNotification(
-      "Info",
-      "Already claimed reward for this survey",
-      "info"
-    );
-  } else {
-    // Ask user if they completed the survey
-    const completed = confirm(
-      "Have you completed the survey? Click OK to claim your reward, or Cancel if you didn't finish it."
-    );
-
-    if (completed) {
-      await completeSurvey(survey);
-    } else {
-      showNotification(
-        "Info",
-        "Survey not completed. Please finish the survey",
-        "info"
-      );
-    }
-  }
-}
-
-// Complete survey with concurrency safety
-async function completeSurvey(survey) {
-  if (!survey) return;
-
-  try {
-    // Update user data with atomic operation
-    await atomicUserUpdate((currentData) => {
-      if (currentData.completedTasks >= appConfig.dailyLimit) {
-        throw new Error("Daily limit reached");
+          surveysContainer.appendChild(surveyItem);
+        });
       }
-      
-      if (currentData.completedSurveys && currentData.completedSurveys[survey.id]) {
-        throw new Error("Survey already completed");
-      }
-      
-      const updatedCompletedSurveys = {
-        ...(currentData.completedSurveys || {}),
-        [survey.id]: true
-      };
-      
-      return {
-        ...currentData,
-        completedTasks: currentData.completedTasks + 1,
-        balance: currentData.balance + survey.reward,
-        totalEarnings: currentData.totalEarnings + survey.reward,
-        completedSurveys: updatedCompletedSurveys,
-        history: [
-          {
-            type: "earning",
-            method: "Survey",
-            amount: survey.reward.toFixed(2),
-            address: survey.name,
-            status: "Completed",
-            date: new Date().toLocaleDateString(),
-            timestamp: Date.now()
-          },
-          ...(currentData.history || [])
-        ].slice(0, 50), // Keep only last 50 transactions
-        version: Date.now()
-      };
-    });
 
-    // Update survey completion in app config with transaction
-    await database.ref(`appConfig/surveys`).transaction((surveys) => {
-      if (!surveys) return surveys;
-      
-      const updatedSurveys = surveys.map(s => {
-        if (s.id === survey.id) {
-          return {
-            ...s,
-            completedBy: {
-              ...(s.completedBy || {}),
-              [userId]: true
-            }
-          };
+      // Start survey - MODIFIED to enable verify button instantly
+      function startSurvey(surveyId) {
+        const survey = appConfig.surveys.find((s) => s.id === surveyId);
+        if (!survey) return;
+
+        // Check if user has already completed this survey
+        if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
+          showNotification("Info", "Already completed this survey", "info");
+          return;
         }
-        return s;
-      });
-      
-      return updatedSurveys;
-    });
 
-    // Update UI
-    updateUI();
-    loadSurveys(); // Reload surveys to update completion status
-    showNotification(
-      "Success",
-      `Earned ${survey.reward.toFixed(2)} BDT from survey!`,
-      "success"
-    );
+        if (userData.completedTasks < appConfig.dailyLimit) {
+          // Store the current survey
+          currentSurvey = survey;
 
-    // Reset current survey
-    currentSurvey = null;
-  } catch (error) {
-    console.error("Error completing survey:", error);
-    if (error.message === "Daily limit reached") {
-      showNotification("Completed", "All tasks completed for today", "info");
-    } else if (error.message === "Survey already completed") {
-      showNotification("Info", "Already completed this survey", "info");
-      // Reload surveys to update UI
-      loadSurveys();
-    } else {
-      showNotification("Error", "Failed to complete survey. Try again", "danger");
-    }
-  }
-}
+          // Enable the verify button instantly
+          const verifyButton = document.getElementById(`verifyBtn-${surveyId}`);
+          if (verifyButton) {
+            verifyButton.disabled = false;
+          }
 
-// Withdraw funds with concurrency safety
-async function withdraw() {
-  let method = document.getElementById("method").value;
-  let amount = parseFloat(document.getElementById("amount").value);
-  let address = document.getElementById("address").value;
+          // Open the survey URL in a new tab
+          surveyWindow = window.open(
+            survey.url,
+            "_blank",
+            "noopener,noreferrer"
+          );
 
-  if (!method || !amount || !address) {
-    return showNotification("Error", "Please fill all fields", "danger");
-  }
-
-  if (amount < appConfig.minWithdraw) {
-    return showNotification(
-      "Error",
-      `Minimum withdrawal is ${appConfig.minWithdraw} BDT`,
-      "danger"
-    );
-  }
-
-  try {
-    // Update user data with atomic operation
-    await atomicUserUpdate((currentData) => {
-      if (amount > currentData.balance) {
-        throw new Error("Insufficient balance");
+          // Show instructions
+          showNotification(
+            "Info",
+            "Survey opened in new tab. Complete it and click Verify",
+            "info"
+          );
+        } else {
+          showNotification(
+            "Completed",
+            "All tasks completed for today",
+            "info"
+          );
+        }
       }
-      
-      return {
-        ...currentData,
-        balance: currentData.balance - amount,
-        withdrawn: currentData.withdrawn + amount,
-        history: [
-          {
-            type: "withdrawal",
-            method,
-            amount: amount.toFixed(2),
-            address,
-            status: "Pending",
-            date: new Date().toLocaleDateString(),
-            timestamp: Date.now()
-          },
-          ...(currentData.history || [])
-        ].slice(0, 50), // Keep only last 50 transactions
-        version: Date.now()
-      };
-    });
 
-    // Update UI
-    updateUI();
-    showNotification(
-      "Success",
-      "Withdrawal request submitted",
-      "success"
-    );
+      // Verify survey - MODIFIED to handle instant verification with concurrency safety
+      async function verifySurvey(surveyId) {
+        const survey = appConfig.surveys.find((s) => s.id === surveyId);
+        if (!survey) return;
 
-    // Clear form
-    document.getElementById("method").value = "";
-    document.getElementById("amount").value = "";
-    document.getElementById("address").value = "";
-  } catch (error) {
-    console.error("Error processing withdrawal:", error);
-    if (error.message === "Insufficient balance") {
-      showNotification("Error", "Not enough balance", "danger");
-    } else {
-      showNotification("Error", "Failed to process withdrawal. Try again", "danger");
-    }
-  }
-}
+        // Check if user has completed this survey
+        if (userData.completedSurveys && userData.completedSurveys[survey.id]) {
+          showNotification(
+            "Info",
+            "Already claimed reward for this survey",
+            "info"
+          );
+        } else {
+          // Ask user if they completed the survey
+          const completed = confirm(
+            "Have you completed the survey? Click OK to claim your reward, or Cancel if you didn't finish it."
+          );
 
-// Copy invite link
-function copyInviteLink() {
-  const copyText = document.getElementById("inviteLink");
-  copyText.select();
-  copyText.setSelectionRange(0, 99999); // For mobile devices
-  navigator.clipboard
-    .writeText(copyText.value)
-    .then(() => {
-      showNotification("Success", "Invite link copied", "success");
-    })
-    .catch((err) => {
-      console.error("Failed to copy: ", err);
-      // Fallback for browsers that don't support clipboard API
-      copyText.select();
-      document.execCommand("copy");
-      showNotification("Success", "Invite link copied", "success");
-    });
-}
-
-// Copy invite ID
-function copyInviteID() {
-  const copyText = document.getElementById("inviteID");
-  copyText.select();
-  copyText.setSelectionRange(0, 99999); // For mobile devices
-  navigator.clipboard
-    .writeText(copyText.value)
-    .then(() => {
-      showNotification("Success", "Referral ID copied", "success");
-    })
-    .catch((err) => {
-      console.error("Failed to copy: ", err);
-      // Fallback for browsers that don't support clipboard API
-      copyText.select();
-      document.execCommand("copy");
-      showNotification("Success", "Referral ID copied", "success");
-    });
-}
-
-// Submit referral ID - FIXED to properly validate and count referrals
-async function submitReferralId() {
-  const referralId = document.getElementById("referralIdInput").value.trim();
-  
-  if (!referralId) {
-    showNotification("Error", "Please enter a referral ID", "danger");
-    return;
-  }
-  
-  // Check if user is trying to use their own referral code
-  if (userData && userData.referralCode === referralId) {
-    showNotification("Error", "Cannot use your own referral code", "danger");
-    return;
-  }
-  
-  // Validate the referral code
-  const isValid = await validateReferralCode(referralId);
-  
-  if (isValid) {
-    // Update the user's data to include the referrer
-    await atomicUserUpdate((currentData) => {
-      return {
-        ...currentData,
-        referredBy: referrerId,
-        version: Date.now()
-      };
-    });
-    
-    // Update the referrer's count
-    await updateReferrerCount(referrerId);
-    
-    // Hide the referral section
-    hideReferralSection();
-    
-    showNotification("Success", "Referral submitted successfully", "success");
-    document.getElementById("referralIdInput").value = "";
-  } else {
-    showNotification("Error", "Invalid referral ID", "danger");
-  }
-}
-
-// Validate referral code
-async function validateReferralCode(code) {
-  try {
-    // Check if code exists in users collection
-    const usersRef = database.ref("users");
-    const snapshot = await usersRef.orderByChild("referralCode").equalTo(code).once("value");
-    
-    if (snapshot.exists()) {
-      const userData = snapshot.val();
-      referrerId = Object.keys(userData)[0];
-      return true;
-    }
-    
-    return false;
-  } catch (error) {
-    console.error("Error validating referral code:", error);
-    return false;
-  }
-}
-
-// Redeem promo code with concurrency safety
-async function redeemPromoCode() {
-  const promoCode = document
-    .getElementById("promoCodeInput")
-    .value.trim()
-    .toUpperCase();
-
-  if (!promoCode) {
-    return showNotification(
-      "Error",
-      "Please enter a promo code",
-      "danger"
-    );
-  }
-
-  try {
-    // Check if promo code exists and is valid
-    if (!appConfig.promoCodes || !appConfig.promoCodes[promoCode]) {
-      return showNotification("Error", "Invalid promo code", "danger");
-    }
-
-    const promoCodeData = appConfig.promoCodes[promoCode];
-
-    // Check if promo code is active
-    if (promoCodeData.status !== "active") {
-      return showNotification(
-        "Error",
-        "This promo code is not active",
-        "danger"
-      );
-    }
-
-    // Update user data with atomic operation
-    await atomicUserUpdate((currentData) => {
-      // Check if user already used this promo code
-      if (currentData.usedPromoCodes && currentData.usedPromoCodes.includes(promoCode)) {
-        throw new Error("Promo code already used");
+          if (completed) {
+            await completeSurvey(survey);
+          } else {
+            showNotification(
+              "Info",
+              "Survey not completed. Please finish the survey",
+              "info"
+            );
+          }
+        }
       }
-      
-      const reward = promoCodeData.value;
-      const updatedUsedPromoCodes = [
-        ...(currentData.usedPromoCodes || []),
-        promoCode
-      ];
-      
-      return {
-        ...currentData,
-        balance: currentData.balance + reward,
-        totalEarnings: currentData.totalEarnings + reward,
-        usedPromoCodes: updatedUsedPromoCodes,
-        history: [
-          {
-            type: "earning",
-            method: "Promo Code",
-            amount: reward.toFixed(2),
-            address: promoCode,
-            status: "Completed",
-            date: new Date().toLocaleDateString(),
-            timestamp: Date.now()
-          },
-          ...(currentData.history || [])
-        ].slice(0, 50), // Keep only last 50 transactions
-        version: Date.now()
-      };
-    });
 
-    // Update promo code usage count in app config with transaction
-    await database.ref(`appConfig/promoCodes/${promoCode}/used`).transaction((currentUsed) => {
-      return (currentUsed || 0) + 1;
-    });
+      // Complete survey with concurrency safety
+      async function completeSurvey(survey) {
+        if (!survey) return;
 
-    // Update UI
-    updateUI();
-    showNotification(
-      "Success",
-      `Received ${promoCodeData.value} BDT from promo code ${promoCode}`,
-      "success"
-    );
+        try {
+          // Update user data with atomic operation
+          await atomicUserUpdate((currentData) => {
+            if (currentData.completedTasks >= appConfig.dailyLimit) {
+              throw new Error("Daily limit reached");
+            }
 
-    // Clear input
-    document.getElementById("promoCodeInput").value = "";
-  } catch (error) {
-    console.error("Error redeeming promo code:", error);
-    if (error.message === "Promo code already used") {
-      showNotification(
-        "Error",
-        "Already used this promo code",
-        "danger"
-      );
-    } else {
-      showNotification("Error", "Failed to redeem promo code. Try again", "danger");
-    }
-  }
-}
+            if (
+              currentData.completedSurveys &&
+              currentData.completedSurveys[survey.id]
+            ) {
+              throw new Error("Survey already completed");
+            }
 
-// Filter history
-function filterHistory(type) {
-  let table = document.getElementById("historyTable");
-  if (!table) return;
-  
-  table.innerHTML = "";
+            const updatedCompletedSurveys = {
+              ...(currentData.completedSurveys || {}),
+              [survey.id]: true,
+            };
 
-  if (!userData || !userData.history) return;
+            return {
+              ...currentData,
+              completedTasks: currentData.completedTasks + 1,
+              balance: currentData.balance + survey.reward,
+              totalEarnings: currentData.totalEarnings + survey.reward,
+              completedSurveys: updatedCompletedSurveys,
+              history: [
+                {
+                  type: "earning",
+                  method: "Survey",
+                  amount: survey.reward.toFixed(2),
+                  address: survey.name,
+                  status: "Completed",
+                  date: new Date().toLocaleDateString(),
+                  timestamp: Date.now(),
+                },
+                ...(currentData.history || []),
+              ].slice(0, 50), // Keep only last 50 transactions
+              version: Date.now(),
+            };
+          });
 
-  let filteredData = userData.history;
-  if (type !== "all") {
-    filteredData = userData.history.filter((tx) => tx.type === type);
-  }
+          // Update survey completion in app config with transaction
+          await database.ref(`appConfig/surveys`).transaction((surveys) => {
+            if (!surveys) return surveys;
 
-  // Sort by timestamp (newest first)
-  filteredData.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-  
-  filteredData.slice(0, 5).forEach((tx) => {
-    let statusClass = "";
-    if (tx.status === "Pending") statusClass = "text-warning";
-    if (tx.status === "Completed") statusClass = "text-success";
-    if (tx.status === "Failed") statusClass = "text-danger";
-    if (tx.status === "Rejected") statusClass = "text-danger";
+            const updatedSurveys = surveys.map((s) => {
+              if (s.id === survey.id) {
+                return {
+                  ...s,
+                  completedBy: {
+                    ...(s.completedBy || {}),
+                    [userId]: true,
+                  },
+                };
+              }
+              return s;
+            });
 
-    let row = `
+            return updatedSurveys;
+          });
+
+          // Update UI
+          updateUI();
+          loadSurveys(); // Reload surveys to update completion status
+          showNotification(
+            "Success",
+            `Earned ${survey.reward.toFixed(2)} BDT from survey!`,
+            "success"
+          );
+
+          // Reset current survey
+          currentSurvey = null;
+        } catch (error) {
+          console.error("Error completing survey:", error);
+          if (error.message === "Daily limit reached") {
+            showNotification(
+              "Completed",
+              "All tasks completed for today",
+              "info"
+            );
+          } else if (error.message === "Survey already completed") {
+            showNotification("Info", "Already completed this survey", "info");
+            // Reload surveys to update UI
+            loadSurveys();
+          } else {
+            showNotification(
+              "Error",
+              "Failed to complete survey. Try again",
+              "danger"
+            );
+          }
+        }
+      }
+
+      // Withdraw funds with concurrency safety
+      async function withdraw() {
+        let method = document.getElementById("method").value;
+        let amount = parseFloat(document.getElementById("amount").value);
+        let address = document.getElementById("address").value;
+
+        if (!method || !amount || !address) {
+          return showNotification("Error", "Please fill all fields", "danger");
+        }
+
+        if (amount < appConfig.minWithdraw) {
+          return showNotification(
+            "Error",
+            `Minimum withdrawal is ${appConfig.minWithdraw} BDT`,
+            "danger"
+          );
+        }
+
+        try {
+          // Update user data with atomic operation
+          await atomicUserUpdate((currentData) => {
+            if (amount > currentData.balance) {
+              throw new Error("Insufficient balance");
+            }
+
+            return {
+              ...currentData,
+              balance: currentData.balance - amount,
+              withdrawn: currentData.withdrawn + amount,
+              history: [
+                {
+                  type: "withdrawal",
+                  method,
+                  amount: amount.toFixed(2),
+                  address,
+                  status: "Pending",
+                  date: new Date().toLocaleDateString(),
+                  timestamp: Date.now(),
+                },
+                ...(currentData.history || []),
+              ].slice(0, 50), // Keep only last 50 transactions
+              version: Date.now(),
+            };
+          });
+
+          // Update UI
+          updateUI();
+          showNotification(
+            "Success",
+            "Withdrawal request submitted",
+            "success"
+          );
+
+          // Clear form
+          document.getElementById("method").value = "";
+          document.getElementById("amount").value = "";
+          document.getElementById("address").value = "";
+        } catch (error) {
+          console.error("Error processing withdrawal:", error);
+          if (error.message === "Insufficient balance") {
+            showNotification("Error", "Not enough balance", "danger");
+          } else {
+            showNotification(
+              "Error",
+              "Failed to process withdrawal. Try again",
+              "danger"
+            );
+          }
+        }
+      }
+
+      // Copy invite link
+      function copyInviteLink() {
+        const copyText = document.getElementById("inviteLink");
+        copyText.select();
+        copyText.setSelectionRange(0, 99999); // For mobile devices
+        navigator.clipboard
+          .writeText(copyText.value)
+          .then(() => {
+            showNotification("Success", "Invite link copied", "success");
+          })
+          .catch((err) => {
+            console.error("Failed to copy: ", err);
+            // Fallback for browsers that don't support clipboard API
+            copyText.select();
+            document.execCommand("copy");
+            showNotification("Success", "Invite link copied", "success");
+          });
+      }
+
+      // Copy invite ID
+      function copyInviteID() {
+        const copyText = document.getElementById("inviteID");
+        copyText.select();
+        copyText.setSelectionRange(0, 99999); // For mobile devices
+        navigator.clipboard
+          .writeText(copyText.value)
+          .then(() => {
+            showNotification("Success", "Referral ID copied", "success");
+          })
+          .catch((err) => {
+            console.error("Failed to copy: ", err);
+            // Fallback for browsers that don't support clipboard API
+            copyText.select();
+            document.execCommand("copy");
+            showNotification("Success", "Referral ID copied", "success");
+          });
+      }
+
+      // Submit referral ID - FIXED to properly validate and count referrals
+      async function submitReferralId() {
+        const referralId = document
+          .getElementById("referralIdInput")
+          .value.trim();
+
+        if (!referralId) {
+          showNotification("Error", "Please enter a referral ID", "danger");
+          return;
+        }
+
+        // Check if user is trying to use their own referral code
+        if (userData && userData.referralCode === referralId) {
+          showNotification(
+            "Error",
+            "Cannot use your own referral code",
+            "danger"
+          );
+          return;
+        }
+
+        // Validate the referral code
+        const isValid = await validateReferralCode(referralId);
+
+        if (isValid) {
+          // Update the user's data to include the referrer
+          await atomicUserUpdate((currentData) => {
+            return {
+              ...currentData,
+              referredBy: referrerId,
+              version: Date.now(),
+            };
+          });
+
+          // Update the referrer's count
+          await updateReferrerCount(referrerId);
+
+          // Hide the referral section
+          hideReferralSection();
+
+          showNotification(
+            "Success",
+            "Referral submitted successfully",
+            "success"
+          );
+          document.getElementById("referralIdInput").value = "";
+        } else {
+          showNotification("Error", "Invalid referral ID", "danger");
+        }
+      }
+
+      // Validate referral code
+      async function validateReferralCode(code) {
+        try {
+          // Check if code exists in users collection
+          const usersRef = database.ref("users");
+          const snapshot = await usersRef
+            .orderByChild("referralCode")
+            .equalTo(code)
+            .once("value");
+
+          if (snapshot.exists()) {
+            const userData = snapshot.val();
+            referrerId = Object.keys(userData)[0];
+            return true;
+          }
+
+          return false;
+        } catch (error) {
+          console.error("Error validating referral code:", error);
+          return false;
+        }
+      }
+
+      // Redeem promo code with concurrency safety
+      async function redeemPromoCode() {
+        const promoCode = document
+          .getElementById("promoCodeInput")
+          .value.trim()
+          .toUpperCase();
+
+        if (!promoCode) {
+          return showNotification(
+            "Error",
+            "Please enter a promo code",
+            "danger"
+          );
+        }
+
+        try {
+          // Check if promo code exists and is valid
+          if (!appConfig.promoCodes || !appConfig.promoCodes[promoCode]) {
+            return showNotification("Error", "Invalid promo code", "danger");
+          }
+
+          const promoCodeData = appConfig.promoCodes[promoCode];
+
+          // Check if promo code is active
+          if (promoCodeData.status !== "active") {
+            return showNotification(
+              "Error",
+              "This promo code is not active",
+              "danger"
+            );
+          }
+
+          // Update user data with atomic operation
+          await atomicUserUpdate((currentData) => {
+            // Check if user already used this promo code
+            if (
+              currentData.usedPromoCodes &&
+              currentData.usedPromoCodes.includes(promoCode)
+            ) {
+              throw new Error("Promo code already used");
+            }
+
+            const reward = promoCodeData.value;
+            const updatedUsedPromoCodes = [
+              ...(currentData.usedPromoCodes || []),
+              promoCode,
+            ];
+
+            return {
+              ...currentData,
+              balance: currentData.balance + reward,
+              totalEarnings: currentData.totalEarnings + reward,
+              usedPromoCodes: updatedUsedPromoCodes,
+              history: [
+                {
+                  type: "earning",
+                  method: "Promo Code",
+                  amount: reward.toFixed(2),
+                  address: promoCode,
+                  status: "Completed",
+                  date: new Date().toLocaleDateString(),
+                  timestamp: Date.now(),
+                },
+                ...(currentData.history || []),
+              ].slice(0, 50), // Keep only last 50 transactions
+              version: Date.now(),
+            };
+          });
+
+          // Update promo code usage count in app config with transaction
+          await database
+            .ref(`appConfig/promoCodes/${promoCode}/used`)
+            .transaction((currentUsed) => {
+              return (currentUsed || 0) + 1;
+            });
+
+          // Update UI
+          updateUI();
+          showNotification(
+            "Success",
+            `Received ${promoCodeData.value} BDT from promo code ${promoCode}`,
+            "success"
+          );
+
+          // Clear input
+          document.getElementById("promoCodeInput").value = "";
+        } catch (error) {
+          console.error("Error redeeming promo code:", error);
+          if (error.message === "Promo code already used") {
+            showNotification("Error", "Already used this promo code", "danger");
+          } else {
+            showNotification(
+              "Error",
+              "Failed to redeem promo code. Try again",
+              "danger"
+            );
+          }
+        }
+      }
+
+      // Filter history
+      function filterHistory(type) {
+        let table = document.getElementById("historyTable");
+        if (!table) return;
+
+        table.innerHTML = "";
+
+        if (!userData || !userData.history) return;
+
+        let filteredData = userData.history;
+        if (type !== "all") {
+          filteredData = userData.history.filter((tx) => tx.type === type);
+        }
+
+        // Sort by timestamp (newest first)
+        filteredData.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+        filteredData.slice(0, 5).forEach((tx) => {
+          let statusClass = "";
+          if (tx.status === "Pending") statusClass = "text-warning";
+          if (tx.status === "Completed") statusClass = "text-success";
+          if (tx.status === "Failed") statusClass = "text-danger";
+          if (tx.status === "Rejected") statusClass = "text-danger";
+
+          let row = `
       <tr>
         <td class="ps-4">${tx.date || "Today"}</td>
         <td>${tx.method}</td>
@@ -2929,65 +3152,69 @@ function filterHistory(type) {
         <td class="text-end pe-4 ${statusClass}">${tx.status}</td>
       </tr>
     `;
-    table.innerHTML += row;
-  });
-}
+          table.innerHTML += row;
+        });
+      }
 
-// Load more history
-function loadMoreHistory() {
-  showNotification("Info", "Loading more transactions", "info");
-  // This would typically load more records from Firebase
-  // For now, we'll just show a notification
-}
+      // Load more history
+      function loadMoreHistory() {
+        showNotification("Info", "Loading more transactions", "info");
+        // This would typically load more records from Firebase
+        // For now, we'll just show a notification
+      }
 
-// Show notification
-function showNotification(title, message, type) {
-  const notificationArea = document.getElementById("notificationArea");
-  if (!notificationArea) return;
-  
-  const notification = document.createElement("div");
-  notification.className = `alert alert-${type} floating-notification alert-dismissible shadow`;
-  notification.innerHTML = `
+      // Show notification
+      function showNotification(title, message, type) {
+        const notificationArea = document.getElementById("notificationArea");
+        if (!notificationArea) return;
+
+        const notification = document.createElement("div");
+        notification.className = `alert alert-${type} floating-notification alert-dismissible shadow`;
+        notification.innerHTML = `
     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
     <strong>${title}</strong> ${message}
   `;
 
-  notificationArea.appendChild(notification);
+        notificationArea.appendChild(notification);
 
-  // Auto remove after 5 seconds
-  setTimeout(() => {
-    notification.classList.add("fade");
-    setTimeout(() => notification.remove(), 300);
-  }, 5000);
-}
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+          notification.classList.add("fade");
+          setTimeout(() => notification.remove(), 300);
+        }, 5000);
+      }
 
-// Calculate referral earnings
-function calculateReferralEarnings(amount) {
-  const commissionPercentage = appConfig.referralCommission || 10;
-  return (amount * commissionPercentage) / 100;
-}
+      // Calculate referral earnings
+      function calculateReferralEarnings(amount) {
+        const commissionPercentage = appConfig.referralCommission || 10;
+        return (amount * commissionPercentage) / 100;
+      }
 
-// Show tab function
-function showTab(tab, el) {
-  // Add fade-out effect to current tab
-  const currentTab = document.querySelector(".container:not(.hidden)");
-  if (currentTab) {
-    currentTab.style.opacity = 0;
-    setTimeout(() => {
-      currentTab.classList.add("hidden");
+      // Show tab function
+      function showTab(tab, el) {
+        // Add fade-out effect to current tab
+        const currentTab = document.querySelector(".container:not(.hidden)");
+        if (currentTab) {
+          currentTab.style.opacity = 0;
+          setTimeout(() => {
+            currentTab.classList.add("hidden");
 
-      // Show new tab
-      document.querySelectorAll("div.container").forEach((div) => div.classList.add("hidden"));
-      const newTab = document.getElementById(tab);
-      newTab.classList.remove("hidden");
-      newTab.style.opacity = 1;
+            // Show new tab
+            document
+              .querySelectorAll("div.container")
+              .forEach((div) => div.classList.add("hidden"));
+            const newTab = document.getElementById(tab);
+            newTab.classList.remove("hidden");
+            newTab.style.opacity = 1;
 
-      // Update active nav item
-      document.querySelectorAll(".bottom-nav a").forEach((a) => a.classList.remove("active"));
-      el.classList.add("active");
-    }, 300);
-  }
-}
+            // Update active nav item
+            document
+              .querySelectorAll(".bottom-nav a")
+              .forEach((a) => a.classList.remove("active"));
+            el.classList.add("active");
+          }, 300);
+        }
+      }
     </script>
   </body>
 </html>
