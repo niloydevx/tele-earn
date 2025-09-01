@@ -724,6 +724,44 @@
       max-width: 500px;
       margin: 50px auto;
     }
+
+    /* Pagination Styles */
+    .pagination-container {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    
+    .pagination-info {
+      color: var(--text-secondary);
+      margin-right: 15px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .page-size-selector {
+      width: 80px;
+      display: inline-block;
+      margin-left: 10px;
+    }
+    
+    .page-info {
+      margin: 0 15px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .users-per-page {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .users-per-page label {
+      margin-right: 10px;
+      margin-bottom: 0;
+      color: var(--text-secondary);
+    }
   </style>
 </head>
 <body>
@@ -826,6 +864,9 @@
                 </button>
                 <button class="nav-link" id="v-pills-users-tab" data-bs-toggle="pill" data-bs-target="#v-pills-users" type="button" role="tab">
                   <i class="bi bi-people"></i> Users
+                </button>
+                <button class="nav-link" id="v-pills-backup-tab" data-bs-toggle="pill" data-bs-target="#v-pills-backup" type="button" role="tab">
+                  <i class="bi bi-database"></i> Data Management
                 </button>
               </div>
             </div>
@@ -1154,7 +1195,7 @@
                   <div class="card-body">
                     <div class="row mb-4">
                       <div class="col-md-8">
-                        <input type="text" class="form-control" placeholder="Search users by ID, username, or IP" id="userSearch" />
+                        <input type="text" class="form-control" placeholder="Search users by ID, username, or IP" id="userSearch" oninput="loadUsers()" />
                       </div>
                       <div class="col-md-4 text-end">
                         <button class="btn btn-outline-admin" onclick="loadUsers()">
@@ -1162,6 +1203,18 @@
                         </button>
                       </div>
                     </div>
+                    
+                    <div class="users-per-page">
+                      <label for="usersPerPage">Users per page:</label>
+                      <select class="form-select page-size-selector" id="usersPerPage" onchange="changeUsersPerPage()">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50" selected>50</option>
+                        <option value="100">100</option>
+                        <option value="250">250</option>
+                      </select>
+                    </div>
+                    
                     <div class="table-container">
                       <div class="table-responsive">
                         <table class="table table-dark table-hover">
@@ -1170,7 +1223,9 @@
                               <th>User ID</th>
                               <th>Username</th>
                               <th>Balance</th>
+                              <th>Earnings</th>
                               <th>Status</th>
+                              <th>Join Date</th>
                               <th>Actions</th>
                             </tr>
                           </thead>
@@ -1181,6 +1236,88 @@
                       </div>
                       <div class="table-scroll-indicator d-md-none">
                         <i class="bi bi-arrow-left-right"></i>
+                      </div>
+                    </div>
+                    
+                    <!-- Pagination Controls -->
+                    <div class="pagination-container">
+                      <div class="pagination-info">
+                        Total users: <span id="totalUsersCount">0</span>
+                      </div>
+                      <nav aria-label="User pagination">
+                        <ul class="pagination pagination-sm" id="usersPagination">
+                          <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                          </li>
+                          <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                          <li class="page-item disabled">
+                            <a class="page-link" href="#">Next</a>
+                          </li>
+                        </ul>
+                      </nav>
+                      <div class="page-info">
+                        Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Data Management Tab -->
+              <div class="tab-pane fade" id="v-pills-backup" role="tabpanel">
+                <div class="card">
+                  <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-database me-2"></i>Data Management</h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="alert alert-warning">
+                      <i class="bi bi-exclamation-triangle me-2"></i>
+                      <strong>Warning:</strong> These operations affect all user data. Proceed with caution.
+                    </div>
+                    
+                    <div class="row">
+                      <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                          <div class="card-header bg-danger text-white">
+                            <h6 class="mb-0"><i class="bi bi-trash me-2"></i>Danger Zone</h6>
+                          </div>
+                          <div class="card-body">
+                            <p class="text-muted">Permanently delete all user data. This action cannot be undone.</p>
+                            <button class="btn btn-danger w-100" onclick="confirmDeleteAllUsers()">
+                              <i class="bi bi-trash me-2"></i>Delete All Users
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                          <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="bi bi-download me-2"></i>Backup & Export</h6>
+                          </div>
+                          <div class="card-body">
+                            <p class="text-muted">Download a backup of all user data for safekeeping.</p>
+                            <button class="btn btn-info w-100" onclick="exportUserData()">
+                              <i class="bi bi-download me-2"></i>Export User Data
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="card mt-4">
+                      <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="bi bi-arrow-clockwise me-2"></i>Data Recovery</h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <label class="form-label">Restore from Backup</label>
+                          <input type="file" class="form-control" id="backupFile" accept=".json">
+                          <div class="form-text">Select a previously exported JSON backup file</div>
+                        </div>
+                        <button class="btn btn-success" onclick="restoreUserData()">
+                          <i class="bi bi-arrow-clockwise me-2"></i>Restore User Data
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1320,7 +1457,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
    
-  <script>// Firebase configuration
+  <script>
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyD9RdK77SckQQXtYobeBJBdaF4XOQvDbKU",
   authDomain: "ads-flare.firebaseapp.com",
@@ -1342,6 +1480,14 @@ let bannedUsers = [];
 let selectedUserId = null;
 let currentUserData = null;
 let currentAdminUser = null;
+
+// Pagination state
+let currentPage = 1;
+let usersPerPage = 50;
+let totalUsers = 0;
+let totalPages = 1;
+let allUsers = [];
+let filteredUsers = [];
 
 // Check authentication state on page load
 document.addEventListener("DOMContentLoaded", function() {
@@ -1776,20 +1922,29 @@ async function uploadImage(input, urlFieldId, previewId) {
 }
 
 // =========================
-// Users Functions
+// Users Functions with Pagination
 // =========================
+function changeUsersPerPage() {
+  usersPerPage = parseInt(document.getElementById("usersPerPage").value);
+  currentPage = 1; // Reset to first page
+  renderUsersTable();
+  updatePaginationControls();
+}
+
 function loadUsers() {
   const usersList = document.getElementById("usersList");
-  usersList.innerHTML = '<tr><td colspan="6" class="text-center py-4 loading">Loading users...</td></tr>';
+  usersList.innerHTML = '<tr><td colspan="7" class="text-center py-4 loading">Loading users...</td></tr>';
 
   const searchTerm = document.getElementById("userSearch").value.toLowerCase();
 
   database.ref("users").once("value", (snapshot) => {
     const users = snapshot.val();
-    usersList.innerHTML = "";
-
+    
     if (!users) {
-      usersList.innerHTML = '<tr><td colspan="6" class="text-center py-4">No users found.</td></tr>';
+      usersList.innerHTML = '<tr><td colspan="7" class="text-center py-4">No users found.</td></tr>';
+      allUsers = [];
+      filteredUsers = [];
+      updatePaginationControls();
       return;
     }
 
@@ -1802,56 +1957,132 @@ function loadUsers() {
         bannedUsers = bannedData || [];
       }
 
-      let userCount = 0;
-      Object.keys(users).forEach((userId) => {
-        // Only show users with 10-digit IDs
-        if (!/^\d{10}$/.test(userId)) {
-          return;
-        }
-        
-        const user = users[userId];
+      // Convert users object to array and filter by 10-digit IDs
+      allUsers = Object.entries(users)
+        .filter(([userId]) => /^\d{10}$/.test(userId))
+        .map(([userId, userData]) => ({
+          id: userId,
+          ...userData
+        }));
 
-        if (
-          searchTerm &&
-          !userId.toLowerCase().includes(searchTerm) &&
-          !(user.username || "").toLowerCase().includes(searchTerm) &&
-          !(user.ip || "").toLowerCase().includes(searchTerm)
-        ) {
-          return;
-        }
+      // Apply search filter
+      if (searchTerm) {
+        filteredUsers = allUsers.filter(user => 
+          user.id.toLowerCase().includes(searchTerm) ||
+          (user.username || "").toLowerCase().includes(searchTerm) ||
+          (user.ip || "").toLowerCase().includes(searchTerm)
+        );
+      } else {
+        filteredUsers = [...allUsers];
+      }
 
-        userCount++;
-        const isBanned = bannedUsers.includes(userId);
-        const status = isBanned ? '<span class="badge bg-danger">Banned</span>' : '<span class="badge bg-success">Active</span>';
-
-        const actions = `
-          <button class="btn btn-sm btn-info me-1" onclick="viewUserDetails('${userId}')">
-            <i class="bi bi-info-circle"></i>
-          </button>
-          ${
-            isBanned
-              ? `<button class="btn btn-sm btn-success" onclick="unbanUser('${userId}')"><i class="bi bi-person-check"></i></button>`
-              : `<button class="btn btn-sm btn-danger" onclick="banUser('${userId}')"><i class="bi bi-person-slash"></i></button>`
-          }
-        `;
-
-        const row = `
-          <tr>
-            <td><span class="ip-info">${userId}</span></td>
-            <td>${user.username || "N/A"}</td>
-            <td>${user.balance ? user.balance.toFixed(2) : "0.00"} BDT</td>
-            <td>${status}</td>
-            <td>${actions}</td>
-          </tr>
-        `;
-        usersList.innerHTML += row;
+      totalUsers = filteredUsers.length;
+      totalPages = Math.ceil(totalUsers / usersPerPage);
+      
+      // Sort by join date (newest first)
+      filteredUsers.sort((a, b) => {
+        const dateA = a.joinDate ? new Date(a.joinDate) : new Date(0);
+        const dateB = b.joinDate ? new Date(b.joinDate) : new Date(0);
+        return dateB - dateA;
       });
 
-      if (userCount === 0) {
-        usersList.innerHTML = '<tr><td colspan="6" class="text-center py-4">No users match your search.</td></tr>';
-      }
+      renderUsersTable();
+      updatePaginationControls();
     });
   });
+}
+
+function renderUsersTable() {
+  const usersList = document.getElementById("usersList");
+  usersList.innerHTML = "";
+
+  if (filteredUsers.length === 0) {
+    usersList.innerHTML = '<tr><td colspan="7" class="text-center py-4">No users match your search.</td></tr>';
+    return;
+  }
+
+  // Calculate pagination slice
+  const startIndex = (currentPage - 1) * usersPerPage;
+  const endIndex = Math.min(startIndex + usersPerPage, filteredUsers.length);
+  const usersToShow = filteredUsers.slice(startIndex, endIndex);
+
+  usersToShow.forEach((user) => {
+    const isBanned = bannedUsers.includes(user.id);
+    const status = isBanned ? '<span class="badge bg-danger">Banned</span>' : '<span class="badge bg-success">Active</span>';
+
+    const actions = `
+      <button class="btn btn-sm btn-info me-1" onclick="viewUserDetails('${user.id}')">
+        <i class="bi bi-info-circle"></i>
+      </button>
+      ${
+        isBanned
+          ? `<button class="btn btn-sm btn-success" onclick="unbanUser('${user.id}')"><i class="bi bi-person-check"></i></button>`
+          : `<button class="btn btn-sm btn-danger" onclick="banUser('${user.id}')"><i class="bi bi-person-slash"></i></button>`
+      }
+    `;
+
+    const row = `
+      <tr>
+        <td><span class="ip-info">${user.id}</span></td>
+        <td>${user.username || "N/A"}</td>
+        <td>${user.balance ? user.balance.toFixed(2) : "0.00"} BDT</td>
+        <td>${user.totalEarnings ? user.totalEarnings.toFixed(2) : "0.00"} BDT</td>
+        <td>${status}</td>
+        <td>${user.joinDate || "N/A"}</td>
+        <td>${actions}</td>
+      </tr>
+    `;
+    usersList.innerHTML += row;
+  });
+}
+
+function updatePaginationControls() {
+  const paginationElement = document.getElementById("usersPagination");
+  const totalUsersElement = document.getElementById("totalUsersCount");
+  const currentPageElement = document.getElementById("currentPage");
+  const totalPagesElement = document.getElementById("totalPages");
+  
+  totalUsersElement.textContent = totalUsers;
+  currentPageElement.textContent = currentPage;
+  totalPagesElement.textContent = totalPages;
+  
+  // Clear existing pagination
+  paginationElement.innerHTML = '';
+  
+  // Previous button
+  const prevLi = document.createElement('li');
+  prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+  prevLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Previous</a>`;
+  paginationElement.appendChild(prevLi);
+  
+  // Page numbers
+  const maxVisiblePages = 5;
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+  
+  if (endPage - startPage + 1 < maxVisiblePages) {
+    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+  }
+  
+  for (let i = startPage; i <= endPage; i++) {
+    const pageLi = document.createElement('li');
+    pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+    pageLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>`;
+    paginationElement.appendChild(pageLi);
+  }
+  
+  // Next button
+  const nextLi = document.createElement('li');
+  nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+  nextLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Next</a>`;
+  paginationElement.appendChild(nextLi);
+}
+
+function changePage(page) {
+  if (page < 1 || page > totalPages) return;
+  currentPage = page;
+  renderUsersTable();
+  updatePaginationControls();
 }
 
 function viewUserDetails(userId) {
@@ -2625,6 +2856,113 @@ function updateDashboard() {
       document.getElementById("activeSurveys").textContent = activeSurveys;
     });
   });
-}</script>
+}
+
+// =========================
+// Data Management Functions
+// =========================
+function confirmDeleteAllUsers() {
+  if (confirm("WARNING: This will permanently delete ALL user data. This action cannot be undone. Are you absolutely sure?")) {
+    if (confirm("This is your final warning. ALL user accounts, balances, and history will be PERMANENTLY deleted. Continue?")) {
+      deleteAllUsers();
+    }
+  }
+}
+
+function deleteAllUsers() {
+  showToast("Deleting all user data...", "info");
+  
+  database.ref("users").remove()
+    .then(() => {
+      // Also clear banned users
+      return database.ref("bannedUsers").remove();
+    })
+    .then(() => {
+      showToast("All user data has been permanently deleted", "success");
+      loadUsers();
+      updateDashboard();
+    })
+    .catch((error) => {
+      console.error("Error deleting users:", error);
+      showToast("Error deleting user data: " + error.message, "error");
+    });
+}
+
+function exportUserData() {
+  database.ref("users").once("value", (snapshot) => {
+    const users = snapshot.val();
+    if (!users) {
+      showToast("No user data to export", "warning");
+      return;
+    }
+    
+    // Create a clean export object
+    const exportData = {};
+    Object.keys(users).forEach(userId => {
+      if (/^\d{10}$/.test(userId)) {
+        exportData[userId] = users[userId];
+      }
+    });
+    
+    // Create and download JSON file
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `users-backup-${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    
+    showToast("User data exported successfully", "success");
+  });
+}
+
+function restoreUserData() {
+  const fileInput = document.getElementById("backupFile");
+  const file = fileInput.files[0];
+  
+  if (!file) {
+    showToast("Please select a backup file first", "warning");
+    return;
+  }
+  
+  if (!confirm("This will overwrite ALL current user data with the backup. Continue?")) {
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const userData = JSON.parse(e.target.result);
+      
+      // Validate the data structure
+      if (typeof userData !== 'object') {
+        throw new Error("Invalid backup file format");
+      }
+      
+      showToast("Restoring user data...", "info");
+      
+      // Upload the data to Firebase
+      database.ref("users").set(userData)
+        .then(() => {
+          showToast("User data restored successfully", "success");
+          loadUsers();
+          updateDashboard();
+          fileInput.value = ""; // Clear the file input
+        })
+        .catch((error) => {
+          console.error("Error restoring data:", error);
+          showToast("Error restoring user data: " + error.message, "error");
+        });
+    } catch (error) {
+      console.error("Error parsing backup file:", error);
+      showToast("Invalid backup file: " + error.message, "error");
+    }
+  };
+  reader.readAsText(file);
+}
+</script>
 </body>
 </html>
